@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+SQLAlchemy>=2.0
+pymysql
+alembic
+python-multipart
+pydantic>=2
+python-dotenv
+apscheduler
+jinja2
+docxtpl
