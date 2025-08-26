@@ -15,3 +15,10 @@ dist/
 .vscode/
 .idea/
 .DS_Store
+*.log
+
+# Ignorar arquivos temporários e pastas
+*.log
+/venv/
+/__pycache__/
+/node_modules/
