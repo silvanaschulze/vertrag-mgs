@@ -1,30 +1,37 @@
 """
-Schemas package for Contract Management System
+Schemas-Paket für das Vertragsverwaltungssystem
 
-This module contains all Pydantic schemas for data validation and serialization.
-Schemas define the structure of data that can be sent to and received from the API.
+Dieses Modul enthält alle Pydantic-Schemas für die Validierung und Serialisierung von Daten.
+Schemas definieren die Struktur der Daten, die an die API gesendet und von ihr empfangen werden können.
 """
 
-# Import all schemas here for easy access
-from .user import UserCreate, UserUpdate, UserResponse, UserInDB
+# Alle Schemas hier importieren für einfachen Zugriff
+from .user import (
+    UserCreate, UserUpdate, UserResponse, UserInDB,
+    UserRole, UserAdminCreate, UserAdminUpdate, UserAdminResponse
+)
 from .contract import ContractCreate, ContractUpdate, ContractResponse, ContractInDB
 from .auth import Token, UserLogin, UserRegister
 
-# Export all schemas
+# Alle Schemas exportieren
 __all__ = [
-    # User schemas
+    # Benutzer-Schemas
     "UserCreate",
     "UserUpdate", 
     "UserResponse",
     "UserInDB",
+    "UserRole",
+    "UserAdminCreate",
+    "UserAdminUpdate", 
+    "UserAdminResponse",
     
-    # Contract schemas
+    # Vertrags-Schemas
     "ContractCreate",
     "ContractUpdate",
     "ContractResponse", 
     "ContractInDB",
     
-    # Auth schemas
+    # Authentifizierungs-Schemas
     "Token",
     "UserLogin",
     "UserRegister"
