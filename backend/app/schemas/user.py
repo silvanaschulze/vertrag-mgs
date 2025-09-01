@@ -15,8 +15,8 @@ class UserRole(str, Enum):
     """Benutzer-Rollen Enumeration"""
     USER = "user"           # Regulärer Benutzer - kann eigene Verträge einsehen
     MANAGER = "manager"     # Manager - kann Team-Verträge verwalten
-    ADMIN = "admin"         # Administrator - kann Benutzer und alle Verträge verwalten
-    SUPER_ADMIN = "super_admin"  # Super-Administrator - voller Systemzugriff
+    ADMIN = "admin"         # Administrator -  voller Systemzugriff
+    
 
 # Basis-Schema mit gemeinsamen Feldern
 class UserBase(BaseModel):

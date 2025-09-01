@@ -138,3 +138,16 @@ class ContractListResponse(BaseModel):
     
     class Config:
         from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell
+
+# Schema für Vertragsstatistiken
+class ContractStats(BaseModel):
+    """Schema für Vertragsstatistiken"""
+    total_contracts: int = Field(..., description="Gesamtanzahl der Verträge")
+    active_contracts: int = Field(..., description="Anzahl der aktiven Verträge")
+    expired_contracts: int = Field(..., description="Anzahl der abgelaufenen Verträge")
+    draft_contracts: int = Field(..., description="Anzahl der Entwurfsverträge")
+    total_value: Decimal = Field(..., description="Gesamtwert aller Verträge")
+    currency: str = Field(..., description="Für den Gesamtwert verwendete Währung")
+    
+    class Config:
+        from_attributes = True
