@@ -15,8 +15,8 @@ import re
 #enum für Vertragsstatus
 class ContractStatus(str, Enum):
     """vertragsstatus-Enumeration"""
-    DRAFT = "entwurf"
-    ACTIVE = "aaktiv"
+    DRAFT = "entwurf"                       
+    ACTIVE = "aaktiv"        
     EXPIRED = "abgelaufen"
     TERMINATED = "beendet"
     PENDING_APROVAL = "wartet_auf_genehmigung"
@@ -117,6 +117,14 @@ class ContractResponse(ContractBase):
     created_at: datetime = Field(..., description="Vertragserstellungszeitstempel")
     updated_at: Optional[datetime] = Field(None, description="Zeitstempel der letzten Aktualisierung")
 
+    class Config:
+        from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell
+        json_encoders = {
+            Decimal: lambda v: float (v),
+            date: lambda v: v.isoformat(),
+            datetime: lambda v: v.isoformat(),
+        }
+
 # Schema für Vertragsdaten in der Datenbank
 class ContractInDB(ContractBase):
     """Schema für Vertragsdaten wie in der Datenbank gespeichert"""
@@ -127,6 +135,11 @@ class ContractInDB(ContractBase):
     
     class Config:
         from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell
+        json_encoders = {
+            Decimal: lambda v: float (v),
+            date: lambda v: v.isoformat(),
+            datetime: lambda v: v.isoformat(),
+        }
 
 # Schema für Vertragslisten-Antworten
 class ContractListResponse(BaseModel):
@@ -138,7 +151,11 @@ class ContractListResponse(BaseModel):
     
     class Config:
         from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell
-
+        json_encoders = {
+            Decimal: lambda v: float (v),
+            date: lambda v: v.isoformat(),
+            datetime: lambda v: v.isoformat(),
+        }
 # Schema für Vertragsstatistiken
 class ContractStats(BaseModel):
     """Schema für Vertragsstatistiken"""

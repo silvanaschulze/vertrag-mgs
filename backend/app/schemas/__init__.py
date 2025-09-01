@@ -10,7 +10,7 @@ from .user import (
     UserCreate, UserUpdate, UserResponse, UserInDB,
     UserRole, UserAdminCreate, UserAdminUpdate, UserAdminResponse
 )
-from .contract import ContractCreate, ContractUpdate, ContractResponse, ContractInDB
+from .contract import ContractCreate, ContractUpdate, ContractResponse, ContractInDB, ContractListResponse, ContractStats
 from .auth import Token, UserLogin, UserRegister
 
 # Alle Schemas exportieren
@@ -30,6 +30,8 @@ __all__ = [
     "ContractUpdate",
     "ContractResponse", 
     "ContractInDB",
+    "ContractListResponse",
+    "ContractStats",
     
     # Authentifizierungs-Schemas
     "Token",
