@@ -168,3 +168,8 @@ class ContractStats(BaseModel):
     
     class Config:
         from_attributes = True
+        json_encoders = {
+            Decimal: lambda v: float (v),
+            date: lambda v: v.isoformat(),
+            datetime: lambda v: v.isoformat(),
+        }
