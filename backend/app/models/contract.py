@@ -5,7 +5,7 @@ from sqlalchemy import Column, String, Integer, Date, DateTime, Numeric, Text, B
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
-from ..core.database import Base
+from app.core.database import Base
 
 class ContractStatus(str,enum.Enum):
     """Vertragsstatus Aufzählung"""

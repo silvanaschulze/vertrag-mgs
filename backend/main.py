@@ -8,6 +8,7 @@ Sie konfiguriert FastAPI, Middleware, Router und Scheduler.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers import auth, contracts, users
 
 # FastAPI-Anwendung erstellen
 app = FastAPI(
@@ -31,6 +32,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Router registrieren 
+app.include_router(auth.router)
+app.include_router(contracts.router)
+app.include_router(users.router)
+
 
 @app.get("/")
 def root():
