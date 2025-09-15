@@ -135,7 +135,7 @@ async def get_my_profile(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Mein Profil abrufen - Obter meu perfil
+    Mein Profil abrufen 
     Gibt die Daten des aktuell angemeldeten Benutzers zurück
     """
     return current_user
@@ -148,7 +148,7 @@ async def update_my_profile(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Mein Profil aktualisieren - Atualizar meu perfil
+    Mein Profil aktualisieren 
     Aktualisiert die Daten des aktuell angemeldeten Benutzers
     """
     updated_user = await UserService(db).update_user(
@@ -165,8 +165,8 @@ async def activate_user(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Benutzer aktivieren - Ativar usuário
-    Erfordert Admin-Berechtigung - Requer permissão de administrador
+    Benutzer aktivieren 
+    Erfordert Admin-Berechtigung 
     """
     # Nur Administratoren können Benutzer aktivieren
     if not current_user.is_superuser:
@@ -194,8 +194,8 @@ async def deactivate_user(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Benutzer deaktivieren - Desativar usuário
-    Erfordert Admin-Berechtigung - Requer permissão de administrador
+    Benutzer deaktivieren
+    Erfordert Admin-Berechtigung 
     """
     # Nur Administratoren können Benutzer deaktivieren
     if not current_user.is_superuser:
@@ -231,8 +231,8 @@ async def search_users(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Benutzer suchen - Pesquisar usuários
-    Erfordert Admin-Berechtigung - Requer permissão de administrador
+    Benutzer suchen 
+    Erfordert Admin-Berechtigung 
     """
     # Nur Administratoren können Benutzer suchen
     if not current_user.is_superuser:

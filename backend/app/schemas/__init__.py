@@ -1,12 +1,9 @@
+# app/schemas/__init__.py
 """
-Schemas-Paket für das Vertragsverwaltungssystem
-
-Dieses Modul enthält alle Pydantic-Schemas für die Validierung und Serialisierung von Daten.
-Schemas definieren die Struktur der Daten, die an die API gesendet und von ihr empfangen werden können.
+Schema-Paket 
 """
 
-# Alle Schemas hier importieren für einfachen Zugriff
-
+#  Nur existierende Schemas importieren - Importar apenas schemas existentes
 from .token import (
     Token, 
     TokenData, 
@@ -15,6 +12,7 @@ from .token import (
     LoginResponse
 )
 
+# Alle verfügbaren Schemas exportieren 
 __all__ = [
     # Token-Schemas
     "Token",
@@ -23,4 +21,3 @@ __all__ = [
     "LoginRequest",
     "LoginResponse"
 ]
-
