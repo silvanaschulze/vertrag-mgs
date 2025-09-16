@@ -26,7 +26,7 @@ class ContractType(str,enum.Enum):
 
 class Contract(Base):
     """Vertragsmodell für die Datenbank"""
-    __cpdb__ = "contracts"
+    __tablename__ = "contracts"  
 
     #prämärschlüssel
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

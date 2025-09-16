@@ -2,7 +2,7 @@
 User Model - Benutzermodell 
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Text
 from sqlalchemy.orm import relationship
@@ -32,6 +32,7 @@ class User(Base):
     #Grundlegende Benutzerinformationen
     email = Column(String(100), unique=True, index=True, nullable=False)
     name = Column(String(100), nullable=False)
+    department = Column(String(100), nullable=True)
     role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
 
 
@@ -39,6 +40,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    is_superuser = Column(Boolean, default=False)
     verification_token = Column(String(255), nullable=True)
     reset_token = Column(String(255), nullable=True)
     reset_token_expiration = Column(DateTime, nullable=True)
@@ -46,7 +48,6 @@ class User(Base):
     
     #Zusätzliche Informationen
     phone = Column(String(20), nullable=True)
-    department = Column(String(100), nullable=True)
     position = Column(String(100), nullable=True)
 
     #Audit Felder
@@ -59,7 +60,7 @@ class User(Base):
     is_deleted = Column(Boolean, default=False)
     last_login = Column(DateTime(timezone=True), nullable=True)
     last_login_ip = Column(String(45), nullable=True)  # IPv6 kompatibel
-    notes = Column(Text, nullable=True)
+    notes = Column(String(500), nullable=True)
     preferences = Column(Text, nullable=True)  # JSON String für Benutzerpräferenzen
 
     #Beziehungen
@@ -67,6 +68,8 @@ class User(Base):
     files = relationship("File", back_populates="uploader")  
     notifications = relationship("Notification", back_populates="recipient")  
     activities = relationship("ActivityLog", back_populates="user")  
+    responsible_contracts = relationship("Contract", back_populates="responsible") 
+
     
     """String Darstellung des Benutzers"""
     def __repr__(self):
