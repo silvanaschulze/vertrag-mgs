@@ -1,7 +1,11 @@
 # Python
 __pycache__/
 *.pyc
+
+# Ambientes virtuais
 .venv/
+venv/
+backend/venv/
 
 # Node
 node_modules/
@@ -19,6 +23,16 @@ dist/
 
 # Ignorar arquivos temporários e pastas
 *.log
-/venv/
 /__pycache__/
 /node_modules/
+
+# Requisitos locais
+backend/requirements.txt
+backend/requirements-compatible.txt
+
+# Scripts de teste locais
+backend/test_complete.py
+backend/test_local.py
+
+# Documentação local
+docs/
