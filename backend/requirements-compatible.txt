@@ -1,0 +1,25 @@
+# Dependências compatíveis com seus pacotes atuais
+# Usando versões que funcionam juntas
+
+# Core framework (compatível com Pydantic 2.x)
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+python-multipart>=0.0.6
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.10.0
+
+# Authentication & Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-dotenv>=1.0.0
+
+# Validation (Pydantic 2.x)
+pydantic>=2.0.0
+email-validator>=2.0.0
+
+# Development
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+httpx>=0.24.0
