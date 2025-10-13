@@ -20,10 +20,11 @@ class UserRole(str, Enum):
 
 # Basis-Schema mit gemeinsamen Feldern
 class UserBase(BaseModel):
-    """Basis-Schema mit gemeinsamen Benutzerfeldern"""
-    email: EmailStr = Field(..., description="Benutzer-E-Mail-Adresse")
-    name: str = Field(..., min_length=2, max_length=100, description="Vollständiger Name des Benutzers")
-    role: UserRole = Field(default=UserRole.USER, description="Benutzerrolle")
+    """Basis-Schema mit gemeinsamen Benutzerfeldern / Schema base com campos comuns de usuário"""
+    username: Optional[str] = Field(None, min_length=3, max_length=50, description="Benutzername / Nome de usuário")
+    email: EmailStr = Field(..., description="Benutzer-E-Mail-Adresse / Endereço de e-mail do usuário")
+    name: str = Field(..., min_length=2, max_length=100, description="Vollständiger Name des Benutzers / Nome completo do usuário")
+    role: UserRole = Field(default=UserRole.USER, description="Benutzerrolle / Função do usuário")
 
 # Schema für die Erstellung eines neuen Benutzers
 class UserCreate(UserBase):
@@ -46,11 +47,12 @@ class UserCreate(UserBase):
 
 # Schema für die Aktualisierung von Benutzerdaten
 class UserUpdate(BaseModel):
-    """Schema für die Aktualisierung von Benutzerdaten"""
-    email: Optional[EmailStr] = Field(None, description="Benutzer-E-Mail-Adresse")
-    name: Optional[str] = Field(None, min_length=2, max_length=100, description="Vollständiger Name des Benutzers")
-    role: Optional[UserRole] = Field(None, description="Benutzerrolle")
-    password: Optional[str] = Field(None, min_length=8, description="Benutzerpasswort")
+    """Schema für die Aktualisierung von Benutzerdaten / Schema para atualização de dados de usuário"""
+    username: Optional[str] = Field(None, min_length=3, max_length=50, description="Benutzername / Nome de usuário")
+    email: Optional[EmailStr] = Field(None, description="Benutzer-E-Mail-Adresse / Endereço de e-mail do usuário")
+    name: Optional[str] = Field(None, min_length=2, max_length=100, description="Vollständiger Name des Benutzers / Nome completo do usuário")
+    role: Optional[UserRole] = Field(None, description="Benutzerrolle / Função do usuário")
+    password: Optional[str] = Field(None, min_length=8, description="Benutzerpasswort / Senha do usuário")
 
 # Schema für Benutzerdaten in der Datenbank (enthält gehashtes Passwort)
 class UserInDB(UserBase):

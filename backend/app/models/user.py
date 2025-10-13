@@ -29,7 +29,8 @@ class User(Base):
     #Prämärschlüssel
     id = Column(Integer, primary_key=True, index=True)
    
-    #Grundlegende Benutzerinformationen
+    #Grundlegende Benutzerinformationen / Informações básicas do usuário
+    username = Column(String(50), unique=True, index=True, nullable=True)  # ← ADICIONAR CAMPO USERNAME
     email = Column(String(100), unique=True, index=True, nullable=False)
     name = Column(String(100), nullable=False)
     department = Column(String(100), nullable=True)
@@ -85,7 +86,7 @@ class User(Base):
         return self.role == UserRole.USER
     """Aktualisiert das letzte Login Datum und die IP Adresse"""
     def update_last_login(self, ip_address: Optional[str] = None):
-        self.last_login = datetime.now(datetime.timezone.utc)
+        self.last_login = datetime.now(timezone.utc)
         if ip_address:
             self.last_login_ip = ip_address
     """Erhöht die Anzahl der fehlgeschlagenen Login Versuche"""
@@ -97,7 +98,7 @@ class User(Base):
     """Markiert den Benutzer als gelöscht"""
     def mark_as_deleted(self, deleted_by: Optional[int] = None):
         self.is_deleted = True
-        self.deleted_at = datetime.now(datetime.timezone.utc)
+        self.deleted_at = datetime.now(timezone.utc)  # ← CORRIGIDO
         if deleted_by:
             self.deleted_by = deleted_by
 
@@ -115,15 +116,24 @@ def get_user_by_email(db, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
 
 
+def get_user_by_username(db, username: str) -> Optional[User]:
+    """Benutzer anhand des Benutzernamens aus der Datenbank abrufen
+    Recuperar usuário por nome de usuário do banco de dados
+    """
+    return db.query(User).filter(User.username == username).first()
+
+
 def get_active_users(db) -> List[User]:
     """Alle aktiven Benutzer aus der Datenbank abrufen
     """
     return db.query(User).filter(User.is_active == True, User.is_deleted == False).all()
 
-def create_user(db, email: str, name: str, password_hash: str, role: UserRole = UserRole.USER) -> User:
+def create_user(db, email: str, name: str, password_hash: str, role: UserRole = UserRole.USER, username: Optional[str] = None) -> User:
     """ Neuen Benutzer in der Datenbank erstellen
+    Criar novo usuário no banco de dados
    """
     new_user = User(
+        username=username,
         email=email,
         name=name,
         password_hash=password_hash,
@@ -197,9 +207,12 @@ def get_users_by_role(db, role: UserRole) -> List[User]:
 
 
 def search_users(db, query: str) -> List[User]:
-    """Benutzer anhand von Name oder E-Mail durchsuchen
+    """Benutzer anhand von Name, E-Mail oder Benutzername durchsuchen
+    Buscar usuários por nome, e-mail ou nome de usuário
     """
     return db.query(User).filter(
-        (User.name.ilike(f"%{query}%")) | (User.email.ilike(f"%{query}%")),
+        (User.name.ilike(f"%{query}%")) | 
+        (User.email.ilike(f"%{query}%")) | 
+        (User.username.ilike(f"%{query}%")),
         User.is_deleted == False
     ).all()

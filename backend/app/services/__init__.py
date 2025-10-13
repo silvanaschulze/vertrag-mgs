@@ -1,7 +1,7 @@
 # app/services/__init__.py
 """ Service-Paket 
 """
-from .user import UserService
+from .user_service import UserService
 from .contract_service import ContractService
 
 __all__ = [

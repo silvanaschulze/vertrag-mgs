@@ -32,13 +32,13 @@ class UserService:
         if existing_email:
             raise ValueError("Email already exists - E-Mail bereits vorhanden - E-mail já existe")
         
-        # Benutzer erstellen
+        # Benutzer erstellen / Criar usuário
         hashed_password = get_password_hash(user_data.password)
         db_user = User(
             username=user_data.username,
             email=user_data.email,
-            full_name=user_data.full_name,
-            hashed_password=hashed_password,
+            name=user_data.name,  # ← Corrigir: full_name para name
+            password_hash=hashed_password,
             is_active=user_data.is_active,
             is_superuser=user_data.is_superuser
         )
@@ -82,7 +82,7 @@ class UserService:
         user = await self.get_user_by_username(username)
         if not user:
             return None
-        if not verify_password(password, user.hashed_password):
+        if not verify_password(password, user.password_hash):  # ← Corrigir: hashed_password para password_hash
             return None
         return user
     
@@ -95,10 +95,10 @@ class UserService:
         if not user:
             return None
         
-        # Felder aktualisieren
+        # Felder aktualisieren / Atualizar campos
         update_data = user_data.dict(exclude_unset=True)
         if "password" in update_data:
-            update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
+            update_data["password_hash"] = get_password_hash(update_data.pop("password"))  # ← Corrigir: hashed_password para password_hash
         
         await self.db.execute(
             update(User).where(User.id == user_id).values(**update_data)
@@ -160,7 +160,7 @@ class UserService:
             select(User).where(
                 (User.username.ilike(search_pattern)) |
                 (User.email.ilike(search_pattern)) |
-                (User.full_name.ilike(search_pattern))
+                (User.name.ilike(search_pattern))  # ← Corrigir: full_name para name
             ).offset(skip).limit(limit)
         )
         return result.scalars().all()

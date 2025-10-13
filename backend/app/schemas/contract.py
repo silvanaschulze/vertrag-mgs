@@ -16,7 +16,7 @@ import re
 class ContractStatus(str, Enum):
     """vertragsstatus-Enumeration"""
     DRAFT = "entwurf"                       
-    ACTIVE = "aaktiv"        
+    ACTIVE = "aktiv"        
     EXPIRED = "abgelaufen"
     TERMINATED = "beendet"
     PENDING_APROVAL = "wartet_auf_genehmigung"
@@ -27,7 +27,7 @@ class ContractType(str, Enum):
     SERVICE = "dienstleistung"
     PRODUCT = "produkt"
     EMPLOYMENT = "beschäftigung"
-    LASASE = "miete"
+    LEASE = "miete"
     PARTNERSHIP = "partnerschaft"
     OTHER = "sonstiges"
 
@@ -36,7 +36,7 @@ class ContractBase(BaseModel):
     """basisschema mit gemeinsamen vertragsfeldern"""
     title: str = Field(..., min_length=2, max_length=200, description="Vertrags titel")
     description: Optional[str] = Field(None, max_length=1000, description="Vertragsbeschreibung")
-    type: ContractType = Field(default=ContractType.OTHER, description="Vertragstyp")
+    contract_type: ContractType = Field(default=ContractType.OTHER, description="Vertragstyp")
     status: ContractStatus = Field(default=ContractStatus.DRAFT, description="Vertragsstatus")
 
    #Finanzfelder

@@ -34,7 +34,7 @@ class Contract(Base):
     #Grundlegende Felder
     title = Column(String(200), nullable=False, index=True)
     description = Column(Text, nullable=True)
-    contrac_type = Column(Enum(ContractType), default=ContractType.OTHER, nullable=False)
+    contract_type = Column(Enum(ContractType), default=ContractType.OTHER, nullable=False)
     status = Column(Enum(ContractStatus), default=ContractStatus.DRAFT, nullable=False)
 
     #Finanzfelder

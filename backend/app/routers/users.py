@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
-from app.services.user import UserService
+from backend.app.services.user_service import UserService
 from app.core.security import get_current_user, get_current_active_user
 from app.models.user import User
 

@@ -1,30 +1,34 @@
 """
 Contract Management System - FastAPI Hauptanwendung
-Erstellt: 2024
+Sistema de Gerenciamento de Contratos - Aplicação Principal FastAPI
+Erstellt: 2024 / Criado: 2024
 
 Diese Datei enthält die Hauptanwendung für das Contract Management System.
+Esta arquivo contém a aplicação principal para o Sistema de Gerenciamento de Contratos.
 Sie konfiguriert FastAPI, Middleware, Router und Scheduler.
+Ela configura FastAPI, middleware, roteadores e agendador.
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth_router, contracts_router, users_router as auth, contracts, users
+# CORRIGIR IMPORTS
+from app.routers import auth_router, contracts_router, users_router
 
-# FastAPI-Anwendung erstellen
+# FastAPI-Anwendung erstellen / Criar aplicação FastAPI
 app = FastAPI(
     title="Contract Management System",
-    description="Ein System zur Verwaltung von Verträgen mit automatischen Benachrichtigungen",
+    description="Ein System zur Verwaltung von Verträgen mit automatischen Benachrichtigungen / Um sistema para gerenciamento de contratos com notificações automáticas",
     version="1.0.0"
 )
 
-# CORS-Origins für Entwicklung
+# CORS-Origins für Entwicklung / Origens CORS para desenvolvimento
 origins = [
     "http://localhost:5173", 
     "http://si-server.mshome.net:5173",
-    "http://localhost:3000"  # ← Para React (futuro)
+    "http://localhost:3000"  # ← Para React (futuro) / Para React (futuro)
 ]
 
-# CORS-Middleware konfigurieren
+# CORS-Middleware konfigurieren / Configurar middleware CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -33,16 +37,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Router registrieren 
-app.include_router(auth.router)
-app.include_router(contracts.router)
-app.include_router(users.router)
-
+# Router registrieren / Registrar roteadores
+app.include_router(auth_router.router)
+app.include_router(contracts_router.router)
+app.include_router(users_router.router)
 
 @app.get("/")
 def root():
     """
-    Root-Endpunkt für die API.
+    Root-Endpunkt für die API / Endpoint raiz da API
     """
     return {
         "message": "Contract Management System API",
@@ -53,11 +56,7 @@ def root():
 @app.get("/health")
 def health():
     """
-    Health-Check-Endpunkt für die Anwendung.
+    Health-Check-Endpunkt für die Anwendung / Endpoint de verificação de saúde da aplicação
     """
     return {"ok": True, "status": "healthy"}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
     

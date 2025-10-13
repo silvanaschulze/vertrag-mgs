@@ -3,13 +3,17 @@
 Datenbankmodelle für das Vertragsverwaltungssystem
 """
 
-from .user import User, UserRole
+
 from .contract import Contract, ContractStatus, ContractType
+from .permission import Permission
+from .user import User, UserRole
 
 __all__ = [
     "User",
     "UserRole", 
     "Contract",
     "ContractStatus",
-    "ContractType"
+    "ContractType",
+    "Permission"
+    
 ]

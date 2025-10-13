@@ -1,54 +1,34 @@
-alembic==1.16.4
-annotated-types==0.7.0
-anyio==4.10.0
-APScheduler==3.11.0 """Biblioteca para agendar tarefas em Python, como enviar e-mails periódicos ou limpar dados antigos. 
-Permite agendar tarefas automáticas como Enviar e-mail 3 dias antes de um contrato expirar,Executar um backup todo dia às 2h da manhã."""
-babel==2.17.0
-click==8.2.1
-docxcompose==1.4.0
-docxtpl==0.20.1
-fastapi==0.116.1   """permite construir APIs web rápidas con Python. Ele cuida de:Rotas (@app.get("/users")). 
-Requisições e respostas HTTP (JSON, headers, etc.). Integração com Pydantic (validação automática)."""
-fastapi-mail==1.0.6
-greenlet==3.2.4
-h11==0.16.0
-httptools==0.6.4
-idna==3.10
-Jinja2==3.1.6
-lxml==6.0.1
-Mako==1.3.10
-MarkupSafe==3.0.2
-pydantic==2.11.7 """Serve para validar e tipar os dados que chegam na API.
-Ele garante que os dados recebidos (de requisições, formulários, etc.) estejam corretos e no formato esperado."""
-pydantic_core==2.33.2
-PyMySQL==1.1.2 """Driver MySQL para Python, permitindo que aplicativos Python se conectem e interajam com bancos de dados MySQL.
-É o “motor de comunicação” que permite o Python falar com o MySQL.SQLAlchemy sozinho não sabe conectar — ele precisa de um driver.
-Exemplo:
-Para MySQL: usamos PyMySQL.Para PostgreSQL: usaríamos psycopg2.
-SQLAlchemy + PyMySQL = conseguem conversar com o MySQL.
-SQLAlchemy + psycopg2 = conseguem conversar com o PostgreSQL."""
-python-docx==1.2.0 """Biblioteca para ler, criar e editar arquivos .docx (Word) diretamente no Python. 
-Útil no seu projeto para gerar relatórios ou contratos automáticos."""
-python-dotenv==1.1.1
-python-multipart==0.0.20
-PyYAML==6.0.2
-setuptools==80.9.0
-six==1.17.0
-sniffio==1.3.1
-SQLAlchemy==2.0.43 """ORM (Object-Relational Mapping) que facilita a interação com bancos de dados relacionais usando objetos 
-Python em vez de escrever SQL diretamente.Importante:SQLAlchemy ≠ MySQL.
-MySQL é o banco de dados (onde os dados vivem).
-SQLAlchemy é só a camada Python para falar com esse banco."""
-starlette==0.47.3
-typing-inspection==0.4.1
-typing_extensions==4.14.1
-tzlocal==5.3.1
-uvicorn==0.35.0 """É o servidor que realmente roda sua aplicação FastAPI. Ele recebe requisições HTTP, chama sua aplicação e 
-devolve a resposta. FastAPI é só a aplicação, não o servidor."""
-uvloop==0.21.0
-watchfiles==1.1.0
-websockets==15.0.1
-python-jose[cryptography]==3.3.0  # JWT token handling - JWT-Token-Verwaltung
-passlib[bcrypt]==1.7.4  # Password hashing - Passwort-Hashing   
+# Contract Management System - Dependências Essenciais
+# Vertragsverwaltungssystem - Wesentliche Abhängigkeiten
+# Sistema de Gerenciamento de Contratos - Dependências Essenciais
+
+# ===== CORE FRAMEWORK =====
+fastapi>=0.115  # Framework web principal
+uvicorn[standard]>=0.20,<1.0  # Servidor ASGI
+python-multipart>=0.0.9  # Para upload de arquivos
+
+# ===== DATABASE =====
+sqlalchemy>=2.0  # ORM para banco de dados
+alembic>=1.11  # Migrações de banco de dados
+
+# ===== AUTHENTICATION & SECURITY =====
+python-jose[cryptography]>=3.3  # JWT tokens
+passlib[bcrypt]>=1.7.4  # Hash de senhas
+python-dotenv>=1.0.0  # Variáveis de ambiente
+
+# ===== VALIDATION =====
+pydantic>=2.5  # Validação de dados (já incluído no FastAPI)
+email-validator>=2.0.0  # Validação de email
+
+# ===== DEVELOPMENT & TESTING =====
+pytest>=7.0.0  # Testes
+pytest-asyncio>=0.21.0  # Testes assíncronos
+httpx>=0.24.0  # Cliente HTTP para testes
+
+# ===== CODE QUALITY =====
+flake8>=6.0.0  # Linting
+pylint>=3.0.0  # Análise de código
+black>=23.0.0  # Formatação de código
+
 
 

@@ -17,7 +17,7 @@ from app.core.config import settings
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.schemas.token import Token
-from app.services.user import UserService
+from backend.app.services.user_service import UserService
 
 
 # Router-Konfiguration
