@@ -9,8 +9,8 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.schemas.user import UserCreate, UserUpdate, UserResponse
-from backend.app.services.user_service import UserService
+from app.schemas.user import UserCreate, UserUpdate, UserResponse, UserRole
+from app.services.user_service import UserService
 from app.core.security import get_current_user, get_current_active_user
 from app.models.user import User
 
@@ -35,7 +35,7 @@ async def read_users(
     Alle Benutzer abrufen.
     Erfordert Authentifizierung.
     """
-    if not current_user.is_superuser:
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Nur Administratoren können alle Benutzer auflisten"
@@ -53,7 +53,7 @@ async def read_user(
     Einen Benutzer nach ID abrufen.
     Erfordert Authentifizierung.
     """
-    if not current_user.is_superuser and current_user.id != user_id:
+    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Sie können nur Ihr eigenes Profil anzeigen"
@@ -74,7 +74,7 @@ async def create_user(
     Einen neuen Benutzer erstellen.
     Erfordert Authentifizierung.
     """
-    if not current_user.is_superuser:
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Nur Administratoren können Benutzer erstellen"
@@ -97,7 +97,7 @@ async def update_user(
     Einen vorhandenen Benutzer aktualisieren.
     Erfordert Authentifizierung.
     """
-    if not current_user.is_superuser and current_user.id != user_id:
+    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Sie können nur Ihr eigenes Profil aktualisieren"
@@ -169,7 +169,7 @@ async def activate_user(
     Erfordert Admin-Berechtigung 
     """
     # Nur Administratoren können Benutzer aktivieren
-    if not current_user.is_superuser:
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Nur Administratoren können Benutzer aktivieren"
@@ -198,7 +198,7 @@ async def deactivate_user(
     Erfordert Admin-Berechtigung 
     """
     # Nur Administratoren können Benutzer deaktivieren
-    if not current_user.is_superuser:
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Nur Administratoren können Benutzer deaktivieren"
@@ -235,7 +235,7 @@ async def search_users(
     Erfordert Admin-Berechtigung 
     """
     # Nur Administratoren können Benutzer suchen
-    if not current_user.is_superuser:
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Nur Administratoren können Benutzer suchen"

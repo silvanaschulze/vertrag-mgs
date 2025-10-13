@@ -30,7 +30,9 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Schema für die Erstellung eines neuen Benutzers"""
     password: str = Field(..., min_length=8, description="Benutzerpasswort (mindestens 8 Zeichen)")
-    
+    is_active: bool = Field(default=True, description="Benutzer ist aktiv / Usuário está ativo")
+    is_superuser: bool = Field(default=False, description="Benutzer ist Superuser (nur für ADMIN) / Usuário é superusuário (apenas para ADMIN)")
+
     @field_validator('password')
     @classmethod
     def validate_password(cls, v):
@@ -44,6 +46,13 @@ class UserCreate(UserBase):
         if not any(c.isdigit() for c in v):
             raise ValueError('Das Passwort muss mindestens eine Zahl enthalten')
         return v
+    
+    @field_validator('is_superuser')
+    @classmethod
+    def validate_superuser(cls, v, values):
+        """Validar que apenas ADMINs podem ser superuser"""
+        if v and 'role' in values and values['role'] != UserRole.ADMIN:
+            raise ValueError('Nur ADMINs können Superuser sein / Apenas ADMINs podem ser superusuários')
 
 # Schema für die Aktualisierung von Benutzerdaten
 class UserUpdate(BaseModel):

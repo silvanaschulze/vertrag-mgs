@@ -57,14 +57,11 @@ class UserService:
         )
         return result.scalar_one_or_none()
     
-    async def get_user_by_username(self, username: str) -> Optional[User]:
+    async def get_user(self, user_id: int) -> Optional[User]:
         """
-        Benutzer nach Benutzername abrufen 
+        Benutzer nach ID abrufen (Alias für get_user_by_id)
         """
-        result = await self.db.execute(
-            select(User).where(User.username == username)
-        )
-        return result.scalar_one_or_none()
+        return await self.get_user_by_id(user_id)
     
     async def get_user_by_email(self, email: str) -> Optional[User]:
         """

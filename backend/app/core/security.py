@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
-from backend.app.services.user_service import UserService
+from app.services.user_service import UserService
 from app.schemas.token import TokenData
 
 

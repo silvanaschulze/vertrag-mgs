@@ -7,10 +7,10 @@ Es fungiert als Vermittler zwischen den Routers (API-Endpunkte) und den Models (
 from datetime import date, datetime, timedelta, UTC
 from typing import List, Optional, Dict, Any
 from decimal import Decimal
-from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_, desc, asc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, or_, and_, desc, asc, select
 #schemas models
-from ..models.contract import Contract, ContractStatus, ContractType, get_contract_by_id, get_active_contracts, get_expired_contracts
+from ..models.contract import Contract, ContractStatus, ContractType
 from ..schemas.contract import (
      ContractCreate, 
      ContractUpdate, 
@@ -27,17 +27,17 @@ class ContractService:
     Funções principais das operações de contrato
     """
     
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         """
         Initialisiert den Dienst mit einer Datenbanksitzung.
         Inicializa o serviço com uma sessão de banco de dados.
         
         Args / Argumentos:
-            db (Session): SQLAlchemy-sitzung für die Datenbankinteraktion / Sessão SQLAlchemy para interação com banco de dados
+            db (AsyncSession): SQLAlchemy-sitzung für die Datenbankinteraktion / Sessão SQLAlchemy para interação com banco de dados
         """
         self.db = db
     
-    def create_contract(self, contract_data: ContractCreate, created_by: int) -> ContractResponse:
+    async def create_contract(self, contract_data: ContractCreate, created_by: int) -> ContractResponse:
         """
         Erstellt einen neuen Vertrag / Cria um novo contrato
         
@@ -75,11 +75,11 @@ class ContractService:
         
         # In Datenbank speichern / Salvar no banco de dados
         self.db.add(db_contract)
-        self.db.commit()
-        self.db.refresh(db_contract)
+        await self.db.commit()
+        await self.db.refresh(db_contract)
         return ContractResponse.model_validate(db_contract)
 
-    def get_contract(self, contract_id: int) -> Optional[ContractResponse]:
+    async def get_contract(self, contract_id: int) -> Optional[ContractResponse]:
         """
         Vertrag nach ID abrufen / Recuperar contrato por ID
         
@@ -89,12 +89,15 @@ class ContractService:
         Returns / Retorna:
             Optional[ContractResponse]: Vertrag oder None / Contrato ou None
         """
-        db_contract = get_contract_by_id(self.db, contract_id)
+        result = await self.db.execute(
+            select(Contract).where(Contract.id == contract_id)
+        )
+        db_contract = result.scalar_one_or_none()
         if db_contract:
             return ContractResponse.model_validate(db_contract)
         return None
 
-    def update_contract(self, contract_id: int, update_data: ContractUpdate) -> Optional[ContractResponse]:
+    async def update_contract(self, contract_id: int, update_data: ContractUpdate) -> Optional[ContractResponse]:
         """
         Vertrag aktualisieren / Atualizar contrato
         
@@ -106,7 +109,10 @@ class ContractService:
             Optional[ContractResponse]: Aktualisierter Vertrag oder None / Contrato atualizado ou None
         """
         # Bestehenden Vertrag suchen / Buscar contrato existente
-        db_contract = get_contract_by_id(self.db, contract_id)
+        result = await self.db.execute(
+            select(Contract).where(Contract.id == contract_id)
+        )
+        db_contract = result.scalar_one_or_none()
         if not db_contract:
             return None
         
@@ -127,11 +133,11 @@ class ContractService:
             setattr(db_contract, key, value)
 
         # In die Datenbank speichern / Salvar no banco de dados
-        self.db.commit()
-        self.db.refresh(db_contract)
+        await self.db.commit()
+        await self.db.refresh(db_contract)
         return ContractResponse.model_validate(db_contract) 
 
-    def list_contracts(self, skip: int = 0, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> ContractListResponse:
+    async def list_contracts(self, skip: int = 0, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> ContractListResponse:
         """
         Verträge auflisten / Listar contratos
         
@@ -143,37 +149,95 @@ class ContractService:
         Returns / Retorna:
             ContractListResponse: Liste der Verträge / Lista de contratos
         """
-        query = self.db.query(Contract)
+        # Base query / Query base
+        query = select(Contract)
         
         # Filter anwenden / Aplicar filtros
         if filters:
             for attr, value in filters.items():
                 if hasattr(Contract, attr):
-                    query = query.filter(getattr(Contract, attr) == value)
+                    query = query.where(getattr(Contract, attr) == value)
         
-        total = query.count()
+        # Total count / Contagem total
+        count_query = select(func.count(Contract.id))
+        if filters:
+            for attr, value in filters.items():
+                if hasattr(Contract, attr):
+                    count_query = count_query.where(getattr(Contract, attr) == value)
+        
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar()
 
         # Paginierung und Sortierung anwenden / Aplicar paginação e ordenação
-        query = query.order_by(desc(Contract.created_at))
-        contracts = query.offset(skip).limit(limit).all()
+        query = query.order_by(desc(Contract.created_at)).offset(skip).limit(limit)
+        
+        result = await self.db.execute(query)
+        contracts = result.scalars().all()
         contract_list = [ContractResponse.model_validate(c) for c in contracts]
         current_page = (skip // limit) + 1 if limit else 1
         
         return ContractListResponse(total=total, contracts=contract_list, page=current_page, per_page=len(contract_list))   
     
-    def get_contract_stats(self) -> ContractStats:
+
+
+
+
+
+
+    async def delete_contract(self, contract_id: int) -> bool:
         """
-        Vertragsstatistiken abrufen / Recuperar estatísticas de contratos
+        Vertrag löschen / Deletar contrato
+        
+        Args / Argumentos:
+            contract_id (int): Vertrags-ID / ID do contrato
+            
+        Returns / Retorna:
+            bool: Erfolg der Löschung / Sucesso da exclusão
+        """
+        result = await self.db.execute(
+            select(Contract).where(Contract.id == contract_id)
+        )
+        db_contract = result.scalar_one_or_none()
+        if not db_contract:
+            return False
+        await self.db.delete(db_contract)
+        await self.db.commit()
+        return True 
+
+    async def get_contract_stats(self) -> ContractStats:
+        """
+        Vertragsstatistiken abrufen / Obter estatísticas dos contratos
         
         Returns / Retorna:
-            ContractStats: Vertragsstatistiken / Estatísticas de contratos
+            ContractStats: Statistiken / Estatísticas
         """
-        total_contracts = self.db.query(func.count(Contract.id)).scalar()
-        active_contracts = self.db.query(func.count(Contract.id)).filter(Contract.status == ContractStatus.ACTIVE).scalar()
-        expired_contracts = self.db.query(func.count(Contract.id)).filter(Contract.status == ContractStatus.EXPIRED).scalar()
-        draft_contracts = self.db.query(func.count(Contract.id)).filter(Contract.status == ContractStatus.DRAFT).scalar()
-        total_value_result = self.db.query(func.sum(Contract.value)).filter(Contract.value.isnot(None)).scalar()
-        total_value = total_value_result or Decimal('0')
+        # Total contracts / Total de contratos
+        total_result = await self.db.execute(select(func.count(Contract.id)))
+        total_contracts = total_result.scalar()
+        
+        # Active contracts / Contratos ativos
+        active_result = await self.db.execute(
+            select(func.count(Contract.id)).where(Contract.status == "active")
+        )
+        active_contracts = active_result.scalar()
+        
+        # Expired contracts / Contratos expirados
+        expired_result = await self.db.execute(
+            select(func.count(Contract.id)).where(Contract.status == "expired")
+        )
+        expired_contracts = expired_result.scalar()
+        
+        # Draft contracts / Contratos em rascunho
+        draft_result = await self.db.execute(
+            select(func.count(Contract.id)).where(Contract.status == "draft")
+        )
+        draft_contracts = draft_result.scalar()
+        
+        # Total value / Valor total
+        value_result = await self.db.execute(
+            select(func.sum(Contract.value)).where(Contract.value.isnot(None))
+        )
+        total_value = value_result.scalar() or Decimal('0')
         
         return ContractStats(
             total_contracts=total_contracts,
@@ -184,222 +248,118 @@ class ContractService:
             currency="EUR"
         )
 
-    def get_active_contracts_service(self) -> List[ContractResponse]:
+    async def search_contracts(self, query: str, skip: int = 0, limit: int = 10) -> ContractListResponse:
         """
-        Aktive Verträge abrufen / Recuperar contratos ativos
-        
-        Returns / Retorna:
-            List[ContractResponse]: Liste aktiver Verträge / Lista de contratos ativos
-        """
-        active_contracts = get_active_contracts(self.db)
-        return [ContractResponse.model_validate(c) for c in active_contracts]      
-
-    def get_expired_contracts_service(self) -> List[ContractResponse]:
-        """
-        Abgelaufene Verträge abrufen / Recuperar contratos expirados
-        
-        Returns / Retorna:
-            List[ContractResponse]: Liste abgelaufener Verträge / Lista de contratos expirados
-        """
-        expired_contracts = get_expired_contracts(self.db)
-        return [ContractResponse.model_validate(c) for c in expired_contracts]  
-
-    def get_contracts_expiring_within(self, days: int) -> List[ContractResponse]:
-        """
-        Verträge abrufen, die in den nächsten X Tagen ablaufen / Recuperar contratos que vencem nos próximos X dias
+        Verträge suchen / Buscar contratos
         
         Args / Argumentos:
-            days (int): Anzahl der Tage / Número de dias
+            query (str): Suchbegriff / Termo de busca
+            skip (int): Anzahl zu überspringen / Número para pular
+            limit (int): Maximale Anzahl / Número máximo
             
         Returns / Retorna:
-            List[ContractResponse]: Liste der Verträge / Lista de contratos
+            ContractListResponse: Suchergebnisse / Resultados da busca
         """
-        target_date = date.today() + timedelta(days=days)
-        contracts = self.db.query(Contract).filter(
-            and_(
-                Contract.end_date.isnot(None),
-                Contract.end_date <= target_date,
-                Contract.status == ContractStatus.ACTIVE
-            )
-        ).all()
-        return [ContractResponse.model_validate(c) for c in contracts]      
+        search_filter = or_(
+            Contract.title.ilike(f"%{query}%"),
+            Contract.description.ilike(f"%{query}%"),
+            Contract.client_name.ilike(f"%{query}%")
+        )
+        
+        # Total count / Contagem total
+        count_query = select(func.count(Contract.id)).where(search_filter)
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar()
+        
+        # Search results / Resultados da busca
+        query_obj = select(Contract).where(search_filter).order_by(desc(Contract.created_at)).offset(skip).limit(limit)
+        result = await self.db.execute(query_obj)
+        contracts = result.scalars().all()
+        
+        return ContractListResponse(
+            contracts=[ContractResponse.model_validate(c) for c in contracts],
+            total=total,
+            skip=skip,
+            limit=limit
+        )
 
-    def get_contracts_by_client(self, client_name: str) -> List[ContractResponse]:
+    async def get_active_contracts(self, skip: int = 0, limit: int = 10) -> ContractListResponse:
         """
-        Verträge nach Kundenname abrufen / Recuperar contratos por nome do cliente
+        Aktive Verträge abrufen / Obter contratos ativos
+        
+        Args / Argumentos:
+            skip (int): Anzahl zu überspringen / Número para pular
+            limit (int): Maximale Anzahl / Número máximo
+            
+        Returns / Retorna:
+            ContractListResponse: Aktive Verträge / Contratos ativos
+        """
+        return await self.list_contracts(skip=skip, limit=limit, filters={"status": "active"})
+
+    async def get_contracts_expiring_within(self, days: int, skip: int = 0, limit: int = 10) -> ContractListResponse:
+        """
+        Verträge abrufen, die in X Tagen ablaufen / Obter contratos que expiram em X dias
+        
+        Args / Argumentos:
+            days (int): Anzahl Tage / Número de dias
+            skip (int): Anzahl zu überspringen / Número para pular
+            limit (int): Maximale Anzahl / Número máximo
+            
+        Returns / Retorna:
+            ContractListResponse: Verträge / Contratos
+        """
+        from datetime import datetime, timedelta
+        target_date = datetime.now() + timedelta(days=days)
+        
+        # Total count / Contagem total
+        count_query = select(func.count(Contract.id)).where(
+            Contract.end_date <= target_date,
+            Contract.status == "active"
+        )
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar()
+        
+        # Contracts / Contratos
+        query = select(Contract).where(
+            Contract.end_date <= target_date,
+            Contract.status == "active"
+        ).order_by(Contract.end_date.asc()).offset(skip).limit(limit)
+        
+        result = await self.db.execute(query)
+        contracts = result.scalars().all()
+        
+        return ContractListResponse(
+            contracts=[ContractResponse.model_validate(c) for c in contracts],
+            total=total,
+            skip=skip,
+            limit=limit
+        )
+
+    async def get_expired_contracts(self, skip: int = 0, limit: int = 10) -> ContractListResponse:
+        """
+        Abgelaufene Verträge abrufen / Obter contratos expirados
+        
+        Args / Argumentos:
+            skip (int): Anzahl zu überspringen / Número para pular
+            limit (int): Maximale Anzahl / Número máximo
+            
+        Returns / Retorna:
+            ContractListResponse: Abgelaufene Verträge / Contratos expirados
+        """
+        return await self.list_contracts(skip=skip, limit=limit, filters={"status": "expired"})
+
+    async def get_contracts_by_client(self, client_name: str, skip: int = 0, limit: int = 10) -> ContractListResponse:
+        """
+        Verträge nach Kunde abrufen / Obter contratos por cliente
         
         Args / Argumentos:
             client_name (str): Kundenname / Nome do cliente
+            skip (int): Anzahl zu überspringen / Número para pular
+            limit (int): Maximale Anzahl / Número máximo
             
         Returns / Retorna:
-            List[ContractResponse]: Liste der Verträge / Lista de contratos
+            ContractListResponse: Verträge des Kunden / Contratos do cliente
         """
-        contracts = self.db.query(Contract).filter(
-            Contract.client_name.ilike(f"%{client_name}%")
-        ).all()
-        return [ContractResponse.model_validate(c) for c in contracts]  
-
-    def get_contracts_by_type(self, contract_type: ContractType) -> List[ContractResponse]:
-        """
-        Verträge nach Typ abrufen / Recuperar contratos por tipo
-        
-        Args / Argumentos:
-            contract_type (ContractType): Vertragstyp / Tipo de contrato
-            
-        Returns / Retorna:
-            List[ContractResponse]: Liste der Verträge / Lista de contratos
-        """
-        contracts = self.db.query(Contract).filter(
-            Contract.contract_type == contract_type
-        ).all()
-        return [ContractResponse.model_validate(c) for c in contracts]
-
-    def search_contracts(self, query_str: str) -> List[ContractResponse]:
-        """
-        Verträge durchsuchen / Buscar contratos
-        
-        Args / Argumentos:
-            query_str (str): Suchbegriff / Termo de busca
-            
-        Returns / Retorna:
-            List[ContractResponse]: Liste der gefundenen Verträge / Lista de contratos encontrados
-        """
-        search_pattern = f"%{query_str}%"
-        contracts = self.db.query(Contract).filter(
-            or_(
-                Contract.title.ilike(search_pattern),
-                Contract.description.ilike(search_pattern),
-                Contract.client_name.ilike(search_pattern),
-                Contract.client_email.ilike(search_pattern),
-                Contract.client_phone.ilike(search_pattern),
-                Contract.client_address.ilike(search_pattern),
-                Contract.terms_and_conditions.ilike(search_pattern),
-                Contract.notes.ilike(search_pattern)
-            )
-        ).all()
-        return [ContractResponse.model_validate(c) for c in contracts]      
-
-    def bulk_update_contract_status(self, contract_ids: List[int], new_status: ContractStatus) -> int:
-        """
-        Vertragsstatus in Stapel aktualisieren / Atualizar status de contratos em lote
-        
-        Args / Argumentos:
-            contract_ids (List[int]): Liste der Vertrags-IDs / Lista de IDs de contratos
-            new_status (ContractStatus): Neuer Status / Novo status
-            
-        Returns / Retorna:
-            int: Anzahl aktualisierter Verträge / Número de contratos atualizados
-        """
-        update_count = self.db.query(Contract).filter(
-            Contract.id.in_(contract_ids)
-        ).update(
-            {Contract.status: new_status, Contract.updated_at: datetime.now(UTC)},
-            synchronize_session=False
-        )
-        self.db.commit()
-        return update_count 
-
-    def bulk_delete_contracts(self, contract_ids: List[int]) -> int:
-        """
-        Verträge in Stapel löschen / Deletar contratos em lote
-        
-        Args / Argumentos:
-            contract_ids (List[int]): Liste der Vertrags-IDs / Lista de IDs de contratos
-            
-        Returns / Retorna:
-            int: Anzahl gelöschter Verträge / Número de contratos deletados
-        """
-        delete_count = self.db.query(Contract).filter(
-            Contract.id.in_(contract_ids)
-        ).delete(synchronize_session=False)
-        self.db.commit()
-        return delete_count     
-
-    def get_contracts_nearing_renewal(self, days: int) -> List[ContractResponse]:
-        """
-        Verträge abrufen, die sich der Verlängerung nähern / Recuperar contratos próximos da renovação
-        
-        Args / Argumentos:
-            days (int): Anzahl der Tage / Número de dias
-            
-        Returns / Retorna:
-            List[ContractResponse]: Liste der Verträge / Lista de contratos
-        """
-        target_date = date.today() + timedelta(days=days)
-        contracts = self.db.query(Contract).filter(
-            and_(
-                Contract.renewal_date.isnot(None),
-                Contract.renewal_date <= target_date,
-                Contract.status == ContractStatus.ACTIVE
-            )
-        ).all()
-        return [ContractResponse.model_validate(c) for c in contracts]  
-
-    def get_high_value_contracts(self, min_value: Decimal) -> List[ContractResponse]:
-        """
-        Hochwertige Verträge abrufen / Recuperar contratos de alto valor
-        
-        Args / Argumentos:
-            min_value (Decimal): Mindestwert / Valor mínimo
-            
-        Returns / Retorna:
-            List[ContractResponse]: Liste der Verträge / Lista de contratos
-        """
-        contracts = self.db.query(Contract).filter(
-            and_(
-                Contract.value.isnot(None),
-                Contract.value >= min_value
-            )
-        ).all()
-        return [ContractResponse.model_validate(c) for c in contracts]  
-
-    def get_recently_updated_contracts(self, days: int) -> List[ContractResponse]:
-        """
-        Kürzlich aktualisierte Verträge abrufen / Recuperar contratos atualizados recentemente
-        
-        Args / Argumentos:
-            days (int): Anzahl der Tage / Número de dias
-            
-        Returns / Retorna:
-            List[ContractResponse]: Liste der Verträge / Lista de contratos
-        """
-        target_datetime = datetime.now(UTC) - timedelta(days=days)
-        contracts = self.db.query(Contract).filter(
-            Contract.updated_at.isnot(None),
-            Contract.updated_at >= target_datetime
-        ).all()
-        return [ContractResponse.model_validate(c) for c in contracts]  
-
-    def get_contracts_created_by_user(self, user_id: int) -> List[ContractResponse]:
-        """
-        Verträge abrufen, die von einem Benutzer erstellt wurden / Recuperar contratos criados por um usuário
-        
-        Args / Argumentos:
-            user_id (int): Benutzer-ID / ID do usuário
-            
-        Returns / Retorna:
-            List[ContractResponse]: Liste der Verträge / Lista de contratos
-        """
-        contracts = self.db.query(Contract).filter(
-            Contract.created_by == user_id
-        ).all()
-        return [ContractResponse.model_validate(c) for c in contracts]  
-
-    def delete_contract(self, contract_id: int) -> bool:
-        """
-        Vertrag löschen / Deletar contrato
-        
-        Args / Argumentos:
-            contract_id (int): Vertrags-ID / ID do contrato
-            
-        Returns / Retorna:
-            bool: Erfolg der Löschung / Sucesso da exclusão
-        """
-        db_contract = get_contract_by_id(self.db, contract_id)
-        if not db_contract:
-            return False
-        self.db.delete(db_contract)
-        self.db.commit()
-        return True 
+        return await self.list_contracts(skip=skip, limit=limit, filters={"client_name": client_name})
 
      
