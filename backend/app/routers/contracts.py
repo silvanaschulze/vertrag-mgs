@@ -77,7 +77,10 @@ async def list_contracts(
         filters={
             'status': status,
             'contract_type': contract_type
-        } if status or contract_type else None
+        } if status or contract_type else None,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order
     )   
 # POST /contracts/ - Erstellt einen neuen Vertrag
 @router.post("/", response_model=ContractResponse, status_code=status.HTTP_201_CREATED)

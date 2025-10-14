@@ -7,6 +7,7 @@ Passwort-Hashing und Verifizierungsfunktionen
 from passlib.context import CryptContext
 
 # Kontext für Passwort-Hashing 
+# Kontext für Passwort-Hashing 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_password_hash(password: str) -> str:

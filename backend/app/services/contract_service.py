@@ -137,7 +137,7 @@ class ContractService:
         await self.db.refresh(db_contract)
         return ContractResponse.model_validate(db_contract) 
 
-    async def list_contracts(self, skip: int = 0, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> ContractListResponse:
+    async def list_contracts(self, skip: int = 0, limit: int = 10, filters: Optional[Dict[str, Any]] = None, search: Optional[str] = None, sort_by: str = "created_at", sort_order: str = "desc") -> ContractListResponse:
         """
         Verträge auflisten / Listar contratos
         
@@ -158,6 +158,16 @@ class ContractService:
                 if hasattr(Contract, attr):
                     query = query.where(getattr(Contract, attr) == value)
         
+         # Search anwenden / Aplicar busca
+        if search:
+            search_filter = or_(
+                Contract.title.ilike(f"%{search}%"),
+                Contract.description.ilike(f"%{search}%"),
+                Contract.client_name.ilike(f"%{search}%")
+            )
+            query = query.where(search_filter)
+        
+
         # Total count / Contagem total
         count_query = select(func.count(Contract.id))
         if filters:
@@ -169,15 +179,22 @@ class ContractService:
         total = total_result.scalar()
 
         # Paginierung und Sortierung anwenden / Aplicar paginação e ordenação
-        query = query.order_by(desc(Contract.created_at)).offset(skip).limit(limit)
+                # Sortierung anwenden / Aplicar ordenação
+        sort_column = getattr(Contract, sort_by, Contract.created_at)
+        if sort_order.lower() == "asc":
+            query = query.order_by(asc(sort_column))
+        else:
+            query = query.order_by(desc(sort_column))
+        
+        # Paginierung anwenden / Aplicar paginação
+        query = query.offset(skip).limit(limit)
         
         result = await self.db.execute(query)
         contracts = result.scalars().all()
         contract_list = [ContractResponse.model_validate(c) for c in contracts]
         current_page = (skip // limit) + 1 if limit else 1
         
-        return ContractListResponse(total=total, contracts=contract_list, page=current_page, per_page=len(contract_list))   
-    
+        return ContractListResponse(total=total, contracts=contract_list, page=current_page, per_page=limit)  
 
 
 
@@ -217,19 +234,19 @@ class ContractService:
         
         # Active contracts / Contratos ativos
         active_result = await self.db.execute(
-            select(func.count(Contract.id)).where(Contract.status == "active")
+            select(func.count(Contract.id)).where(Contract.status == ContractStatus.ACTIVE)
         )
         active_contracts = active_result.scalar()
         
         # Expired contracts / Contratos expirados
         expired_result = await self.db.execute(
-            select(func.count(Contract.id)).where(Contract.status == "expired")
+            select(func.count(Contract.id)).where(Contract.status == ContractStatus.EXPIRED)
         )
         expired_contracts = expired_result.scalar()
         
         # Draft contracts / Contratos em rascunho
         draft_result = await self.db.execute(
-            select(func.count(Contract.id)).where(Contract.status == "draft")
+           select(func.count(Contract.id)).where(Contract.status == ContractStatus.DRAFT)
         )
         draft_contracts = draft_result.scalar()
         
@@ -294,7 +311,7 @@ class ContractService:
         Returns / Retorna:
             ContractListResponse: Aktive Verträge / Contratos ativos
         """
-        return await self.list_contracts(skip=skip, limit=limit, filters={"status": "active"})
+        return await self.list_contracts(skip=skip, limit=limit, filters={"status": ContractStatus.ACTIVE})
 
     async def get_contracts_expiring_within(self, days: int, skip: int = 0, limit: int = 10) -> ContractListResponse:
         """
@@ -314,7 +331,7 @@ class ContractService:
         # Total count / Contagem total
         count_query = select(func.count(Contract.id)).where(
             Contract.end_date <= target_date,
-            Contract.status == "active"
+            Contract.status == ContractStatus.ACTIVE
         )
         total_result = await self.db.execute(count_query)
         total = total_result.scalar()
@@ -322,7 +339,7 @@ class ContractService:
         # Contracts / Contratos
         query = select(Contract).where(
             Contract.end_date <= target_date,
-            Contract.status == "active"
+            Contract.status == ContractStatus.ACTIVE
         ).order_by(Contract.end_date.asc()).offset(skip).limit(limit)
         
         result = await self.db.execute(query)
@@ -346,7 +363,7 @@ class ContractService:
         Returns / Retorna:
             ContractListResponse: Abgelaufene Verträge / Contratos expirados
         """
-        return await self.list_contracts(skip=skip, limit=limit, filters={"status": "expired"})
+        return await self.list_contracts(skip=skip, limit=limit, filters={"status": ContractStatus.EXPIRED})
 
     async def get_contracts_by_client(self, client_name: str, skip: int = 0, limit: int = 10) -> ContractListResponse:
         """

@@ -36,3 +36,10 @@ backend/test_local.py
 
 # Documentação local
 docs/
+
+# Python e VS Code
+.venv/
+.vscode/
+__pycache__/
+*.pyc
+

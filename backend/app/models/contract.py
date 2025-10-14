@@ -113,21 +113,5 @@ class Contract(Base):
         }
 
 
-# Hilfsfunktionen für das Modell
-def get_contract_by_id(db, contract_id: int) -> Optional[Contract]:
-    """ Vertrag anhand der ID abrufen aus Datenbank abrufen """
-    return db.query(Contract).filter(Contract.id == contract_id).first()    
 
-def get_active_contracts(db) -> list[Contract]:
-    """ Alle aktiven Verträge abrufen aus Datenbank abrufen """
-    return db.query(Contract).filter(Contract.status == ContractStatus.ACTIVE).all() 
-
-def get_expired_contracts(db, days:int =30) -> list[Contract]:
-    """ Verträge abrufen, die innerhalb der angegebenen Tage ablaufen  """
-    from datetime import timedelta
-    expiry_date = datetime.now().date() + timedelta(days=days)
-    return db.query(Contract).filter(
-        Contract.end_date <= expiry_date,
-        Contract.status == ContractStatus.ACTIVE
-    ).all() 
 

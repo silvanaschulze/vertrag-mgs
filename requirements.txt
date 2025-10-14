@@ -16,6 +16,34 @@ python-jose[cryptography]>=3.3  # JWT tokens
 passlib[bcrypt]>=1.7.4  # Hash de senhas
 python-dotenv>=1.0.0  # Variáveis de ambiente
 
+# Compatibilidade com pydantic BaseSettings (pydantic v2 separou pydantic-settings)
+pydantic-settings>=0.1
+docxtpl>=0.17.0
+aiosqlite>=0.18.0
+
+# ===== VALIDATION =====
+pydantic>=2.5  # Validação de dados (já incluído no FastAPI)
+email-validator>=2.0.0  # Validação de email
+
+# ===== DEVELOPMENT & TESTING =====
+pytest>=7.0.0  # Testes
+pytest-asyncio>=0.21.0  # Testes assíncronos
+httpx>=0.24.0  # Cliente HTTP para testes
+
+# ===== CODE QUALITY =====
+fastapi>=0.115  # Framework web principal
+uvicorn[standard]>=0.20,<1.0  # Servidor ASGI
+python-multipart>=0.0.9  # Para upload de arquivos
+
+# ===== DATABASE =====
+sqlalchemy>=2.0  # ORM para banco de dados
+alembic>=1.11  # Migrações de banco de dados
+
+# ===== AUTHENTICATION & SECURITY =====
+python-jose[cryptography]>=3.3  # JWT tokens
+passlib[bcrypt]>=1.7.4  # Hash de senhas
+python-dotenv>=1.0.0  # Variáveis de ambiente
+
 # ===== VALIDATION =====
 pydantic>=2.5  # Validação de dados (já incluído no FastAPI)
 email-validator>=2.0.0  # Validação de email

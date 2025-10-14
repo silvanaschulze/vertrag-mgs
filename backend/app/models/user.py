@@ -65,12 +65,8 @@ class User(Base):
     preferences = Column(Text, nullable=True)  # JSON String für Benutzerpräferenzen
 
     #Beziehungen
-    contracts = relationship("Contract", back_populates="creator")  
-    files = relationship("File", back_populates="uploader")  
-    notifications = relationship("Notification", back_populates="recipient")  
-    activities = relationship("ActivityLog", back_populates="user")  
-    responsible_contracts = relationship("Contract", back_populates="responsible") 
-
+    
+    contracts = relationship("Contract", back_populates="creator") 
     
     """String Darstellung des Benutzers"""
     def __repr__(self):
@@ -104,29 +100,7 @@ class User(Base):
 
     # Hilfsfunktionen für das User-Modell
 
-def get_user_by_id(db, user_id: int) -> Optional[User]:
-    """ Benutzer anhand der ID aus der Datenbank abrufen
-    """
-    return db.query(User).filter(User.id == user_id).first()
 
-
-def get_user_by_email(db, email: str) -> Optional[User]:
-    """Benutzer anhand der E-Mail aus der Datenbank abrufen
-    """
-    return db.query(User).filter(User.email == email).first()
-
-
-def get_user_by_username(db, username: str) -> Optional[User]:
-    """Benutzer anhand des Benutzernamens aus der Datenbank abrufen
-    Recuperar usuário por nome de usuário do banco de dados
-    """
-    return db.query(User).filter(User.username == username).first()
-
-
-def get_active_users(db) -> List[User]:
-    """Alle aktiven Benutzer aus der Datenbank abrufen
-    """
-    return db.query(User).filter(User.is_active == True, User.is_deleted == False).all()
 
 def create_user(db, email: str, name: str, password_hash: str, role: UserRole = UserRole.USER, username: Optional[str] = None) -> User:
     """ Neuen Benutzer in der Datenbank erstellen

@@ -39,6 +39,7 @@ class UserService:
             email=user_data.email,
             name=user_data.name,  # ← Corrigir: full_name para name
             password_hash=hashed_password,
+            role=user_data.role,
             is_active=user_data.is_active,
             is_superuser=user_data.is_superuser
         )

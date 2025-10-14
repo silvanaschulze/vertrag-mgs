@@ -49,9 +49,9 @@ class UserCreate(UserBase):
     
     @field_validator('is_superuser')
     @classmethod
-    def validate_superuser(cls, v, values):
+    def validate_superuser(cls, v, info):
         """Validar que apenas ADMINs podem ser superuser"""
-        if v and 'role' in values and values['role'] != UserRole.ADMIN:
+        if v and hasattr(info, 'data') and 'role' in info.data and info.data['role'] != UserRole.ADMIN:
             raise ValueError('Nur ADMINs können Superuser sein / Apenas ADMINs podem ser superusuários')
 
 # Schema für die Aktualisierung von Benutzerdaten
