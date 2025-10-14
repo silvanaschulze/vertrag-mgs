@@ -60,3 +60,9 @@ black>=23.0.0  # Formatação de código
 
 
 
+
+fastapi
+uvicorn[standard]
+python-multipart
+email-validator
+pydantic-settings

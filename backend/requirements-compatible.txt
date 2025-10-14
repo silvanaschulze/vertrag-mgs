@@ -31,3 +31,9 @@ spacy>=3.6.0
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
 httpx>=0.24.0
+
+fastapi
+uvicorn[standard]
+python-multipart
+email-validator
+pydantic-settings

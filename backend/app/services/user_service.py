@@ -4,13 +4,14 @@ Geschäftslogik für Benutzeroperationen
 """
 
 from typing import Optional, List
+from typing import cast
+from sqlalchemy import select, update, delete, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
-from sqlalchemy.orm import selectinload
+
 
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
-from app.utils import get_password_hash, verify_password
+from app.utils.security import get_password_hash, verify_password
 
 class UserService:
     """Benutzerservice-Klasse """
@@ -23,7 +24,8 @@ class UserService:
         Neuen Benutzer erstellen 
         """
         # Prüfen ob Benutzer bereits existiert
-        existing_user = await self.get_user_by_username(user_data.username)
+        if user_data.username:   
+            existing_user = await self.get_user_by_username(user_data.username)
         if existing_user:
             raise ValueError("Username already exists - Benutzername bereits vorhanden - Nome de usuário já existe")
         
@@ -37,7 +39,7 @@ class UserService:
         db_user = User(
             username=user_data.username,
             email=user_data.email,
-            name=user_data.name,  # ← Corrigir: full_name para name
+            name=getattr(user_data, "name", None) or getattr(user_data, "full_name", None),
             password_hash=hashed_password,
             role=user_data.role,
             is_active=user_data.is_active,
@@ -45,8 +47,9 @@ class UserService:
         )
         
         self.db.add(db_user)
-        await self.db.commit()
+        await self.db.flush()      # pega PK sem precisar commitar
         await self.db.refresh(db_user)
+        await self.db.commit()
         return db_user
     
     async def get_user_by_id(self, user_id: int) -> Optional[User]:
@@ -64,13 +67,25 @@ class UserService:
         """
         return await self.get_user_by_id(user_id)
     
+    async def get_user_by_username(self, username: str) -> Optional[User]:
+        """
+        Benutzer nach Benutzername abrufen
+        """
+        """result = await self.db.execute(select(User).where(User.username == username))
+        return result.scalar_one_or_none()"""
+
+        if not username:
+            return None
+        result = await self.db.execute(
+            select(User).where(User.username == username)
+        )
+        return result.scalar_one_or_none()
+    
     async def get_user_by_email(self, email: str) -> Optional[User]:
         """
         Benutzer nach E-Mail abrufen 
         """
-        result = await self.db.execute(
-            select(User).where(User.email == email)
-        )
+        result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
     
     async def authenticate_user(self, username: str, password: str) -> Optional[User]:
@@ -80,7 +95,9 @@ class UserService:
         user = await self.get_user_by_username(username)
         if not user:
             return None
-        if not verify_password(password, user.password_hash):  # ← Corrigir: hashed_password para password_hash
+        
+        hashed = cast(str, getattr(user, "password_hash"))
+        if not verify_password(password, hashed):  # ← Corrigir: hashed_password para password_hash
             return None
         return user
     
@@ -110,11 +127,11 @@ class UserService:
         """
          Benutzer löschen 
         """
-        result = await self.db.execute(
-            delete(User).where(User.id == user_id)
-        )
+        user = await self.get_user_by_id(user_id)
+        return False
+        await self.db.delete(user)
         await self.db.commit()
-        return result.rowcount > 0
+        return True
     
     async def get_users(self, skip: int = 0, limit: int = 100) -> List[User]:
         """
@@ -123,7 +140,8 @@ class UserService:
         result = await self.db.execute(
             select(User).offset(skip).limit(limit)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
+       
     
     async def activate_user(self, user_id: int) -> bool:
         """
@@ -152,13 +170,12 @@ class UserService:
         """
         # Suche in Benutzername, E-Mail und vollständigem Namen
       
-        search_pattern = f"%{query}%"
-        
-        result = await self.db.execute(
-            select(User).where(
-                (User.username.ilike(search_pattern)) |
-                (User.email.ilike(search_pattern)) |
-                (User.name.ilike(search_pattern))  # ← Corrigir: full_name para name
-            ).offset(skip).limit(limit)
+        pattern = f"%{query}%"
+        stmt = (
+            select(User)
+            .where(or_(User.username.ilike(pattern), User.email.ilike(pattern), User.name.ilike(pattern)))
+            .offset(skip)
+            .limit(limit)
         )
-        return result.scalars().all()
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())

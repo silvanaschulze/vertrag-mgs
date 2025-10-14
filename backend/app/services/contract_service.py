@@ -4,11 +4,11 @@ Dieses Modul enthält die Geschäftslogik für Vertragsoperationen.
 Es fungiert als Vermittler zwischen den Routers (API-Endpunkte) und den Models (Datenbank).
 
 """
-from datetime import date, datetime, timedelta, UTC
-from typing import List, Optional, Dict, Any
+from datetime import date, datetime, timedelta
+from typing import List, Optional, Dict, Any, cast
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, or_, and_, desc, asc, select
+from sqlalchemy import func, or_, desc, asc, select, and_
 #schemas models
 from ..models.contract import Contract, ContractStatus, ContractType
 from ..schemas.contract import (
@@ -17,8 +17,7 @@ from ..schemas.contract import (
      ContractResponse, 
      ContractListResponse, 
      ContractInDB,
-     ContractStats,
-     ContractListResponse
+     ContractStats
 )
 
 class ContractService:
@@ -123,9 +122,9 @@ class ContractService:
         if 'end_date' in update_data_dict and 'start_date' in update_data_dict:
             if update_data_dict['end_date'] <= update_data_dict['start_date']:
                 raise ValueError("Enddatum muss nach dem Startdatum liegen. / Data de fim deve ser posterior à data de início.")
-        elif 'end_date' in update_data_dict and update_data_dict['end_date'] <= db_contract.start_date:
+        elif 'end_date' in update_data_dict and update_data_dict['end_date'] <= cast(date, db_contract.start_date):
             raise ValueError("Enddatum muss nach dem Startdatum liegen. / Data de fim deve ser posterior à data de início.")
-        elif 'start_date' in update_data_dict and db_contract.end_date and update_data_dict['start_date'] >= db_contract.end_date:
+        elif 'start_date' in update_data_dict and db_contract.end_date is not None and update_data_dict['start_date'] >= cast(date, db_contract.end_date):
             raise ValueError("Startdatum muss vor dem Endungsdatum liegen. / Data de início deve ser anterior à data de fim.")
         
         # Aktualisierungen anwenden / Aplicar atualizações
@@ -155,7 +154,7 @@ class ContractService:
         # Filter anwenden / Aplicar filtros
         if filters:
             for attr, value in filters.items():
-                if hasattr(Contract, attr):
+                if hasattr(Contract, attr) and value is not None:
                     query = query.where(getattr(Contract, attr) == value)
         
          # Search anwenden / Aplicar busca
@@ -172,11 +171,19 @@ class ContractService:
         count_query = select(func.count(Contract.id))
         if filters:
             for attr, value in filters.items():
-                if hasattr(Contract, attr):
+                if hasattr(Contract, attr) and value is not None:
                     count_query = count_query.where(getattr(Contract, attr) == value)
-        
+        # Search filter also apply to count / Aplicar filtro de busca também na contagem
+        if search:
+            search_filter = or_(
+                Contract.title.ilike(f"%{search}%"),
+                Contract.description.ilike(f"%{search}%"),
+                Contract.client_name.ilike(f"%{search}%")
+            )
+            count_query = count_query.where(search_filter)
+
         total_result = await self.db.execute(count_query)
-        total = total_result.scalar()
+        total = total_result.scalar() or 0
 
         # Paginierung und Sortierung anwenden / Aplicar paginação e ordenação
                 # Sortierung anwenden / Aplicar ordenação
@@ -230,29 +237,29 @@ class ContractService:
         """
         # Total contracts / Total de contratos
         total_result = await self.db.execute(select(func.count(Contract.id)))
-        total_contracts = total_result.scalar()
+        total_contracts = total_result.scalar() or 0
         
         # Active contracts / Contratos ativos
         active_result = await self.db.execute(
-            select(func.count(Contract.id)).where(Contract.status == ContractStatus.ACTIVE)
+            select(func.count(Contract.id)).where(Contract.status == ContractStatus.ACTIVE) # type: ignore
         )
-        active_contracts = active_result.scalar()
+        active_contracts = active_result.scalar() or 0
         
         # Expired contracts / Contratos expirados
         expired_result = await self.db.execute(
-            select(func.count(Contract.id)).where(Contract.status == ContractStatus.EXPIRED)
+            select(func.count(Contract.id)).where(Contract.status == ContractStatus.EXPIRED) # type: ignore
         )
-        expired_contracts = expired_result.scalar()
+        expired_contracts = expired_result.scalar() or 0
         
         # Draft contracts / Contratos em rascunho
         draft_result = await self.db.execute(
-           select(func.count(Contract.id)).where(Contract.status == ContractStatus.DRAFT)
+           select(func.count(Contract.id)).where(Contract.status == ContractStatus.DRAFT) # type: ignore
         )
-        draft_contracts = draft_result.scalar()
+        draft_contracts = draft_result.scalar() or 0
         
         # Total value / Valor total
         value_result = await self.db.execute(
-            select(func.sum(Contract.value)).where(Contract.value.isnot(None))
+            select(func.sum(Contract.value)).where(Contract.value.is_not(None))
         )
         total_value = value_result.scalar() or Decimal('0')
         
@@ -286,18 +293,18 @@ class ContractService:
         # Total count / Contagem total
         count_query = select(func.count(Contract.id)).where(search_filter)
         total_result = await self.db.execute(count_query)
-        total = total_result.scalar()
+        total = total_result.scalar() or 0
         
         # Search results / Resultados da busca
         query_obj = select(Contract).where(search_filter).order_by(desc(Contract.created_at)).offset(skip).limit(limit)
         result = await self.db.execute(query_obj)
         contracts = result.scalars().all()
-        
+        current_page = (skip // limit) + 1 if limit else 1
         return ContractListResponse(
             contracts=[ContractResponse.model_validate(c) for c in contracts],
             total=total,
-            skip=skip,
-            limit=limit
+            page=current_page,
+            per_page=limit
         )
 
     async def get_active_contracts(self, skip: int = 0, limit: int = 10) -> ContractListResponse:
@@ -330,26 +337,32 @@ class ContractService:
         
         # Total count / Contagem total
         count_query = select(func.count(Contract.id)).where(
-            Contract.end_date <= target_date,
-            Contract.status == ContractStatus.ACTIVE
+            and_(
+                Contract.end_date <= target_date,  # type: ignore
+                Contract.status == ContractStatus.ACTIVE # type: ignore
+            )
         )
+        
         total_result = await self.db.execute(count_query)
-        total = total_result.scalar()
+        total = total_result.scalar() or 0
         
         # Contracts / Contratos
         query = select(Contract).where(
-            Contract.end_date <= target_date,
-            Contract.status == ContractStatus.ACTIVE
-        ).order_by(Contract.end_date.asc()).offset(skip).limit(limit)
+            and_(
+                Contract.end_date <= target_date,   # type: ignore
+                Contract.status == ContractStatus.ACTIVE  # type: ignore
+            )
+        ).order_by(asc(Contract.end_date)).offset(skip).limit(limit)
         
         result = await self.db.execute(query)
         contracts = result.scalars().all()
         
+        current_page = (skip // limit) + 1 if limit else 1
         return ContractListResponse(
             contracts=[ContractResponse.model_validate(c) for c in contracts],
             total=total,
-            skip=skip,
-            limit=limit
+            page=current_page,
+            per_page=limit
         )
 
     async def get_expired_contracts(self, skip: int = 0, limit: int = 10) -> ContractListResponse:

@@ -8,7 +8,7 @@ Verschiedene Schemas werden für verschiedene Operationen verwendet (erstellen, 
 from datetime import datetime, date
 from typing import Optional, List
 from decimal import Decimal
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from enum import Enum
 import re
 
@@ -19,7 +19,7 @@ class ContractStatus(str, Enum):
     ACTIVE = "aktiv"        
     EXPIRED = "abgelaufen"
     TERMINATED = "beendet"
-    PENDING_APROVAL = "wartet_auf_genehmigung"
+    PENDING_APPROVAL = "wartet_auf_genehmigung"
 
 #enum für Vertragstyp
 class ContractType(str, Enum):
@@ -61,9 +61,10 @@ class ContractBase(BaseModel):
     notes: Optional[str] = Field(None, max_length=500, description="Zusätzliche Notizen")
 
     @field_validator('end_date')
-    def validate_end_date(cls, v, values):
+    @classmethod
+    def validate_end_date(cls, v, info: ValidationInfo):
         """Überprüft, ob das Enddatum nach dem Startdatum liegt"""
-        if v and 'start_date' in values and v <= values ['start_date']:
+        if v and 'start_date' in info.data and v <= info.data['start_date']:
             raise ValueError('Das Enddatum muss nach dem Startdatum liegen.')
         return v
     

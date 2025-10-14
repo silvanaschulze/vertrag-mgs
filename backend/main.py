@@ -11,8 +11,8 @@ Ela configura FastAPI, middleware, roteadores e agendador.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# CORRIGIR IMPORTS
 from app.routers import auth_router, contracts_router, users_router
+from app.core.config import settings
 
 # FastAPI-Anwendung erstellen / Criar aplicação FastAPI
 app = FastAPI(
@@ -21,26 +21,25 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS-Origins für Entwicklung / Origens CORS para desenvolvimento
-origins = [
-    "http://localhost:5173", 
-    "http://si-server.mshome.net:5173",
-    "http://localhost:3000"  # ← Para React (futuro) / Para React (futuro)
-]
+
 
 # CORS-Middleware konfigurieren / Configurar middleware CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+     allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS] if settings.BACKEND_CORS_ORIGINS else [
+        "http://localhost:5173", 
+        "http://si-server.mshome.net:5173",
+        "http://localhost:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Router registrieren / Registrar roteadores
-app.include_router(auth_router.router)
-app.include_router(contracts_router.router)
-app.include_router(users_router.router)
+app.include_router(auth_router)
+app.include_router(contracts_router)
+app.include_router(users_router)
 
 @app.get("/")
 def root():
