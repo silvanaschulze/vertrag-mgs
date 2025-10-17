@@ -7,7 +7,6 @@ from typing import Any, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt  
-from passlib.context import CryptContext
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,7 +32,7 @@ router = APIRouter(
 
 # Sicherheitskonfiguration
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 # JWT-Einstellungen
 
@@ -41,14 +40,9 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30  # Token de acesso expira em 30 minutos
 REFRESH_TOKEN_EXPIRE_DAYS = 7     # Token de refresh expira em 7 dias
 
-# Hilfsfunktionen 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """ Passwort verifizieren """
-    return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password: str) -> str:
-    """Passwort hashen """
-    return pwd_context.hash(password)
+# Hilfsfunktionen 
+from app.utils.security import verify_password, get_password_hash
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Zugriffstoken erstellen """
@@ -83,12 +77,12 @@ async def get_current_user(
     
     try:
         payload = jwt.decode(
-            credentials.credentials, 
-            settings.SECRET_KEY, 
+            credentials.credentials,
+            settings.SECRET_KEY,
             algorithms=[ALGORITHM]
         )
-        username: str = payload.get("sub")
-        if username is None:
+        username = payload.get("sub")
+        if not isinstance(username, str) or not username:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
@@ -109,7 +103,7 @@ async def get_current_active_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """Aktuellen aktiven Benutzer abrufen"""
-    if not current_user.is_active:
+    if current_user.is_active is not True:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user - Inaktiver Benutzer"
@@ -140,7 +134,7 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    if not user.is_active:
+    if user.is_active is not True:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user - Inaktiver Benutzer"

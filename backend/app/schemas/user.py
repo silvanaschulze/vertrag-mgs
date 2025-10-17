@@ -8,7 +8,7 @@ Verschiedene Schemas werden für verschiedene Operationen verwendet (erstellen, 
 from datetime import datetime
 from typing import Optional
 from enum import Enum
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, ValidationInfo, field_validator
 
 # Benutzer-Rollen Enumeration
 class UserRole(str, Enum):
@@ -47,12 +47,14 @@ class UserCreate(UserBase):
             raise ValueError('Das Passwort muss mindestens eine Zahl enthalten')
         return v
     
-    @field_validator('is_superuser')
-    @classmethod
-    def validate_superuser(cls, v, info):
-        """Validar que apenas ADMINs podem ser superuser"""
-        if v and hasattr(info, 'data') and 'role' in info.data and info.data['role'] != UserRole.ADMIN:
-            raise ValueError('Nur ADMINs können Superuser sein / Apenas ADMINs podem ser superusuários')
+@field_validator("is_superuser")
+@classmethod
+def validate_superuser(cls, v: bool, info: ValidationInfo) -> bool:
+    """Validar que apenas ADMINs podem ser superuser"""
+    data = info.data or {}
+    if v and data.get("role") != UserRole.ADMIN:
+        raise ValueError("Nur ADMINs können Superuser sein / Apenas ADMINs podem ser superusuários")
+    return v
 
 # Schema für die Aktualisierung von Benutzerdaten
 class UserUpdate(BaseModel):
@@ -87,7 +89,9 @@ class UserResponse(UserBase):
 # Administrator-spezifische Schemas
 class UserAdminCreate(UserCreate):
     """Schema für Administrator zum Erstellen von Benutzern"""
-    role: UserRole = Field(..., description="Benutzerrolle (Administrator kann jede Rolle setzen)")
+    role: UserRole = Field(default=UserRole.USER, description="Benutzerrolle (Administrator kann jede Rolle setzen)")
+    class Config:
+        from_attributes = True
 
 class UserAdminUpdate(UserUpdate):
     """Schema für Administrator zum Aktualisieren von Benutzern"""

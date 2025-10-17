@@ -42,6 +42,19 @@ def send_email(
             msg.attach(MIMEText(body, 'html'))
         else:
             msg.attach(MIMEText(body, 'plain'))
+
+        # E-Mail senden / Enviar e-mail
+        if settings.SMTP_USE_TLS:
+            if settings.SMTP_PORT == 465:
+                # Use SMTP_SSL for port 465
+                server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT)
+            else:
+                # Use STARTTLS for other ports
+                server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
+                server.starttls()
+        else:
+            # Plain SMTP without encryption
+            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
         
         # E-Mail senden / Enviar e-mail
         server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)

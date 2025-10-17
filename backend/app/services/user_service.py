@@ -24,7 +24,8 @@ class UserService:
         Neuen Benutzer erstellen 
         """
         # Prüfen ob Benutzer bereits existiert
-        if user_data.username:   
+        existing_user: Optional[User] = None
+        if user_data.username:
             existing_user = await self.get_user_by_username(user_data.username)
         if existing_user:
             raise ValueError("Username already exists - Benutzername bereits vorhanden - Nome de usuário já existe")
@@ -128,7 +129,8 @@ class UserService:
          Benutzer löschen 
         """
         user = await self.get_user_by_id(user_id)
-        return False
+        if not user:
+            return False
         await self.db.delete(user)
         await self.db.commit()
         return True

@@ -37,7 +37,11 @@ class Settings(BaseSettings):
     # listas com default_factory (mantém Field, agora visível para type checker)
     BACKEND_CORS_ORIGINS: Annotated[
         List[AnyHttpUrl],
-        Field(description="List of origins allowed by CORS.", default_factory=list),
+        Field(description="List of origins allowed by CORS.", default_factory=lambda: [
+            "http://localhost:5173",
+            "http://si-server.mshome.net:5173", 
+            "http://localhost:3000"
+        ]),
     ] = []
 
     # SMTP
