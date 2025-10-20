@@ -23,6 +23,7 @@ import io
 import dateparser
 import spacy
 from spacy.matcher import Matcher
+from typing import Dict, Any, cast
 
 # Logging konfigurieren / Configurar logging
 logger = logging.getLogger(__name__)
@@ -239,14 +240,20 @@ class PDFReaderService:
             doc = fitz.open(pdf_path)
             
             # Metadaten extrahieren / Extrair metadados
+            raw_md = doc.metadata or {}
+            md: Dict[str, Any] = cast(Dict[str, Any], raw_md)
             metadata = {
-                'title': doc.metadata.get('title', ''),
-                'author': doc.metadata.get('author', ''),
-                'creator': doc.metadata.get('creator', ''),
-                'producer': doc.metadata.get('producer', ''),
-                'creation_date': doc.metadata.get('creationDate', ''),
-                'modification_date': doc.metadata.get('modDate', '')
-            }
+                'title': md.get('title', '') or '',
+                'author': md.get('author', '') or '',
+                'creator': md.get('creator', '') or '',
+                'producer': md.get('producer', '') or '',
+                'creation_date': md.get('creationDate', '') or '',
+                'modification_date': md.get('modDate', '') or '',
+
+            }             
+            doc.close()
+
+
             
             # Text von jeder Seite extrahieren / Extrair texto de cada página
             for page_num in range(doc.page_count):
@@ -465,7 +472,7 @@ class PDFReaderService:
         """
         try:
             logger.info("Intelligente Datenextraktion gestartet / Extração inteligente de dados iniciada")
-            
+            # Extração básica / Grundlegende Extraktion
             extracted_data = {
                 'title': self._extract_title(text),
                 'client_name': self._extract_client_name(text),
@@ -478,6 +485,10 @@ class PDFReaderService:
                 'description': self._extract_description(text)
             }
             
+            # Extração avançada / Erweiterte Extraktion
+            advanced_data = self.extract_advanced_context_data(text)
+            extracted_data.update(advanced_data)
+
             logger.info("Intelligente Datenextraktion erfolgreich / Extração inteligente de dados bem-sucedida")
             return extracted_data
             
@@ -691,3 +702,237 @@ class PDFReaderService:
         except Exception as e:
             logger.error(f"Fehler bei Beschreibungs-Extraktion / Erro na extração de descrição: {str(e)}")
             return None
+
+    def calculate_notice_period(self, text: str) -> Optional[Dict[str, Any]]:
+        """
+        Calcula período de aviso prévio / Berechnet Kündigungsfrist
+        
+        Args / Argumentos:
+            text (str): Texto do contrato / Vertragstext
+            
+        Returns / Retorna:
+            Optional[Dict[str, Any]]: Informações do período de aviso / Kündigungsfrist-Informationen
+        """
+        try:
+            logger.info("Kündigungsfrist-Berechnung gestartet / Notice period calculation started")
+            
+            # Padrões para período de aviso / Muster für Kündigungsfrist
+            notice_patterns = [
+                r'kündigungsfrist\s*:?\s*(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)',
+                r'kündigung\s+(?:mit|nach)\s*(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)',
+                r'kündigbar\s+(?:mit|nach)\s*(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)',
+                r'beendigung\s+(?:mit|nach)\s*(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)',
+                r'(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)\s*kündigungsfrist',
+                r'(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)\s*(?:vor|vorher)',
+            ]
+            
+            text_lower = text.lower()
+            notice_periods = []
+            
+            for pattern in notice_patterns:
+                matches = re.finditer(pattern, text_lower, re.IGNORECASE)
+                for match in matches:
+                    period_value = int(match.group(1))
+                    period_text = match.group(0)
+                    
+                    # Determinar unidade / Einheit bestimmen
+                    if any(unit in period_text for unit in ['jahre', 'jahren']):
+                        unit = 'years'
+                        days = period_value * 365
+                    elif any(unit in period_text for unit in ['monate', 'monaten']):
+                        unit = 'months'
+                        days = period_value * 30
+                    else:
+                        unit = 'days'
+                        days = period_value
+                    
+                    notice_periods.append({
+                        'value': period_value,
+                        'unit': unit,
+                        'days': days,
+                        'text': period_text,
+                        'confidence': 0.9
+                    })
+            
+            if notice_periods:
+                # Retornar o período mais longo (geralmente o correto) / Längste Frist zurückgeben
+                best_period = max(notice_periods, key=lambda x: x['days'])
+                
+                logger.info(f"Kündigungsfrist gefunden / Notice period found: {best_period['value']} {best_period['unit']}")
+                return best_period
+            
+            logger.info("Keine Kündigungsfrist gefunden / No notice period found")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Fehler bei Kündigungsfrist-Berechnung / Error in notice period calculation: {str(e)}")
+            return None
+    
+    def extract_advanced_context_data(self, text: str) -> Dict[str, Any]:
+        """
+        Extrai dados contextuais avançados / Extrahiert erweiterte Kontextdaten
+        
+        Args / Argumentos:
+            text (str): Texto do contrato / Vertragstext
+            
+        Returns / Retorna:
+            Dict[str, Any]: Dados contextuais / Kontextdaten
+        """
+        try:
+            logger.info("Erweiterte Kontextanalyse gestartet / Advanced context analysis started")
+            
+            context_data = {
+                'notice_period': self.calculate_notice_period(text),
+                'contract_complexity': self._analyze_contract_complexity(text),
+                'key_terms': self._extract_key_terms(text),
+                'legal_entities': self._extract_legal_entities(text),
+                'financial_terms': self._extract_financial_terms(text)
+            }
+            
+            logger.info("Erweiterte Kontextanalyse erfolgreich / Advanced context analysis successful")
+            return context_data
+            
+        except Exception as e:
+            logger.error(f"Fehler bei erweiterter Kontextanalyse / Error in advanced context analysis: {str(e)}")
+            return {}
+    
+    def _analyze_contract_complexity(self, text: str) -> Dict[str, Any]:
+        """Analisa complexidade do contrato / Analysiert Vertragskomplexität"""
+        try:
+            # Métricas de complexidade / Komplexitätsmetriken
+            word_count = len(text.split())
+            sentence_count = len([s for s in text.split('.') if s.strip()])
+            paragraph_count = len([p for p in text.split('\n\n') if p.strip()])
+            
+            # Palavras complexas (mais de 6 caracteres) / Komplexe Wörter (mehr als 6 Zeichen)
+            complex_words = sum(1 for word in text.split() if len(word) > 6)
+            complex_word_ratio = complex_words / word_count if word_count > 0 else 0
+            
+            # Score de complexidade (0-1) / Komplexitätsscore (0-1)
+            avg_sentence_length = word_count / sentence_count if sentence_count > 0 else 0
+            complexity_score = min(1.0, (avg_sentence_length / 20) + (complex_word_ratio * 2))
+            
+            return {
+                'word_count': word_count,
+                'sentence_count': sentence_count,
+                'paragraph_count': paragraph_count,
+                'avg_sentence_length': avg_sentence_length,
+                'complex_word_ratio': complex_word_ratio,
+                'complexity_score': complexity_score,
+                'complexity_level': 'high' if complexity_score > 0.7 else 'medium' if complexity_score > 0.4 else 'low'
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler bei Komplexitätsanalyse / Error in complexity analysis: {str(e)}")
+            return {'complexity_score': 0.5, 'complexity_level': 'medium'}
+    
+    def _extract_key_terms(self, text: str) -> List[Dict[str, Any]]:
+        """Extrai termos-chave do contrato / Extrahiert Schlüsselbegriffe des Vertrags"""
+        try:
+            # Termos legais importantes / Wichtige rechtliche Begriffe
+            legal_terms = [
+                'kündigung', 'kündigungsfrist', 'verlängerung', 'automatische verlängerung',
+                'vertragsende', 'vertragsbeginn', 'leistung', 'vergütung', 'zahlung',
+                'haftung', 'haftungsausschluss', 'gewährleistung', 'garantie',
+                'streitbeilegung', 'schiedsgericht', 'gerichtsstand', 'anwendbares recht'
+            ]
+            
+            text_lower = text.lower()
+            found_terms = []
+            
+            for term in legal_terms:
+                if term in text_lower:
+                    # Encontrar contexto / Kontext finden
+                    start_pos = text_lower.find(term)
+                    context_start = max(0, start_pos - 30)
+                    context_end = min(len(text), start_pos + len(term) + 30)
+                    context = text[context_start:context_end]
+                    
+                    found_terms.append({
+                        'term': term,
+                        'context': context,
+                        'position': start_pos,
+                        'confidence': 0.8
+                    })
+            
+            return found_terms
+            
+        except Exception as e:
+            logger.error(f"Fehler bei Schlüsselbegriff-Extraktion / Error in key term extraction: {str(e)}")
+            return []
+    
+    def _extract_legal_entities(self, text: str) -> List[Dict[str, Any]]:
+        """Extrai entidades legais / Extrahiert rechtliche Entitäten"""
+        try:
+            # Padrões para entidades legais / Muster für rechtliche Entitäten
+            entity_patterns = [
+                r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:GmbH|GmbH & Co\. KG)\b',
+                r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:AG|Aktiengesellschaft)\b',
+                r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:KG|Kommanditgesellschaft)\b',
+                r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:OHG|Offene Handelsgesellschaft)\b',
+                r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:UG|Unternehmergesellschaft)\b',
+            ]
+            
+            entities = []
+            for pattern in entity_patterns:
+                matches = re.finditer(pattern, text, re.IGNORECASE)
+                for match in matches:
+                    entities.append({
+                        'name': match.group(1).strip(),
+                        'full_text': match.group(0),
+                        'type': 'legal_entity',
+                        'confidence': 0.9
+                    })
+            
+            return entities
+            
+        except Exception as e:
+            logger.error(f"Fehler bei rechtlicher Entitäts-Extraktion / Error in legal entity extraction: {str(e)}")
+            return []
+    
+    def _extract_financial_terms(self, text: str) -> Dict[str, Any]:
+        """Extrai termos financeiros / Extrahiert finanzielle Begriffe"""
+        try:
+            financial_terms = {
+                'payment_terms': [],
+                'penalties': [],
+                'discounts': [],
+                'taxes': []
+            }
+            
+            # Termos de pagamento / Zahlungsbedingungen
+            payment_patterns = [
+                r'(?:zahlung|bezahlung|entgelt)\s+(?:innerhalb|bis)\s+(\d+)\s*(?:tage|tagen)',
+                r'(?:rechnung|rechnungsstellung)\s+(?:innerhalb|bis)\s+(\d+)\s*(?:tage|tagen)',
+                r'(?:fällig|fälligkeit)\s+(?:innerhalb|bis)\s+(\d+)\s*(?:tage|tagen)',
+            ]
+            
+            for pattern in payment_patterns:
+                matches = re.finditer(pattern, text, re.IGNORECASE)
+                for match in matches:
+                    financial_terms['payment_terms'].append({
+                        'term': match.group(0),
+                        'days': int(match.group(1)),
+                        'confidence': 0.8
+                    })
+            
+            # Multas e penalidades / Strafen und Strafen
+            penalty_patterns = [
+                r'(?:strafe|strafzahlung|vertragsstrafe)\s+(?:von|in höhe von)\s*€?\s*(\d+(?:\.\d{3})*(?:,\d{2})?)',
+                r'(?:pönale|pönale)\s+(?:von|in höhe von)\s*€?\s*(\d+(?:\.\d{3})*(?:,\d{2})?)',
+            ]
+            
+            for pattern in penalty_patterns:
+                matches = re.finditer(pattern, text, re.IGNORECASE)
+                for match in matches:
+                    financial_terms['penalties'].append({
+                        'term': match.group(0),
+                        'amount': match.group(1),
+                        'confidence': 0.8
+                    })
+            
+            return financial_terms
+            
+        except Exception as e:
+            logger.error(f"Fehler bei finanzieller Begriffs-Extraktion / Error in financial term extraction: {str(e)}")
+            return {'payment_terms': [], 'penalties': [], 'discounts': [], 'taxes': []}
