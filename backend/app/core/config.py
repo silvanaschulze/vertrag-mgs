@@ -8,7 +8,7 @@ used.
 """
 
 from functools import lru_cache
-from typing import List, Annotated
+from typing import List, Annotated, cast
 
 from pydantic import AnyHttpUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -37,13 +37,16 @@ class Settings(BaseSettings):
     # listas com default_factory (mantém Field, agora visível para type checker)
     BACKEND_CORS_ORIGINS: Annotated[
         List[AnyHttpUrl],
-        Field(description="List of origins allowed by CORS.", default_factory=lambda: [
-            "http://localhost:5173",
-            "http://si-server.mshome.net:5173", 
-            "http://localhost:3000"
-        ]),
-    ] = []
-
+        Field(description="List of origins allowed by CORS."),
+    ] = Field(
+        default_factory=lambda: [
+            cast(AnyHttpUrl, "http://localhost:5173"),
+            cast(AnyHttpUrl, "http://si-server.mshome.net:5173"),
+            cast(AnyHttpUrl, "http://localhost:3000"),
+        ],
+    )
+    
+         
     # SMTP
     SMTP_HOST: Annotated[str, Field(description="SMTP server host / Servidor SMTP")] = "localhost"
     SMTP_PORT: Annotated[int, Field(description="SMTP server port / Porta SMTP")] = 587

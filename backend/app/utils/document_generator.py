@@ -30,17 +30,23 @@ def generate_contract_pdf(
     try:
         # Word-Vorlage laden / Carregar template Word
         doc = DocxTemplate(template_path)
-        
+
         # Daten in Vorlage einsetzen / Inserir dados no template
         doc.render(data)
-        
-        # PDF generieren / Gerar PDF
+
+        # Wenn ein Ausgabe-Pfad angegeben ist, speichern wir als .docx
         if output_path:
             doc.save(output_path)
-        
-        # Bytes zurückgeben / Retornar bytes
-        return doc.get_docx().read()
-        
+            # Versuchen, die gespeicherte Datei zu lesen und zurückzugeben
+            with open(output_path, "rb") as f:
+                return f.read()
+
+        # Ansonsten in BytesIO speichern und zurückgeben
+        bio = BytesIO()
+        doc.save(bio)
+        bio.seek(0)
+        return bio.read()
+
     except Exception as e:
         print(f"PDF-Generierungsfehler / Erro de geração de PDF: {e}")
         return b""

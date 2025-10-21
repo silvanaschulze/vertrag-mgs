@@ -148,6 +148,22 @@ class ContractService:
         Returns / Retorna:
             ContractListResponse: Liste der Verträge / Lista de contratos
         """
+        # Normalize and cap skip/limit to avoid massive queries or negative values
+        try:
+            skip = int(skip)
+        except Exception:
+            skip = 0
+        skip = max(0, skip)
+
+        try:
+            limit = int(limit)
+        except Exception:
+            limit = 10
+        if limit <= 0:
+            limit = 10
+        max_limit = 100
+        limit = min(limit, max_limit)
+
         # Base query / Query base
         query = select(Contract)
         
@@ -183,7 +199,7 @@ class ContractService:
             count_query = count_query.where(search_filter)
 
         total_result = await self.db.execute(count_query)
-        total = total_result.scalar() or 0
+        total = int(total_result.scalar() or 0)
 
         # Paginierung und Sortierung anwenden / Aplicar paginação e ordenação
                 # Sortierung anwenden / Aplicar ordenação
@@ -237,25 +253,25 @@ class ContractService:
         """
         # Total contracts / Total de contratos
         total_result = await self.db.execute(select(func.count(Contract.id)))
-        total_contracts = total_result.scalar() or 0
-        
+        total_contracts = int(total_result.scalar() or 0)
+
         # Active contracts / Contratos ativos
         active_result = await self.db.execute(
             select(func.count(Contract.id)).where(Contract.status == ContractStatus.ACTIVE) # type: ignore
         )
-        active_contracts = active_result.scalar() or 0
-        
+        active_contracts = int(active_result.scalar() or 0)
+
         # Expired contracts / Contratos expirados
         expired_result = await self.db.execute(
             select(func.count(Contract.id)).where(Contract.status == ContractStatus.EXPIRED) # type: ignore
         )
-        expired_contracts = expired_result.scalar() or 0
-        
+        expired_contracts = int(expired_result.scalar() or 0)
+
         # Draft contracts / Contratos em rascunho
         draft_result = await self.db.execute(
-           select(func.count(Contract.id)).where(Contract.status == ContractStatus.DRAFT) # type: ignore
+            select(func.count(Contract.id)).where(Contract.status == ContractStatus.DRAFT) # type: ignore
         )
-        draft_contracts = draft_result.scalar() or 0
+        draft_contracts = int(draft_result.scalar() or 0)
         
         # Total value / Valor total
         value_result = await self.db.execute(
@@ -293,7 +309,7 @@ class ContractService:
         # Total count / Contagem total
         count_query = select(func.count(Contract.id)).where(search_filter)
         total_result = await self.db.execute(count_query)
-        total = total_result.scalar() or 0
+        total = int(total_result.scalar() or 0)
         
         # Search results / Resultados da busca
         query_obj = select(Contract).where(search_filter).order_by(desc(Contract.created_at)).offset(skip).limit(limit)

@@ -1,21 +1,29 @@
-from datetime import datetime, date
+from __future__ import annotations
+
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional
-from sqlalchemy import Column, String, Integer, Date, DateTime, Numeric, Text, Boolean, ForeignKey, Enum
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from typing import TYPE_CHECKING, Optional
 import enum
+from sqlalchemy import Column, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+
 from app.core.database import Base
 
-class ContractStatus(str,enum.Enum):
-    """Vertragsstatus Aufzählung"""
+
+"""Vertragsstatus Aufzählung"""
+if TYPE_CHECKING:
+    from .alert import Alert
+    from .user import User
+
+class ContractStatus(str, enum.Enum):
     DRAFT = "entwurf"               #Entwurf
     ACTIVE = "aktiv"                #Aktiv  
     EXPIRED = "abgelaufen"          #Abgelaufen
     TERMINATED = "beendet"          #Beendet
     PENDING_APPROVAL = "wartet_auf_genehmigung" #Wartet auf Genehmigung
 
-class ContractType(str,enum.Enum):
+class ContractType(str, enum.Enum):
     """Vertragstyp Aufzählung"""
     SERVICE = "dienstleistung"      #Dienstleistung
     PRODUCT = "produkt"             #Produkt
@@ -29,33 +37,33 @@ class Contract(Base):
     __tablename__ = "contracts"  
 
     #prämärschlüssel
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, autoincrement=True)
 
     #Grundlegende Felder
-    title = Column(String(200), nullable=False, index=True)
-    description = Column(Text, nullable=True)
-    contract_type = Column(Enum(ContractType), default=ContractType.OTHER, nullable=False)
-    status = Column(Enum(ContractStatus), default=ContractStatus.DRAFT, nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    contract_type: Mapped[ContractType] = mapped_column(Enum(ContractType), default=ContractType.OTHER, nullable=False)
+    status: Mapped[ContractStatus] = mapped_column(Enum(ContractStatus), default=ContractStatus.DRAFT, nullable=False)
 
     #Finanzfelder
-    value = Column(Numeric(12, 2), nullable=True)  #Maximalwert 9999999999.99
-    currency = Column(String(3), default="EUR", nullable=False)  #ISO 4217 Währungscode
+    value: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)  #Maximalwert 9999999999.99
+    currency: Mapped[str] = mapped_column(String(3), default="EUR", nullable=False)  #ISO 4217 Währungscode
 
     #Datumsfelder
-    start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=True)
-    renewal_date = Column(Date, nullable=True)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    renewal_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
     #Kundenfelder
-    client_name = Column(String(200), nullable=False)  #z.B. Firma oder Einzelperson
-    client_document = Column(String(20), nullable=True) #z.B. Steuernummer, Handelsregisternummer
-    client_address = Column(String(300), nullable=True) #Rechnungsadresse
-    client_email = Column(String(100), nullable=True)
-    client_phone = Column(String(20), nullable=True)
+    client_name: Mapped[str] = mapped_column(String(200), nullable=False)  #z.B. Firma oder Einzelperson
+    client_document: Mapped[Optional[str]] = mapped_column(String(20), nullable=True) #z.B. Steuernummer, Handelsregisternummer
+    client_address: Mapped[Optional[str]] = mapped_column(String(300), nullable=True) #Rechnungsadresse
+    client_email: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    client_phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     #Zusätzliche Felder
-    terms_and_conditions = Column(Text, nullable=True)
-    notes = Column(Text, nullable=True)
+    terms_and_conditions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     #audit felder
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -63,7 +71,10 @@ class Contract(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now(), nullable=False)
 
     #Beziehung zum Benutzer
-    creator = relationship("User", back_populates="contracts")
+    creator: Mapped["User"] = relationship("User", back_populates="contracts")
+
+    # Beziehung zu Alerts
+    alerts: Mapped[list["Alert"]] = relationship("Alert", back_populates="contract")
 
     def __repr__(self) -> str:
         """String-Darstellung des Vertrags"""

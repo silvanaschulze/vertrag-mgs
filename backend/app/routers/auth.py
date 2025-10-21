@@ -126,6 +126,8 @@ async def login(
     user_service = UserService(db)
     
     # Benutzer authentifizieren
+    if not form_data.username or not form_data.password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username and password are required")
     user = await user_service.authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(

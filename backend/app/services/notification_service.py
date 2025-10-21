@@ -27,6 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.contract import Contract, ContractStatus
 from app.models.alert import Alert, AlertType, AlertStatus, AlertResponse, AlertListResponse
 from app.utils.email import send_email, render_contract_expiry_html, get_email_subject_by_type
+import asyncio
 
 
 # ========= Helpers de Cálculo / Berechnungshelfer =========
@@ -139,7 +140,9 @@ class NotificationService:
             alert.mark_failed("No recipient available / Kein Empfänger verfügbar")
             await self.db.commit()
             return False
-        success = send_email(recipient, cast(str, subject), body_html, is_html=True)
+
+        # send_email may be blocking (smtplib); run in thread to avoid blocking event loop
+        success = await asyncio.to_thread(send_email, recipient, cast(str, subject), body_html, True)
         if success:
             alert.mark_sent()
         else:
@@ -192,7 +195,8 @@ class NotificationService:
             # Coletar resposta
             created.append(AlertResponse.model_validate(alert))
 
-        return AlertListResponse(total=len(created), alerts=created, page=1, per_page=len(created) or 1)
+        per_page_value = len(created) or 1
+        return AlertListResponse(total=len(created), alerts=created, page=1, per_page=per_page_value)
 
     async def reprocess_alert(self, alert_id: int) -> Optional[AlertResponse]:
         """Reprocessa um alerta (útil para status FAILED).

@@ -14,6 +14,10 @@ from email.mime.multipart import MIMEMultipart
 from app.core.config import settings
 from app.models.contract import Contract
 from app.models.alert import AlertType
+import socket
+import logging
+
+logger = logging.getLogger(__name__)
 
 def send_email(
     to: str, 
@@ -33,13 +37,14 @@ def send_email(
     Returns / Retorna:
         bool: Erfolg des E-Mail-Versands / Sucesso do envio do e-mail
     """
+    server = None
     try:
         # E-Mail-Konfiguration / Configuração de e-mail
         msg = MIMEMultipart()
         msg['From'] = settings.SMTP_USER
         msg['To'] = to
         msg['Subject'] = subject
-        
+
         # E-Mail-Inhalt hinzufügen / Adicionar conteúdo do e-mail
         if is_html:
             msg.attach(MIMEText(body, 'html'))
@@ -47,30 +52,45 @@ def send_email(
             msg.attach(MIMEText(body, 'plain'))
 
         # E-Mail senden / Enviar e-mail
+        # Use a short socket timeout for network ops
+        timeout = getattr(settings, 'SMTP_TIMEOUT', 10)
         if settings.SMTP_USE_TLS:
             if settings.SMTP_PORT == 465:
                 # Use SMTP_SSL for port 465
-                server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT)
+                server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=timeout)
             else:
                 # Use STARTTLS for other ports
-                server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
+                server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=timeout)
                 server.starttls()
         else:
             # Plain SMTP without encryption
-            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
-        
-        # E-Mail senden / Enviar e-mail
-        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
-        server.starttls()
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=timeout)
+
+        # Set socket-level timeout if supported
+        try:
+            server.timeout = timeout
+        except Exception:
+            # Not supported on all smtplib implementations; ignore
+            pass
+
+        # Login and send
+        if settings.SMTP_USER:
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         text = msg.as_string()
-        server.sendmail(settings.SMTP_USER, to, text)
-        server.quit()
-        
+        server.sendmail(settings.SMTP_USER or '', to, text)
         return True
-    except Exception as e:
-        print(f"E-Mail-Fehler / Erro de e-mail: {e}")
+    except (smtplib.SMTPException, socket.timeout, ConnectionError) as e:
+        logger.exception(f"E-Mail-Fehler / Erro de e-mail ao enviar para {to}: {e}")
         return False
+    except Exception as e:
+        logger.exception(f"Unerwarteter Fehler beim E-Mail-Versand / Erro inesperado ao enviar e-mail para {to}: {e}")
+        return False
+    finally:
+        if server:
+            try:
+                server.quit()
+            except Exception:
+                logger.debug("Fehler beim Schließen der SMTP-Verbindung / Error closing SMTP connection", exc_info=True)
 
 def send_notification_email(
     to: str, 

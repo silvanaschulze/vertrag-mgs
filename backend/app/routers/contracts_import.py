@@ -27,6 +27,7 @@ from app.schemas.extracted_contract import (
     ExtractionResponse
 )
 from app.services.pdf_reader import PDFReaderService
+import asyncio
 # Contract Extractor Service wurde in PDFReaderService integriert
 # Serviço de extração de contrato foi integrado no PDFReaderService
 
@@ -81,7 +82,8 @@ async def import_contract_pdf(
         ExtractionResponse: Extraktionsergebnis / Resultado da extração
     """
     start_time = time.time()
-    
+    file_path = None
+
     try:
         logger.info(f"PDF-Import gestartet / Importação de PDF iniciada: {file.filename} von Benutzer / do usuário {current_user.id}")
         
@@ -121,51 +123,60 @@ async def import_contract_pdf(
         safe_filename = f"{current_user.id}_{timestamp}_{file.filename}"
         file_path = os.path.join(UPLOAD_DIR, safe_filename)
         
-        # Datei speichern / Salvar arquivo
-        with open(file_path, "wb") as buffer:
-            buffer.write(file_content)
+        # Datei speichern / Salvar arquivo (in Thread auslagern um Event-Loop nicht zu blockieren)
+        def _write_file(path: str, content: bytes) -> None:
+            with open(path, "wb") as buffer:
+                buffer.write(content)
+
+        await asyncio.to_thread(_write_file, file_path, file_content)
         
         logger.info(f"Datei gespeichert / Arquivo salvo: {file_path}")
-        
+
         # PDF-Reader-Service initialisieren / Inicializar serviço de leitura de PDF
         pdf_reader = PDFReaderService()
-        
-        # PDF validieren / Validar PDF
-        validation_result = pdf_reader.validate_pdf(file_path)
-        if not validation_result['valid']:
-            os.remove(file_path)  # Datei löschen / Deletar arquivo
+
+        # PDF validieren / Validar PDF (executar em thread se for CPU/IO-bound)
+        validation_result = await asyncio.to_thread(pdf_reader.validate_pdf, file_path)
+        if not validation_result.get('valid'):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Ungültige PDF-Datei / Arquivo PDF inválido: {validation_result.get('error', 'Unbekannter Fehler')}"
             )
-        
-        # Text extrahieren / Extrair texto
+
+        # Text extrahieren (möglicherweise IO/CPU-bound) - in Thread auslagern
         if extraction_method == "combined":
-            extraction_result = pdf_reader.extract_text_combined(file_path)
+            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_combined, file_path)
         elif extraction_method == "pdfplumber":
-            extraction_result = pdf_reader.extract_text_with_pdfplumber(file_path)
+            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_with_pdfplumber, file_path)
         elif extraction_method == "pypdf2":
-            extraction_result = pdf_reader.extract_text_with_pypdf2(file_path)
+            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_with_pypdf2, file_path)
         elif extraction_method == "pymupdf":
-            extraction_result = pdf_reader.extract_text_with_pymupdf(file_path)
+            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_with_pymupdf, file_path)
         else:
-            extraction_result = pdf_reader.extract_text_combined(file_path)
-        
-        if not extraction_result['success']:
-            os.remove(file_path)  # Datei löschen / Deletar arquivo
+            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_combined, file_path)
+
+        if not extraction_result.get('success'):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Textextraktion fehlgeschlagen / Extração de texto falhou: {extraction_result.get('error', 'Unbekannter Fehler')}"
             )
-        
+
         # Intelligente Extraktion durchführen / Executar extração inteligente
-        intelligent_data = pdf_reader.extract_intelligent_data(extraction_result['text'])
-        
+        intelligent_data = await asyncio.to_thread(pdf_reader.extract_intelligent_data, extraction_result.get('text', ''))
+
         # ExtractedContractDraft erstellen / Criar ExtractedContractDraft
-        from app.schemas.extracted_contract import ExtractedContractDraft
+        from app.schemas.extracted_contract import ExtractedContractDraft, ConfidenceLevel
         extracted_data = ExtractedContractDraft(
             extraction_method=extraction_method,
-            raw_text=extraction_result['text'],
+            raw_text=extraction_result.get('text', ''),
             pdf_metadata=extraction_result.get('metadata', {}),
             title=intelligent_data.get('title'),
             title_confidence=0.8 if intelligent_data.get('title') else 0.0,
@@ -191,23 +202,30 @@ async def import_contract_pdf(
             terms_and_conditions_confidence=0.6 if intelligent_data.get('terms_and_conditions') else 0.0,
             description=intelligent_data.get('description'),
             description_confidence=0.4 if intelligent_data.get('description') else 0.0,
-            raw_text_confidence=0.7
+            raw_text_confidence=0.7,
+            client_document=None,
+            client_document_confidence=0.0,
+            notes=None,
+            notes_confidence=0.0,
+            overall_confidence=0.0,
+            confidence_level=ConfidenceLevel.UNKNOWN,
         )
-        
+
         # OCR durchführen falls gewünscht / Executar OCR se desejado
         if include_ocr and extraction_result.get('total_chars', 0) < 100:
             logger.info("OCR wird durchgeführt / OCR será executado - wenig Text extrahiert / pouco texto extraído")
             # Hier könnte OCR implementiert werden / Aqui OCR poderia ser implementado
-        
+
         processing_time = time.time() - start_time
-        
+
         logger.info(f"PDF-Import erfolgreich / Importação de PDF bem-sucedida: {processing_time:.2f}s")
-        
+
         return ExtractionResponse(
             success=True,
             extracted_data=extracted_data,
             processing_time=processing_time,
-            file_size=file_size
+            file_size=file_size,
+            error_message=None
         )
         
     except HTTPException:
@@ -220,7 +238,7 @@ async def import_contract_pdf(
         )
     finally:
         # Aufräumen bei Fehlern / Limpeza em caso de erros
-        if 'file_path' in locals() and os.path.exists(file_path):
+        if file_path and os.path.exists(file_path):
             try:
                 os.remove(file_path)
                 logger.info(f"Temporäre Datei gelöscht / Arquivo temporário deletado: {file_path}")
@@ -252,7 +270,8 @@ async def upload_contract_with_metadata(
         ExtractionResponse: Upload-Ergebnis / Resultado do upload
     """
     start_time = time.time()
-    
+    file_path = None
+
     try:
         logger.info(f"Vertragsupload mit Metadaten gestartet / Upload de contrato com metadados iniciado: {file.filename}")
         
@@ -284,25 +303,32 @@ async def upload_contract_with_metadata(
         safe_filename = f"{current_user.id}_{timestamp}_{file.filename}"
         file_path = os.path.join(UPLOAD_DIR, safe_filename)
         
-        with open(file_path, "wb") as buffer:
-            buffer.write(file_content)
+        # Salvar arquivo sem bloquear o event loop
+        def _write_file(path: str, content: bytes) -> None:
+            with open(path, "wb") as buffer:
+                buffer.write(content)
+
+        await asyncio.to_thread(_write_file, file_path, file_content)
         
-        # PDF verarbeiten / Processar PDF
+        # PDF verarbeiten / Processar PDF (in thread, evita bloquear o event loop)
         pdf_reader = PDFReaderService()
-        extraction_result = pdf_reader.extract_text_combined(file_path)
-        
-        if not extraction_result['success']:
-            os.remove(file_path)
+        extraction_result = await asyncio.to_thread(pdf_reader.extract_text_combined, file_path)
+
+        if not extraction_result or not extraction_result.get('success'):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Textextraktion fehlgeschlagen / Extração de texto falhou: {extraction_result.get('error')}"
+                detail=f"Textextraktion fehlgeschlagen / Extração de texto falhou: {extraction_result.get('error') if extraction_result else 'Unknown error'}"
             )
-        
-        # Intelligente Extraktion durchführen / Executar extração inteligente
-        intelligent_data = pdf_reader.extract_intelligent_data(extraction_result['text'])
+
+        # Intelligente Extraktion in thread
+        intelligent_data = await asyncio.to_thread(pdf_reader.extract_intelligent_data, extraction_result.get('text', ''))
         
         # ExtractedContractDraft erstellen / Criar ExtractedContractDraft
-        from app.schemas.extracted_contract import ExtractedContractDraft
+        from app.schemas.extracted_contract import ExtractedContractDraft, ConfidenceLevel
         extracted_data = ExtractedContractDraft(
             extraction_method="combined",
             raw_text=extraction_result['text'],
@@ -331,7 +357,13 @@ async def upload_contract_with_metadata(
             terms_and_conditions_confidence=0.6 if intelligent_data.get('terms_and_conditions') else 0.0,
             description=intelligent_data.get('description'),
             description_confidence=0.4 if intelligent_data.get('description') else 0.0,
-            raw_text_confidence=0.7
+            raw_text_confidence=0.7,
+            client_document=None,
+            client_document_confidence=0.0,
+            notes=None,
+            notes_confidence=0.0,
+            overall_confidence=0.0,
+            confidence_level=ConfidenceLevel.UNKNOWN,
         )
         
         # Übergebene Metadaten verwenden / Usar metadados fornecidos
@@ -355,7 +387,8 @@ async def upload_contract_with_metadata(
             success=True,
             extracted_data=extracted_data,
             processing_time=processing_time,
-            file_size=file_size
+            file_size=file_size,
+            error_message=None
         )
         
     except HTTPException:
@@ -367,7 +400,7 @@ async def upload_contract_with_metadata(
             detail=f"Interner Serverfehler / Erro interno do servidor: {str(e)}"
         )
     finally:
-        if 'file_path' in locals() and os.path.exists(file_path):
+        if file_path and os.path.exists(file_path):
             try:
                 os.remove(file_path)
             except Exception as e:

@@ -91,7 +91,9 @@ class PDFReaderService:
         except OSError:
             logger.warning("Deutsches Spacy-Modell nicht gefunden / Modelo Spacy alemão não encontrado")
             self.nlp = None
-        
+        # máximo de páginas a processar por documento para evitar uso excessivo de memória
+        self.max_pages = 500
+
         logger.info("PDF-Reader-Service initialisiert / PDF Reader Service initialized")
     
     def extract_text_with_pdfplumber(self, pdf_path: str) -> Dict[str, Any]:
@@ -106,6 +108,13 @@ class PDFReaderService:
             Dict[str, Any]: Extrahierter Text und Metadaten / Texto extraído e metadados
         """
         try:
+            # Basic file checks to avoid trying to open non-existing or huge files
+            if not os.path.exists(pdf_path):
+                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+            # limit to 50 MB to avoid excessive memory usage
+            max_size = 50 * 1024 * 1024
+            if os.path.getsize(pdf_path) > max_size:
+                raise ValueError(f"PDF file too large (>50MB): {pdf_path}")
             logger.info(f"Textextraktion mit pdfplumber gestartet / Extração de texto com pdfplumber iniciada: {pdf_path}")
             
             text_content = []
@@ -123,8 +132,8 @@ class PDFReaderService:
                     'modification_date': pdf.metadata.get('ModDate', '')
                 }
                 
-                # Text von jeder Seite extrahieren / Extrair texto de cada página
-                for page_num, page in enumerate(pdf.pages, 1):
+                # Text von jeder Seite extrahieren / Extrair texto de cada página (limitado)
+                for page_num, page in enumerate(pdf.pages[: self.max_pages], 1):
                     page_text = page.extract_text()
                     if page_text:
                         text_content.append({
@@ -146,7 +155,7 @@ class PDFReaderService:
             return result
             
         except Exception as e:
-            logger.error(f"Fehler bei pdfplumber-Extraktion / Erro na extração com pdfplumber: {str(e)}")
+            logger.exception(f"Fehler bei pdfplumber-Extraktion / Erro na extração com pdfplumber: {str(e)}")
             return {
                 'method': 'pdfplumber',
                 'success': False,
@@ -168,6 +177,11 @@ class PDFReaderService:
             Dict[str, Any]: Extrahierter Text und Metadaten / Texto extraído e metadados
         """
         try:
+            if not os.path.exists(pdf_path):
+                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+            max_size = 50 * 1024 * 1024
+            if os.path.getsize(pdf_path) > max_size:
+                raise ValueError(f"PDF file too large (>50MB): {pdf_path}")
             logger.info(f"Textextraktion mit PyPDF2 gestartet / Extração de texto com PyPDF2 iniciada: {pdf_path}")
             
             text_content = []
@@ -187,8 +201,8 @@ class PDFReaderService:
                         'modification_date': pdf_reader.metadata.get('/ModDate', '')
                     }
                 
-                # Text von jeder Seite extrahieren / Extrair texto de cada página
-                for page_num, page in enumerate(pdf_reader.pages, 1):
+                # Text von jeder Seite extrahieren / Extrair texto de cada página (limitado)
+                for page_num, page in enumerate(pdf_reader.pages[: self.max_pages], 1):
                     page_text = page.extract_text()
                     if page_text:
                         text_content.append({
@@ -210,7 +224,7 @@ class PDFReaderService:
             return result
             
         except Exception as e:
-            logger.error(f"Fehler bei PyPDF2-Extraktion / Erro na extração com PyPDF2: {str(e)}")
+            logger.exception(f"Fehler bei PyPDF2-Extraktion / Erro na extração com PyPDF2: {str(e)}")
             return {
                 'method': 'pypdf2',
                 'success': False,
@@ -232,41 +246,40 @@ class PDFReaderService:
             Dict[str, Any]: Extrahierter Text und Metadaten / Texto extraído e metadados
         """
         try:
+            if not os.path.exists(pdf_path):
+                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+            max_size = 50 * 1024 * 1024
+            if os.path.getsize(pdf_path) > max_size:
+                raise ValueError(f"PDF file too large (>50MB): {pdf_path}")
             logger.info(f"Textextraktion mit pymupdf gestartet / Extração de texto com pymupdf iniciada: {pdf_path}")
             
             text_content = []
             metadata = {}
             
-            doc = fitz.open(pdf_path)
-            
-            # Metadaten extrahieren / Extrair metadados
-            raw_md = doc.metadata or {}
-            md: Dict[str, Any] = cast(Dict[str, Any], raw_md)
-            metadata = {
-                'title': md.get('title', '') or '',
-                'author': md.get('author', '') or '',
-                'creator': md.get('creator', '') or '',
-                'producer': md.get('producer', '') or '',
-                'creation_date': md.get('creationDate', '') or '',
-                'modification_date': md.get('modDate', '') or '',
+            with fitz.open(pdf_path) as doc:
 
-            }             
-            doc.close()
+                # Metadaten extrahieren / Extrair metadados
+                raw_md = doc.metadata or {}
+                md: Dict[str, Any] = cast(Dict[str, Any], raw_md)
+                metadata = {
+                    'title': md.get('title', '') or '',
+                    'author': md.get('author', '') or '',
+                    'creator': md.get('creator', '') or '',
+                    'producer': md.get('producer', '') or '',
+                    'creation_date': md.get('creationDate', '') or '',
+                    'modification_date': md.get('modDate', '') or '',
+                }
 
-
-            
-            # Text von jeder Seite extrahieren / Extrair texto de cada página
-            for page_num in range(doc.page_count):
-                page = doc[page_num]
-                page_text = page.get_text()
-                if page_text:
-                    text_content.append({
-                        'page': page_num + 1,
-                        'text': page_text,
-                        'char_count': len(page_text)
-                    })
-            
-            doc.close()
+                # Text von jeder Seite extrahieren / Extrair texto de cada página (limitado)
+                for page_num in range(min(doc.page_count, self.max_pages)):
+                    page = doc[page_num]
+                    page_text = page.get_text()
+                    if page_text:
+                        text_content.append({
+                            'page': page_num + 1,
+                            'text': page_text,
+                            'char_count': len(page_text)
+                        })
             
             result = {
                 'method': 'pymupdf',
@@ -281,7 +294,7 @@ class PDFReaderService:
             return result
             
         except Exception as e:
-            logger.error(f"Fehler bei pymupdf-Extraktion / Erro na extração com pymupdf: {str(e)}")
+            logger.exception(f"Fehler bei pymupdf-Extraktion / Erro na extração com pymupdf: {str(e)}")
             return {
                 'method': 'pymupdf',
                 'success': False,
@@ -315,11 +328,14 @@ class PDFReaderService:
             # Zusätzliche Informationen / Informações adicionais
             data = pytesseract.image_to_data(image, lang=language, output_type=pytesseract.Output.DICT)
             
+            # calcular confiança média somente se tivermos scores válidos
+            conf_values = [int(conf) for conf in data.get('conf', []) if isinstance(conf, (int, str)) and int(conf) > 0]
+            avg_conf = int(sum(conf_values) / len(conf_values)) if conf_values else 0
             result = {
                 'method': 'pytesseract',
                 'success': True,
                 'text': text,
-                'confidence': sum([int(conf) for conf in data['conf'] if int(conf) > 0]) / len([conf for conf in data['conf'] if int(conf) > 0]) if data['conf'] else 0,
+                'confidence': avg_conf,
                 'language': language,
                 'char_count': len(text)
             }

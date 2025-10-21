@@ -1,13 +1,20 @@
-"""
-User Model - Benutzermodell 
-"""
+"""User Model - Benutzermodell"""
 
+from __future__ import annotations
 from datetime import datetime, timezone
-from typing import Optional, List
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Text
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from typing import TYPE_CHECKING, Optional
+
 import enum
+from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+
+from app.core.database import Base
+
+if TYPE_CHECKING:
+    from .contract import Contract
+
+
 
 from app.core.database import Base
 
@@ -27,46 +34,46 @@ class User(Base):
     __tablename__ = "users"
 
     #Prämärschlüssel
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
    
     #Grundlegende Benutzerinformationen / Informações básicas do usuário
-    username = Column(String(50), unique=True, index=True, nullable=True)  # ← ADICIONAR CAMPO USERNAME
-    email = Column(String(100), unique=True, index=True, nullable=False)
-    name = Column(String(100), nullable=False)
-    department = Column(String(100), nullable=True)
-    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    username: Mapped[Optional[str]] = mapped_column(String(50), unique=True, index=True, nullable=True)  # ← ADICIONAR CAMPO USERNAME
+    email: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    department: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER, nullable=False)
 
 
     #Authentifizierungsinformationen
-    password_hash = Column(String(255), nullable=False)
-    is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=False)
-    is_superuser = Column(Boolean, default=False)
-    verification_token = Column(String(255), nullable=True)
-    reset_token = Column(String(255), nullable=True)
-    reset_token_expiration = Column(DateTime, nullable=True)
-    failed_login_attempts = Column(Integer, default=0)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
+    verification_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reset_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reset_token_expiration: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
     
     #Zusätzliche Informationen
-    phone = Column(String(20), nullable=True)
-    position = Column(String(100), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    position: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     #Audit Felder
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
-    created_by = Column(Integer, nullable=True)  # ForeignKey zu User.id kann hinzugefügt werden
-    updated_by = Column(Integer, nullable=True)  # ForeignKey zu User.id kann hinzugefügt werden
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
-    deleted_by = Column(Integer, nullable=True)  # ForeignKey zu User.id kann hinzu
-    is_deleted = Column(Boolean, default=False)
-    last_login = Column(DateTime(timezone=True), nullable=True)
-    last_login_ip = Column(String(45), nullable=True)  # IPv6 kompatibel
-    notes = Column(String(500), nullable=True)
-    preferences = Column(Text, nullable=True)  # JSON String für Benutzerpräferenzen
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+    created_by: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # ForeignKey zu User.id kann hinzugefügt werden
+    updated_by: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # ForeignKey zu User.id kann hinzugefügt werden
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_by: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # ForeignKey zu User.id kann hinzu
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login_ip: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)  # IPv6 kompatibel
+    notes: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    preferences: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON String für Benutzerpräferenzen
 
     #Beziehungen
     
-    contracts = relationship("Contract", back_populates="creator") 
+    contracts: Mapped[list["Contract"]] = relationship("Contract", back_populates="creator") 
     
     """String Darstellung des Benutzers"""
     def __repr__(self):
@@ -158,6 +165,11 @@ def reset_user_password(db, user: User, new_password_hash: str):
     return user
 
 
+def get_user_by_email(db, email: str) -> Optional[User]:
+    """Benutzer anhand der E-Mail abrufen (ignoriert gelöschte Benutzer)"""
+    return db.query(User).filter(User.email == email, User.is_deleted == False).first()
+
+
 def authenticate_user(db, email: str, password_hash: str) -> Optional[User]:
     """Benutzer authentifizieren
     """
@@ -174,13 +186,13 @@ def authenticate_user(db, email: str, password_hash: str) -> Optional[User]:
     return None
 
 
-def get_users_by_role(db, role: UserRole) -> List[User]:
+def get_users_by_role(db, role: UserRole) -> list[User]:
     """Benutzer anhand ihrer Rolle abrufen
     """
     return db.query(User).filter(User.role == role, User.is_deleted == False).all()
 
 
-def search_users(db, query: str) -> List[User]:
+def search_users(db, query: str) -> list[User]:
     """Benutzer anhand von Name, E-Mail oder Benutzername durchsuchen
     Buscar usuários por nome, e-mail ou nome de usuário
     """

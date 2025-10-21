@@ -23,6 +23,14 @@ class UserService:
         """
         Neuen Benutzer erstellen 
         """
+        # Basic validations
+        if not user_data.username or not user_data.username.strip():
+            raise ValueError("username is required")
+        if not user_data.email or "@" not in user_data.email:
+            raise ValueError("valid email is required")
+        if not user_data.password or len(user_data.password) < 8:
+            raise ValueError("password must be at least 8 characters")
+
         # Prüfen ob Benutzer bereits existiert
         existing_user: Optional[User] = None
         if user_data.username:
@@ -48,9 +56,10 @@ class UserService:
         )
         
         self.db.add(db_user)
-        await self.db.flush()      # pega PK sem precisar commitar
-        await self.db.refresh(db_user)
+        # Flush to get PK if DB supports it, then commit and refresh
+        await self.db.flush()
         await self.db.commit()
+        await self.db.refresh(db_user)
         return db_user
     
     async def get_user_by_id(self, user_id: int) -> Optional[User]:
@@ -113,8 +122,13 @@ class UserService:
         
         # Felder aktualisieren / Atualizar campos
         update_data = user_data.dict(exclude_unset=True)
+        # Validate incoming fields
+        if "email" in update_data and (not update_data["email"] or "@" not in update_data["email"]):
+            raise ValueError("valid email is required")
         if "password" in update_data:
-            update_data["password_hash"] = get_password_hash(update_data.pop("password"))  # ← Corrigir: hashed_password para password_hash
+            if not update_data["password"] or len(update_data["password"]) < 8:
+                raise ValueError("password must be at least 8 characters")
+            update_data["password_hash"] = get_password_hash(update_data.pop("password"))  # hashed into password_hash
         
         await self.db.execute(
             update(User).where(User.id == user_id).values(**update_data)
