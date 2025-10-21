@@ -433,6 +433,21 @@ class TestAlertPerformance:
         
         # Deve ser rápido (< 2 segundos) / Sollte schnell sein (< 2 Sekunden)
         assert duration < 2.0
+        html = ""
+        # Renderizar 50 vezes / 50 mal rendern
+        for _ in range(50):
+            html = render_contract_expiry_html(
+            contract=contract,
+            days_until=30,
+            alert_type=AlertType.T_MINUS_30,
+            language="de"
+            )
+
+        end_time = time.time()
+        duration = end_time - start_time
+
+        # Deve ser rápido (< 2 segundos) / Sollte schnell sein (< 2 Sekunden)
+        assert duration < 2.0
         assert isinstance(html, str)
 
 
