@@ -37,8 +37,9 @@ router = APIRouter(
 # JWT-Einstellungen
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # Token de acesso expira em 30 minutos
-REFRESH_TOKEN_EXPIRE_DAYS = 7     # Token de refresh expira em 7 dias
+# Use central settings for token expirations so changes apply globally
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 
 
 # Hilfsfunktionen 
@@ -123,36 +124,44 @@ async def login(
 
     """
     # Benutzerservice abrufen
-    user_service = UserService(db)
-    
-    # Benutzer authentifizieren
-    if not form_data.username or not form_data.password:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username and password are required")
-    user = await user_service.authenticate_user(form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password - Falscher Benutzername oder Passwort",
-            headers={"WWW-Authenticate": "Bearer"},
+    try:
+        user_service = UserService(db)
+
+        # Benutzer authentifizieren
+        if not form_data.username or not form_data.password:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username and password are required")
+        user = await user_service.authenticate_user(form_data.username, form_data.password)
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password - Falscher Benutzername oder Passwort",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if user.is_active is not True:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Inactive user - Inaktiver Benutzer"
+            )
+
+        # Zugriffstoken erstellen
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.username, "user_id": user.id, "username": user.username}, expires_delta=access_token_expires
         )
-    
-    if user.is_active is not True:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user - Inaktiver Benutzer"
-        )
-    
-    # Zugriffstoken erstellen
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username, "user_id": user.id, "username": user.username}, expires_delta=access_token_expires
-    )
-    
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
-    }
+
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        }
+    except HTTPException:
+        # re-raise known HTTP exceptions
+        raise
+    except Exception:
+        # Não vazar detalhes internos
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 @router.post("/register", response_model=UserResponse)
 async def register(

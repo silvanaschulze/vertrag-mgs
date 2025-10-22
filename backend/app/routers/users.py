@@ -83,8 +83,13 @@ async def create_user(
     db_user = await UserService(db).get_user_by_email(email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="E-Mail bereits registriert")
-    new_user = await UserService(db).create_user(user)
-    return new_user
+    try:
+        new_user = await UserService(db).create_user(user)
+        return new_user
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Erstellen des Benutzers")
 
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(
@@ -106,8 +111,13 @@ async def update_user(
     db_user = await UserService(db).get_user(user_id=user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail=" Benutzer nicht gefunden")
-    updated_user = await UserService(db).update_user(user_id, user)
-    return updated_user 
+    try:
+        updated_user = await UserService(db).update_user(user_id, user)
+        return updated_user
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Aktualisieren des Benutzers")
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(

@@ -113,6 +113,13 @@ def create_user(db, email: str, name: str, password_hash: str, role: UserRole = 
     """ Neuen Benutzer in der Datenbank erstellen
     Criar novo usuário no banco de dados
    """
+    import warnings
+    warnings.warn(
+        "create_user(db, ...) is synchronous helper for scripts/tests. Use app.services.user_service.UserService for async code.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     new_user = User(
         username=username,
         email=email,
@@ -129,6 +136,12 @@ def create_user(db, email: str, name: str, password_hash: str, role: UserRole = 
 def delete_user(db, user: User, deleted_by: Optional[int] = None):
     """Benutzer aus der Datenbank löschen (soft delete)
     """
+    import warnings
+    warnings.warn(
+        "delete_user(db, ...) is synchronous helper for scripts/tests. Use app.services.user_service.UserService for async code.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     user.mark_as_deleted(deleted_by)
     db.commit()
 
@@ -136,6 +149,12 @@ def delete_user(db, user: User, deleted_by: Optional[int] = None):
 def update_user(db, user: User, **kwargs) -> User:
     """Benutzerinformationen aktualisieren
     """
+    import warnings
+    warnings.warn(
+        "update_user(db, ...) is synchronous helper for scripts/tests. Use app.services.user_service.UserService for async code.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     for key, value in kwargs.items():
         if hasattr(user, key):
             setattr(user, key, value)
@@ -147,6 +166,12 @@ def update_user(db, user: User, **kwargs) -> User:
 def verify_user(db, user: User):
     """Benutzer verifizieren
     """
+    import warnings
+    warnings.warn(
+        "verify_user(db, ...) is synchronous helper for scripts/tests. Use app.services.user_service.UserService for async code.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     user.is_verified = True
     user.verification_token = None
     db.commit()
@@ -157,6 +182,12 @@ def verify_user(db, user: User):
 def reset_user_password(db, user: User, new_password_hash: str):
     """Benutzerpasswort zurücksetzen
     """
+    import warnings
+    warnings.warn(
+        "reset_user_password(db, ...) is synchronous helper for scripts/tests. Use app.services.user_service.UserService for async code.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     user.password_hash = new_password_hash
     user.reset_token = None
     user.reset_token_expiration = None
@@ -167,12 +198,24 @@ def reset_user_password(db, user: User, new_password_hash: str):
 
 def get_user_by_email(db, email: str) -> Optional[User]:
     """Benutzer anhand der E-Mail abrufen (ignoriert gelöschte Benutzer)"""
+    import warnings
+    warnings.warn(
+        "get_user_by_email(db, ...) is synchronous helper for scripts/tests. Use app.services.user_service.UserService for async code.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return db.query(User).filter(User.email == email, User.is_deleted == False).first()
 
 
 def authenticate_user(db, email: str, password_hash: str) -> Optional[User]:
     """Benutzer authentifizieren
     """
+    import warnings
+    warnings.warn(
+        "authenticate_user(db, ...) is synchronous helper for scripts/tests. Use app.services.user_service.UserService for async code.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     user = get_user_by_email(db, email)
     if user and user.password_hash == password_hash and user.is_active and not user.is_deleted:
         user.reset_failed_logins()
@@ -189,6 +232,12 @@ def authenticate_user(db, email: str, password_hash: str) -> Optional[User]:
 def get_users_by_role(db, role: UserRole) -> list[User]:
     """Benutzer anhand ihrer Rolle abrufen
     """
+    import warnings
+    warnings.warn(
+        "get_users_by_role(db, ...) is synchronous helper for scripts/tests. Use app.services.user_service.UserService for async code.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return db.query(User).filter(User.role == role, User.is_deleted == False).all()
 
 
@@ -196,6 +245,12 @@ def search_users(db, query: str) -> list[User]:
     """Benutzer anhand von Name, E-Mail oder Benutzername durchsuchen
     Buscar usuários por nome, e-mail ou nome de usuário
     """
+    import warnings
+    warnings.warn(
+        "search_users(db, ...) is synchronous helper for scripts/tests. Use app.services.user_service.UserService for async code.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return db.query(User).filter(
         (User.name.ilike(f"%{query}%")) | 
         (User.email.ilike(f"%{query}%")) | 
