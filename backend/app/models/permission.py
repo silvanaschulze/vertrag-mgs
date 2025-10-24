@@ -44,4 +44,4 @@ class Permission(Base):
         Returns / Retorna:
             bool: True wenn gewährt / True se concedida
         """
-        return self.is_active
+        return bool(self.is_active)

@@ -77,7 +77,10 @@ class User(Base):
     
     """String Darstellung des Benutzers"""
     def __repr__(self):
-        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', role='{self.role.value}')>"   
+        # Safety: role may be None or an Enum; handle gracefully to avoid AttributeError during repr
+        role_val = getattr(self.role, 'value', self.role)
+        role_str = role_val if role_val is not None else 'N/A'
+        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', role='{role_str}')>"
     """Überprüft ob der Benutzer Admin ist """
     def is_admin(self) -> bool:
         return self.role == UserRole.ADMIN

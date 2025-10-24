@@ -78,7 +78,9 @@ class Contract(Base):
 
     def __repr__(self) -> str:
         """String-Darstellung des Vertrags"""
-        return f"<Contract(id={self.id}, title={self.title}, status={self.status.value})>"
+        # Protege contra status == None durante criação/coleção de objetos nos testes
+        status_value = self.status.value if getattr(self, "status", None) is not None else "None"
+        return f"<Contract(id={self.id}, title={self.title}, status={status_value})>"
 
     def is_active(self) -> bool:
         """Überprufen, ob der Vertrag aktiv ist """

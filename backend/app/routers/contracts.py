@@ -23,7 +23,14 @@ from app.schemas.contract import (
     ContractListResponse,
     ContractStats,
 )
+import os
+import asyncio
 from app.services.contract_service import ContractService
+from app.utils.document_generator import render_docx_bytes, _convert_docx_bytes_to_pdf_bytes
+from fastapi.responses import StreamingResponse, Response
+from fastapi import UploadFile, File
+from app.core.config import settings
+from pathlib import Path
 
 # Router für Contract-Endpoints
 router = APIRouter(
@@ -79,8 +86,8 @@ async def list_contracts(
             'contract_type': contract_type
         } if status or contract_type else None,
         search=search,
-        sort_by=sort_by,
-        sort_order=sort_order
+    sort_by=sort_by or "created_at",
+    sort_order=sort_order or "desc"
     )   
 # POST /contracts/ - Erstellt einen neuen Vertrag
 @router.post("/", response_model=ContractResponse, status_code=status.HTTP_201_CREATED)
@@ -257,6 +264,79 @@ async def get_expired_contracts(
         skip=(page - 1) * per_page,
         limit=per_page
     )
+
+
+@router.get("/{contract_id}/document", status_code=status.HTTP_200_OK)
+async def generate_contract_document(
+    contract_id: int,
+    format: Optional[str] = Query("pdf", regex="^(pdf|docx)$", description="Formato do documento: pdf ou docx"),
+    contract_service: ContractService = Depends(get_contract_service)
+):
+    """
+    Erzeugt und liefert das Vertragsdokument (DOCX oder PDF).
+    - Rendert ein .docx-Template mit den Vertragsdaten
+    - Konvertiert zu PDF mittels LibreOffice (`soffice`) falls gewünscht und verfügbar
+    """
+    contract = await contract_service.get_contract(contract_id)
+    if not contract:
+        # Vertrag nicht gefunden / Contrato não encontrado
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden / Contrato não encontrado")
+
+    # Preparar dados para template — usar model_dump para Pydantic
+    try:
+        data = contract.model_dump() if hasattr(contract, "model_dump") else dict(contract)
+    except Exception:
+        # Fallback: einfache Konvertierung zu dict
+        data = dict(contract)
+
+    # Determinar caminho do template — permitir que haja um template por tipo/empresa
+    template_path = f"templates/contract_template.docx"
+    if not os.path.exists(template_path):
+        # Template fehlt / Template não encontrado
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Template nicht gefunden / Template não encontrado")
+
+    # Gerar bytes do docx em thread para não bloquear
+    docx_bytes = await asyncio.to_thread(render_docx_bytes, template_path, data)
+
+    if format == "docx":
+        return Response(content=docx_bytes, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={"Content-Disposition": f"attachment; filename=contract_{contract_id}.docx"})
+
+    # se PDF solicitado, tentar converter em thread (blocking)
+    pdf_bytes = await asyncio.to_thread(_convert_docx_bytes_to_pdf_bytes, docx_bytes)
+    if pdf_bytes:
+        return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=contract_{contract_id}.pdf"})
+
+    # fallback: retornar docx com aviso
+    return Response(content=docx_bytes, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={"Content-Disposition": f"attachment; filename=contract_{contract_id}.docx"})
+
+
+@router.post("/{contract_id}/template", status_code=status.HTTP_201_CREATED)
+async def upload_contract_template(
+    contract_id: int,
+    file: UploadFile = File(...),
+):
+    """Upload de template .docx para um contrato específico.
+
+    Valida extensão .docx e tamanho (usando settings.MAX_FILE_SIZE).
+    Salva em uploads/templates/contract_{id}.docx
+    """
+    filename = file.filename or "template.docx"
+    if not filename.lower().endswith(".docx"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Apenas arquivos .docx são aceitos / Nur .docx Dateien erlaubt")
+
+    contents = await file.read()
+    if len(contents) > settings.MAX_FILE_SIZE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Arquivo muito grande / Datei zu groß")
+
+    upload_dir = Path(settings.UPLOAD_DIR) / "templates"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    target_path = upload_dir / f"contract_{contract_id}.docx"
+
+    # salvar em disco
+    with open(target_path, "wb") as f:
+        f.write(contents)
+
+    return {"message": "Template uploaded / Template hochgeladen", "path": str(target_path)}
 @router.get("/by-client", response_model=ContractListResponse, status_code=status.HTTP_200_OK)
 async def get_contracts_by_client(
     client_name: str = Query(..., description="Name des Kunden / Nome do cliente"),

@@ -23,14 +23,14 @@ async def test_create_and_query_models():
     async_session = async_sessionmaker(engine, expire_on_commit=False)
 
     async with async_session() as session:
-        # Create a user
+        # Erstelle einen Benutzer / Criar um usuário
         user = User(email="test@example.com", name="Test User", password_hash="hash", role=UserRole.USER)
         session.add(user)
         await session.commit()
         await session.refresh(user)
         assert user.id is not None
 
-        # Create a contract (use date objects)
+    # Erstelle einen Vertrag (verwende date-Objekte) / Criar um contrato (usar objetos date)
         contract = Contract(
             title="Test Contract",
             start_date=datetime.date(2025, 1, 1),
@@ -45,16 +45,16 @@ async def test_create_and_query_models():
         await session.refresh(contract)
         assert contract.id is not None
 
-        # Create an alert (use datetime)
+    # Erstelle einen Alert (verwende datetime) / Criar um alerta (usar datetime)
         alert = Alert(contract_id=contract.id, alert_type=AlertType.T_MINUS_30, scheduled_for=datetime.datetime(2025, 12, 1, 9, 0, 0))
         session.add(alert)
         await session.commit()
         await session.refresh(alert)
         assert alert.id is not None
 
-        # Query counts using sa.text to get scalar
-        result = await session.execute(sa.text("SELECT count(*) AS cnt FROM users"))
-        count = result.scalar_one()
-        assert count >= 1
+    # Zähle Einträge / Contar entradas
+    result = await session.execute(sa.text("SELECT count(*) AS cnt FROM users"))
+    count = result.scalar_one()
+    assert count >= 1
 
     await engine.dispose()

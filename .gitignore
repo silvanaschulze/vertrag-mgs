@@ -43,3 +43,38 @@ docs/
 __pycache__/
 *.pyc
 
+
+# Test/cache/coverage
+.pytest_cache/
+.mypy_cache/
+.cache/
+.tox/
+.coverage
+coverage.xml
+
+# SQLite / local DB files
+*.sqlite
+*.sqlite3
+*.db
+
+# Python packaging
+dist/
+build/
+*.egg-info/
+pip-wheel-metadata/
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local secrets (already covered but be explicit)
+.env
+.env.*
+
+# Ignore pyproject lockfiles or local-generated requirements
+*.lock
+

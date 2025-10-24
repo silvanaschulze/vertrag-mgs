@@ -47,14 +47,14 @@ class UserCreate(UserBase):
             raise ValueError('Das Passwort muss mindestens eine Zahl enthalten')
         return v
     
-@field_validator("is_superuser")
-@classmethod
-def validate_superuser(cls, v: bool, info: ValidationInfo) -> bool:
-    """Validar que apenas ADMINs podem ser superuser"""
-    data = info.data or {}
-    if v and data.get("role") != UserRole.ADMIN:
-        raise ValueError("Nur ADMINs können Superuser sein / Apenas ADMINs podem ser superusuários")
-    return v
+    @field_validator("is_superuser")
+    @classmethod
+    def validate_superuser(cls, v: bool, info: ValidationInfo) -> bool:
+        """Validar que apenas ADMINs podem ser superuser"""
+        data = info.data or {}
+        if v and data.get("role") != UserRole.ADMIN:
+            raise ValueError("Nur ADMINs können Superuser sein / Apenas ADMINs podem ser superusuários")
+        return v
 
 # Schema für die Aktualisierung von Benutzerdaten
 class UserUpdate(BaseModel):

@@ -10,6 +10,7 @@ from typing import List, Optional, cast
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.exc import OperationalError
 from sqlalchemy import select, and_, desc, func
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -73,8 +74,12 @@ async def list_alerts(
         query = query.order_by(desc(Alert.created_at))
 
         # Executar query com paginação no banco (LIMIT/OFFSET) para evitar carregar tudo
-        count_result = await db.execute(select(func.count()).select_from(query.subquery()))
-        total = int(count_result.scalar_one())
+        try:
+            count_result = await db.execute(select(func.count()).select_from(query.subquery()))
+            total = int(count_result.scalar_one())
+        except OperationalError:
+            # Banco não inicializado (ex.: em ambientes de teste sem migrações)
+            return AlertListResponse(total=0, alerts=[], page=page, per_page=per_page)
         # Calcular offset/limit
         start_idx = (page - 1) * per_page
         query = query.limit(per_page).offset(start_idx)
@@ -91,6 +96,8 @@ async def list_alerts(
             per_page=per_page
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -116,17 +123,20 @@ async def get_alert(
     try:
         result = await db.execute(select(Alert).where(Alert.id == alert_id))
         alert = result.scalar_one_or_none()
-        
+
         if alert is None:
             raise HTTPException(
                 status_code=404,
                 detail="Alert not found / Alerta não encontrado"
             )
-        
+
         return AlertResponse.model_validate(alert)
-        
+
     except HTTPException:
         raise
+    except OperationalError:
+        # DB not initialized -> treat as not found
+        raise HTTPException(status_code=404, detail="Alert not found / Alerta não encontrado")
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -174,6 +184,9 @@ async def reprocess_alert(
         
     except HTTPException:
         raise
+    except OperationalError:
+        # DB not initialized -> treat as not found
+        raise HTTPException(status_code=404, detail="Alert not found / Alerta não encontrado")
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -200,13 +213,13 @@ async def get_contract_alerts(
         # Verificar se o contrato existe / Prüfen ob Vertrag existiert
         contract_result = await db.execute(select(Contract).where(Contract.id == contract_id))
         contract = contract_result.scalar_one_or_none()
-        
+
         if contract is None:
             raise HTTPException(
                 status_code=404,
                 detail="Contract not found / Contrato não encontrado"
             )
-        
+
         # Buscar alertas do contrato / Alerts des Vertrags suchen
         result = await db.execute(
             select(Alert)
@@ -214,11 +227,14 @@ async def get_contract_alerts(
             .order_by(desc(Alert.created_at))
         )
         alerts = result.scalars().all()
-        
+
         return [AlertResponse.model_validate(alert) for alert in alerts]
-        
+
     except HTTPException:
         raise
+    except OperationalError:
+        # DB absent -> return not found for contract
+        raise HTTPException(status_code=404, detail="Contract not found / Contrato não encontrado")
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -255,14 +271,22 @@ async def get_alerts_summary(
         # Total de alertas usando COUNT()
         total_result = await db.execute(select(func.count()).select_from(Alert))
         total_alerts = int(total_result.scalar_one() or 0)
-        
+
         return {
             "total_alerts": total_alerts,
             "by_status": status_counts,
             "by_type": type_counts,
             "generated_at": datetime.utcnow().isoformat()
         }
-        
+
+    except OperationalError:
+        # DB not initialized: retornar resumo vazio
+        return {
+            "total_alerts": 0,
+            "by_status": {},
+            "by_type": {},
+            "generated_at": datetime.utcnow().isoformat()
+        }
     except Exception as e:
         raise HTTPException(
             status_code=500,

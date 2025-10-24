@@ -1,8 +1,10 @@
 """initial
 
-Revision ID: 0001_initial
-Revises: 
-Create Date: 2025-10-22 00:00:00.000000
+Revisions-ID: 0001_initial
+Erstellt: 2025-10-22 00:00:00.000000
+
+Diese Migration erstellt die anfänglichen Tabellen: users, permissions, contracts, alerts.
+Migração inicial que cria as tabelas iniciais: users, permissions, contracts, alerts.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -15,7 +17,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # users
+    # users (Benutzer-Tabelle)
+    # users (tabela de usuários)
     op.create_table(
         'users',
         sa.Column('id', sa.Integer, primary_key=True, index=True),
@@ -47,7 +50,8 @@ def upgrade() -> None:
         sa.Column('preferences', sa.Text, nullable=True),
     )
 
-    # permissions
+    # permissions (Berechtigungs-Tabelle)
+    # permissions (tabela de permissões)
     op.create_table(
         'permissions',
         sa.Column('id', sa.Integer, primary_key=True, index=True),
@@ -58,7 +62,8 @@ def upgrade() -> None:
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     )
 
-    # contracts
+    # contracts (Vertrags-Tabelle)
+    # contracts (tabela de contratos)
     op.create_table(
         'contracts',
         sa.Column('id', sa.Integer, primary_key=True, index=True, autoincrement=True),
@@ -83,7 +88,8 @@ def upgrade() -> None:
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     )
 
-    # alerts
+    # alerts (Alarm-/Benachrichtigungs-Tabelle)
+    # alerts (tabela de alertas)
     op.create_table(
         'alerts',
         sa.Column('id', sa.Integer, primary_key=True, index=True, autoincrement=True),

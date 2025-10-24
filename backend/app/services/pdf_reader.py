@@ -14,15 +14,7 @@ import logging
 from datetime import datetime, date
 from typing import Optional, Dict, Any, List
 from pathlib import Path
-import fitz  # pymupdf
-import pdfplumber
-import PyPDF2
-import pytesseract
-from PIL import Image
 import io
-import dateparser
-import spacy
-from spacy.matcher import Matcher
 from typing import Dict, Any, cast
 
 # Logging konfigurieren / Configurar logging
@@ -84,17 +76,38 @@ class PDFReaderService:
             ]
         }
         
-        # Spacy-Modell laden / Carregar modelo Spacy
-        try:
-            self.nlp = spacy.load("de_core_news_sm")
-            logger.info("Deutsches Spacy-Modell geladen / Modelo Spacy alemão carregado")
-        except OSError:
-            logger.warning("Deutsches Spacy-Modell nicht gefunden / Modelo Spacy alemão não encontrado")
-            self.nlp = None
+        # lazy-loaded NLP und Parser libraries
+        self._nlp = None
+        self._dateparser = None
         # máximo de páginas a processar por documento para evitar uso excessivo de memória
         self.max_pages = 500
 
         logger.info("PDF-Reader-Service initialisiert / PDF Reader Service initialized")
+
+    def _ensure_nlp(self):
+        """Lazy-load das Spacy-Modell; safe-fallback, returns None if nicht verfügbar."""
+        if self._nlp is not None:
+            return self._nlp
+        try:
+            import spacy
+            self._nlp = spacy.load("de_core_news_sm")
+            logger.info("Deutsches Spacy-Modell geladen / Modelo Spacy alemão carregado")
+        except Exception:
+            logger.warning("Deutsches Spacy-Modell nicht gefunden / Modelo Spacy alemão não encontrado")
+            self._nlp = None
+        return self._nlp
+
+    def _ensure_dateparser(self):
+        """Lazy-load dateparser; returns module or None."""
+        if self._dateparser is not None:
+            return self._dateparser
+        try:
+            import dateparser
+            self._dateparser = dateparser
+        except Exception:
+            logger.warning("dateparser nicht verfügbar / dateparser não disponível")
+            self._dateparser = None
+        return self._dateparser
     
     def extract_text_with_pdfplumber(self, pdf_path: str) -> Dict[str, Any]:
         """
@@ -107,253 +120,24 @@ class PDFReaderService:
         Returns / Retorna:
             Dict[str, Any]: Extrahierter Text und Metadaten / Texto extraído e metadados
         """
-        try:
-            # Basic file checks to avoid trying to open non-existing or huge files
-            if not os.path.exists(pdf_path):
-                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-            # limit to 50 MB to avoid excessive memory usage
-            max_size = 50 * 1024 * 1024
-            if os.path.getsize(pdf_path) > max_size:
-                raise ValueError(f"PDF file too large (>50MB): {pdf_path}")
-            logger.info(f"Textextraktion mit pdfplumber gestartet / Extração de texto com pdfplumber iniciada: {pdf_path}")
-            
-            text_content = []
-            metadata = {}
-            
-            with pdfplumber.open(pdf_path) as pdf:
-                # Metadaten extrahieren / Extrair metadados
-                metadata = {
-                    'pages': len(pdf.pages),
-                    'title': pdf.metadata.get('Title', ''),
-                    'author': pdf.metadata.get('Author', ''),
-                    'creator': pdf.metadata.get('Creator', ''),
-                    'producer': pdf.metadata.get('Producer', ''),
-                    'creation_date': pdf.metadata.get('CreationDate', ''),
-                    'modification_date': pdf.metadata.get('ModDate', '')
-                }
-                
-                # Text von jeder Seite extrahieren / Extrair texto de cada página (limitado)
-                for page_num, page in enumerate(pdf.pages[: self.max_pages], 1):
-                    page_text = page.extract_text()
-                    if page_text:
-                        text_content.append({
-                            'page': page_num,
-                            'text': page_text,
-                            'char_count': len(page_text)
-                        })
-            
-            result = {
-                'method': 'pdfplumber',
-                'success': True,
-                'text': '\n'.join([page['text'] for page in text_content]),
-                'pages': text_content,
-                'metadata': metadata,
-                'total_chars': sum([page['char_count'] for page in text_content])
-            }
-            
-            logger.info(f"Textextraktion mit pdfplumber erfolgreich / Extração de texto com pdfplumber bem-sucedida: {result['total_chars']} Zeichen")
-            return result
-            
-        except Exception as e:
-            logger.exception(f"Fehler bei pdfplumber-Extraktion / Erro na extração com pdfplumber: {str(e)}")
-            return {
-                'method': 'pdfplumber',
-                'success': False,
-                'error': str(e),
-                'text': '',
-                'pages': [],
-                'metadata': {}
-            }
-    
+        # delega a implementação para o módulo refatorado
+        from app.services.pdf_reader_pkg import extractors
+        return extractors.extract_text_with_pdfplumber(self, pdf_path)
+
     def extract_text_with_pypdf2(self, pdf_path: str) -> Dict[str, Any]:
-        """
-        Extrahiert Text aus PDF mit PyPDF2
-        Extrai texto de PDF com PyPDF2
-        
-        Args / Argumentos:
-            pdf_path (str): Pfad zur PDF-Datei / Caminho para o arquivo PDF
-            
-        Returns / Retorna:
-            Dict[str, Any]: Extrahierter Text und Metadaten / Texto extraído e metadados
-        """
-        try:
-            if not os.path.exists(pdf_path):
-                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-            max_size = 50 * 1024 * 1024
-            if os.path.getsize(pdf_path) > max_size:
-                raise ValueError(f"PDF file too large (>50MB): {pdf_path}")
-            logger.info(f"Textextraktion mit PyPDF2 gestartet / Extração de texto com PyPDF2 iniciada: {pdf_path}")
-            
-            text_content = []
-            metadata = {}
-            
-            with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                
-                # Metadaten extrahieren / Extrair metadados
-                if pdf_reader.metadata:
-                    metadata = {
-                        'title': pdf_reader.metadata.get('/Title', ''),
-                        'author': pdf_reader.metadata.get('/Author', ''),
-                        'creator': pdf_reader.metadata.get('/Creator', ''),
-                        'producer': pdf_reader.metadata.get('/Producer', ''),
-                        'creation_date': pdf_reader.metadata.get('/CreationDate', ''),
-                        'modification_date': pdf_reader.metadata.get('/ModDate', '')
-                    }
-                
-                # Text von jeder Seite extrahieren / Extrair texto de cada página (limitado)
-                for page_num, page in enumerate(pdf_reader.pages[: self.max_pages], 1):
-                    page_text = page.extract_text()
-                    if page_text:
-                        text_content.append({
-                            'page': page_num,
-                            'text': page_text,
-                            'char_count': len(page_text)
-                        })
-            
-            result = {
-                'method': 'pypdf2',
-                'success': True,
-                'text': '\n'.join([page['text'] for page in text_content]),
-                'pages': text_content,
-                'metadata': metadata,
-                'total_chars': sum([page['char_count'] for page in text_content])
-            }
-            
-            logger.info(f"Textextraktion mit PyPDF2 erfolgreich / Extração de texto com PyPDF2 bem-sucedida: {result['total_chars']} Zeichen")
-            return result
-            
-        except Exception as e:
-            logger.exception(f"Fehler bei PyPDF2-Extraktion / Erro na extração com PyPDF2: {str(e)}")
-            return {
-                'method': 'pypdf2',
-                'success': False,
-                'error': str(e),
-                'text': '',
-                'pages': [],
-                'metadata': {}
-            }
-    
+        """Delegiert an pdf_reader_pkg.extractors.extract_text_with_pypdf2"""
+        from app.services.pdf_reader_pkg import extractors
+        return extractors.extract_text_with_pypdf2(self, pdf_path)
+
     def extract_text_with_pymupdf(self, pdf_path: str) -> Dict[str, Any]:
-        """
-        Extrahiert Text aus PDF mit pymupdf (fitz)
-        Extrai texto de PDF com pymupdf (fitz)
-        
-        Args / Argumentos:
-            pdf_path (str): Pfad zur PDF-Datei / Caminho para o arquivo PDF
-            
-        Returns / Retorna:
-            Dict[str, Any]: Extrahierter Text und Metadaten / Texto extraído e metadados
-        """
-        try:
-            if not os.path.exists(pdf_path):
-                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-            max_size = 50 * 1024 * 1024
-            if os.path.getsize(pdf_path) > max_size:
-                raise ValueError(f"PDF file too large (>50MB): {pdf_path}")
-            logger.info(f"Textextraktion mit pymupdf gestartet / Extração de texto com pymupdf iniciada: {pdf_path}")
-            
-            text_content = []
-            metadata = {}
-            
-            with fitz.open(pdf_path) as doc:
+        """Delegiert an pdf_reader_pkg.extractors.extract_text_with_pymupdf"""
+        from app.services.pdf_reader_pkg import extractors
+        return extractors.extract_text_with_pymupdf(self, pdf_path)
 
-                # Metadaten extrahieren / Extrair metadados
-                raw_md = doc.metadata or {}
-                md: Dict[str, Any] = cast(Dict[str, Any], raw_md)
-                metadata = {
-                    'title': md.get('title', '') or '',
-                    'author': md.get('author', '') or '',
-                    'creator': md.get('creator', '') or '',
-                    'producer': md.get('producer', '') or '',
-                    'creation_date': md.get('creationDate', '') or '',
-                    'modification_date': md.get('modDate', '') or '',
-                }
-
-                # Text von jeder Seite extrahieren / Extrair texto de cada página (limitado)
-                for page_num in range(min(doc.page_count, self.max_pages)):
-                    page = doc[page_num]
-                    page_text = page.get_text()
-                    if page_text:
-                        text_content.append({
-                            'page': page_num + 1,
-                            'text': page_text,
-                            'char_count': len(page_text)
-                        })
-            
-            result = {
-                'method': 'pymupdf',
-                'success': True,
-                'text': '\n'.join([page['text'] for page in text_content]),
-                'pages': text_content,
-                'metadata': metadata,
-                'total_chars': sum([page['char_count'] for page in text_content])
-            }
-            
-            logger.info(f"Textextraktion mit pymupdf erfolgreich / Extração de texto com pymupdf bem-sucedida: {result['total_chars']} Zeichen")
-            return result
-            
-        except Exception as e:
-            logger.exception(f"Fehler bei pymupdf-Extraktion / Erro na extração com pymupdf: {str(e)}")
-            return {
-                'method': 'pymupdf',
-                'success': False,
-                'error': str(e),
-                'text': '',
-                'pages': [],
-                'metadata': {}
-            }
-    
     def ocr_with_pytesseract(self, image_path: str, language: str = 'deu') -> Dict[str, Any]:
-        """
-        Führt OCR mit pytesseract durch
-        Executa OCR com pytesseract
-        
-        Args / Argumentos:
-            image_path (str): Pfad zur Bilddatei / Caminho para o arquivo de imagem
-            language (str): OCR-Sprache / Idioma do OCR
-            
-        Returns / Retorna:
-            Dict[str, Any]: OCR-Ergebnis / Resultado do OCR
-        """
-        try:
-            logger.info(f"OCR mit pytesseract gestartet / OCR com pytesseract iniciado: {image_path}")
-            
-            # Bild laden / Carregar imagem
-            image = Image.open(image_path)
-            
-            # OCR durchführen / Executar OCR
-            text = pytesseract.image_to_string(image, lang=language)
-            
-            # Zusätzliche Informationen / Informações adicionais
-            data = pytesseract.image_to_data(image, lang=language, output_type=pytesseract.Output.DICT)
-            
-            # calcular confiança média somente se tivermos scores válidos
-            conf_values = [int(conf) for conf in data.get('conf', []) if isinstance(conf, (int, str)) and int(conf) > 0]
-            avg_conf = int(sum(conf_values) / len(conf_values)) if conf_values else 0
-            result = {
-                'method': 'pytesseract',
-                'success': True,
-                'text': text,
-                'confidence': avg_conf,
-                'language': language,
-                'char_count': len(text)
-            }
-            
-            logger.info(f"OCR mit pytesseract erfolgreich / OCR com pytesseract bem-sucedido: {result['char_count']} Zeichen")
-            return result
-            
-        except Exception as e:
-            logger.error(f"Fehler bei pytesseract-OCR / Erro no OCR com pytesseract: {str(e)}")
-            return {
-                'method': 'pytesseract',
-                'success': False,
-                'error': str(e),
-                'text': '',
-                'confidence': 0,
-                'language': language,
-                'char_count': 0
-            }
+        """Delegiert an pdf_reader_pkg.extractors.ocr_with_pytesseract"""
+        from app.services.pdf_reader_pkg import extractors
+        return extractors.ocr_with_pytesseract(self, image_path, language)
     
     def extract_text_combined(self, pdf_path: str) -> Dict[str, Any]:
         """
@@ -423,57 +207,9 @@ class PDFReaderService:
         Returns / Retorna:
             Dict[str, Any]: Validierungsergebnis / Resultado da validação
         """
-        try:
-            logger.info(f"PDF-Validierung gestartet / Validação de PDF iniciada: {pdf_path}")
-            
-            if not os.path.exists(pdf_path):
-                return {
-                    'valid': False,
-                    'error': 'Datei nicht gefunden / Arquivo não encontrado',
-                    'file_size': 0
-                }
-            
-            file_size = os.path.getsize(pdf_path)
-            
-            # Dateigröße prüfen / Verificar tamanho do arquivo
-            if file_size == 0:
-                return {
-                    'valid': False,
-                    'error': 'Leere Datei / Arquivo vazio',
-                    'file_size': file_size
-                }
-            
-            # PDF-Format prüfen / Verificar formato PDF
-            try:
-                with open(pdf_path, 'rb') as file:
-                    header = file.read(4)
-                    if header != b'%PDF':
-                        return {
-                            'valid': False,
-                            'error': 'Ungültiges PDF-Format / Formato PDF inválido',
-                            'file_size': file_size
-                        }
-            except Exception as e:
-                return {
-                    'valid': False,
-                    'error': f'Fehler beim Lesen der Datei / Erro ao ler arquivo: {str(e)}',
-                    'file_size': file_size
-                }
-            
-            logger.info(f"PDF-Validierung erfolgreich / Validação de PDF bem-sucedida: {file_size} Bytes")
-            return {
-                'valid': True,
-                'file_size': file_size,
-                'message': 'PDF-Datei ist gültig / Arquivo PDF é válido'
-            }
-            
-        except Exception as e:
-            logger.error(f"Fehler bei PDF-Validierung / Erro na validação de PDF: {str(e)}")
-            return {
-                'valid': False,
-                'error': str(e),
-                'file_size': 0
-            }
+        # delega a implementação para o módulo refatorado
+        from app.services.pdf_reader_pkg import extractors
+        return extractors.validate_pdf(self, pdf_path)
     
     def extract_intelligent_data(self, text: str) -> Dict[str, Any]:
         """
@@ -513,210 +249,44 @@ class PDFReaderService:
             return {}
     
     def _extract_title(self, text: str) -> Optional[str]:
-        """Extrahiert Vertragstitel / Extrai título do contrato"""
-        try:
-            title_patterns = [
-                r'Vertrag\s+über\s+([^.\n]+)',
-                r'Vereinbarung\s+über\s+([^.\n]+)',
-                r'Dienstleistungsvertrag\s+([^.\n]+)',
-                r'Werkvertrag\s+([^.\n]+)',
-                r'Mietvertrag\s+([^.\n]+)',
-                r'Kaufvertrag\s+([^.\n]+)',
-            ]
-            
-            for pattern in title_patterns:
-                match = re.search(pattern, text, re.IGNORECASE)
-                if match:
-                    title = match.group(1).strip()
-                    if len(title) > 5:
-                        return title
-            
-            # Fallback: Erste Zeile als Titel / Fallback: primeira linha como título
-            first_line = text.split('\n')[0].strip()
-            if len(first_line) > 5 and len(first_line) < 100:
-                return first_line
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"Fehler bei Titel-Extraktion / Erro na extração de título: {str(e)}")
-            return None
+        from app.services.pdf_reader_pkg.parsers import extract_title
+        return extract_title(text)
     
     def _extract_client_name(self, text: str) -> Optional[str]:
-        """Extrahiert Kundenname / Extrai nome do cliente"""
-        try:
-            for pattern in self.patterns['company_patterns']:
-                matches = re.findall(pattern, text)
-                if matches:
-                    return max(matches, key=len)
-            
-            between_pattern = r'zwischen\s+([^,\n]+)'
-            match = re.search(between_pattern, text, re.IGNORECASE)
-            if match:
-                return match.group(1).strip()
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"Fehler bei Kundenname-Extraktion / Erro na extração de nome do cliente: {str(e)}")
-            return None
+        from app.services.pdf_reader_pkg.parsers import extract_client_name
+        return extract_client_name(text)
     
     def _extract_email(self, text: str) -> Optional[str]:
-        """Extrahiert E-Mail-Adressen / Extrai endereços de e-mail"""
-        try:
-            for pattern in self.patterns['email_patterns']:
-                matches = re.findall(pattern, text)
-                if matches:
-                    return matches[0]
-            return None
-        except Exception as e:
-            logger.error(f"Fehler bei E-Mail-Extraktion / Erro na extração de e-mail: {str(e)}")
-            return None
+        from app.services.pdf_reader_pkg.parsers import extract_email
+        return extract_email(text)
     
     def _extract_phone(self, text: str) -> Optional[str]:
-        """Extrahiert Telefonnummern / Extrai números de telefone"""
-        try:
-            for pattern in self.patterns['phone_patterns']:
-                matches = re.findall(pattern, text)
-                if matches:
-                    return matches[0]
-            return None
-        except Exception as e:
-            logger.error(f"Fehler bei Telefon-Extraktion / Erro na extração de telefone: {str(e)}")
-            return None
+        from app.services.pdf_reader_pkg.parsers import extract_phone
+        return extract_phone(text)
     
     def _extract_address(self, text: str) -> Optional[str]:
-        """Extrahiert Adressen / Extrai endereços"""
-        try:
-            address_patterns = [
-                r'([A-ZÄÖÜ][a-zäöüß]+\s+\d+[a-z]?,\s*\d{5}\s+[A-ZÄÖÜ][a-zäöüß]+)',
-                r'([A-ZÄÖÜ][a-zäöüß]+\s+\d+[a-z]?,\s*\d{5})',
-            ]
-            
-            for pattern in address_patterns:
-                matches = re.findall(pattern, text)
-                if matches:
-                    return matches[0]
-            return None
-        except Exception as e:
-            logger.error(f"Fehler bei Adress-Extraktion / Erro na extração de endereço: {str(e)}")
-            return None
+        from app.services.pdf_reader_pkg.parsers import extract_address
+        return extract_address(text)
     
     def _extract_money_values(self, text: str) -> Dict[str, Any]:
-        """Extrahiert Geldbeträge / Extrai valores monetários"""
-        try:
-            money_values = []
-            currencies = []
-            
-            for pattern in self.patterns['money_patterns']:
-                matches = re.findall(pattern, text)
-                for match in matches:
-                    amount_match = re.search(r'(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)', match)
-                    if amount_match:
-                        money_values.append(amount_match.group(1))
-                    
-                    if '€' in match or 'EUR' in match:
-                        currencies.append('EUR')
-            
-            if money_values:
-                highest_value = max(money_values, key=lambda x: float(x.replace('.', '').replace(',', '.')))
-                currency = currencies[0] if currencies else 'EUR'
-                
-                return {
-                    'value': highest_value,
-                    'currency': currency,
-                    'confidence': 0.8
-                }
-            
-            return {'value': None, 'currency': None, 'confidence': 0.0}
-            
-        except Exception as e:
-            logger.error(f"Fehler bei Geldbetrag-Extraktion / Erro na extração de valor monetário: {str(e)}")
-            return {'value': None, 'currency': None, 'confidence': 0.0}
+        from app.services.pdf_reader_pkg.financials import extract_money_values
+        return extract_money_values(text)
     
     def _extract_dates(self, text: str) -> Dict[str, Any]:
-        """Extrahiert Datumsangaben / Extrai datas"""
-        try:
-            dates = []
-            
-            for pattern in self.patterns['date_patterns']:
-                matches = re.findall(pattern, text)
-                for match in matches:
-                    parsed_date = dateparser.parse(match, languages=['de'])
-                    if parsed_date:
-                        dates.append({
-                            'raw': match,
-                            'parsed': parsed_date,
-                            'confidence': 0.8
-                        })
-            
-            # Datumsangaben nach Kontext kategorisieren / Categorizar datas por contexto
-            start_date = None
-            end_date = None
-            renewal_date = None
-            
-            for date_info in dates:
-                date_str = date_info['raw']
-                context_start = max(0, text.find(date_str) - 50)
-                context_end = min(len(text), text.find(date_str) + 50)
-                context = text[context_start:context_end].lower()
-                
-                if any(keyword in context for keyword in ['start', 'beginn', 'anfang', 'von']):
-                    start_date = date_str
-                elif any(keyword in context for keyword in ['ende', 'end', 'bis', 'until']):
-                    end_date = date_str
-                elif any(keyword in context for keyword in ['verlängerung', 'renewal', 'extension']):
-                    renewal_date = date_str
-            
-            return {
-                'start_date': start_date,
-                'end_date': end_date,
-                'renewal_date': renewal_date
-            }
-            
-        except Exception as e:
-            logger.error(f"Fehler bei Datums-Extraktion / Erro na extração de datas: {str(e)}")
-            return {
-                'start_date': None,
-                'end_date': None,
-                'renewal_date': None
-            }
+        from app.services.pdf_reader_pkg.dates import extract_dates
+        return extract_dates(text)
     
     def _extract_terms_and_conditions(self, text: str) -> Optional[str]:
-        """Extrahiert AGB und Bedingungen / Extrai termos e condições"""
-        try:
-            agb_patterns = [
-                r'Allgemeine Geschäftsbedingungen[:\s]*([^.]{50,500})',
-                r'AGB[:\s]*([^.]{50,500})',
-                r'Bedingungen[:\s]*([^.]{50,500})',
-            ]
-            
-            for pattern in agb_patterns:
-                match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
-                if match:
-                    terms = match.group(1).strip()
-                    if len(terms) > 50:
-                        return terms
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"Fehler bei AGB-Extraktion / Erro na extração de termos: {str(e)}")
-            return None
+        from app.services.pdf_reader_pkg.parsers import extract_terms_and_conditions
+        return extract_terms_and_conditions(text)
     
     def _extract_description(self, text: str) -> Optional[str]:
-        """Extrahiert Beschreibung / Extrai descrição"""
+        """Delegiert an pdf_reader_pkg.parsers.extract_description (lazy import)"""
         try:
-            sentences = text.split('.')[:3]
-            description = '. '.join(sentences).strip()
-            
-            if len(description) > 20 and len(description) < 500:
-                return description
-            
-            return None
-            
+            from app.services.pdf_reader_pkg.parsers import extract_description
+            return extract_description(text)
         except Exception as e:
-            logger.error(f"Fehler bei Beschreibungs-Extraktion / Erro na extração de descrição: {str(e)}")
+            logger.warning(f"Delegation der Beschreibungsextraktion fehlgeschlagen: {str(e)}")
             return None
 
     def calculate_notice_period(self, text: str) -> Optional[Dict[str, Any]]:
@@ -729,59 +299,12 @@ class PDFReaderService:
         Returns / Retorna:
             Optional[Dict[str, Any]]: Informações do período de aviso / Kündigungsfrist-Informationen
         """
+        # Delegation to refactored dates module to avoid duplicating logic here.
         try:
-            logger.info("Kündigungsfrist-Berechnung gestartet / Notice period calculation started")
-            
-            # Padrões para período de aviso / Muster für Kündigungsfrist
-            notice_patterns = [
-                r'kündigungsfrist\s*:?\s*(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)',
-                r'kündigung\s+(?:mit|nach)\s*(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)',
-                r'kündigbar\s+(?:mit|nach)\s*(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)',
-                r'beendigung\s+(?:mit|nach)\s*(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)',
-                r'(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)\s*kündigungsfrist',
-                r'(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)\s*(?:vor|vorher)',
-            ]
-            
-            text_lower = text.lower()
-            notice_periods = []
-            
-            for pattern in notice_patterns:
-                matches = re.finditer(pattern, text_lower, re.IGNORECASE)
-                for match in matches:
-                    period_value = int(match.group(1))
-                    period_text = match.group(0)
-                    
-                    # Determinar unidade / Einheit bestimmen
-                    if any(unit in period_text for unit in ['jahre', 'jahren']):
-                        unit = 'years'
-                        days = period_value * 365
-                    elif any(unit in period_text for unit in ['monate', 'monaten']):
-                        unit = 'months'
-                        days = period_value * 30
-                    else:
-                        unit = 'days'
-                        days = period_value
-                    
-                    notice_periods.append({
-                        'value': period_value,
-                        'unit': unit,
-                        'days': days,
-                        'text': period_text,
-                        'confidence': 0.9
-                    })
-            
-            if notice_periods:
-                # Retornar o período mais longo (geralmente o correto) / Längste Frist zurückgeben
-                best_period = max(notice_periods, key=lambda x: x['days'])
-                
-                logger.info(f"Kündigungsfrist gefunden / Notice period found: {best_period['value']} {best_period['unit']}")
-                return best_period
-            
-            logger.info("Keine Kündigungsfrist gefunden / No notice period found")
-            return None
-            
+            from app.services.pdf_reader_pkg.dates import calculate_notice_period as _calc
+            return _calc(text)
         except Exception as e:
-            logger.error(f"Fehler bei Kündigungsfrist-Berechnung / Error in notice period calculation: {str(e)}")
+            logger.warning(f"Delegation der Kündigungsfrist-Berechnung fehlgeschlagen, fallback: {str(e)}")
             return None
     
     def extract_advanced_context_data(self, text: str) -> Dict[str, Any]:
@@ -804,7 +327,6 @@ class PDFReaderService:
                 'legal_entities': self._extract_legal_entities(text),
                 'financial_terms': self._extract_financial_terms(text)
             }
-            
             logger.info("Erweiterte Kontextanalyse erfolgreich / Advanced context analysis successful")
             return context_data
             
@@ -815,140 +337,34 @@ class PDFReaderService:
     def _analyze_contract_complexity(self, text: str) -> Dict[str, Any]:
         """Analisa complexidade do contrato / Analysiert Vertragskomplexität"""
         try:
-            # Métricas de complexidade / Komplexitätsmetriken
-            word_count = len(text.split())
-            sentence_count = len([s for s in text.split('.') if s.strip()])
-            paragraph_count = len([p for p in text.split('\n\n') if p.strip()])
-            
-            # Palavras complexas (mais de 6 caracteres) / Komplexe Wörter (mehr als 6 Zeichen)
-            complex_words = sum(1 for word in text.split() if len(word) > 6)
-            complex_word_ratio = complex_words / word_count if word_count > 0 else 0
-            
-            # Score de complexidade (0-1) / Komplexitätsscore (0-1)
-            avg_sentence_length = word_count / sentence_count if sentence_count > 0 else 0
-            complexity_score = min(1.0, (avg_sentence_length / 20) + (complex_word_ratio * 2))
-            
-            return {
-                'word_count': word_count,
-                'sentence_count': sentence_count,
-                'paragraph_count': paragraph_count,
-                'avg_sentence_length': avg_sentence_length,
-                'complex_word_ratio': complex_word_ratio,
-                'complexity_score': complexity_score,
-                'complexity_level': 'high' if complexity_score > 0.7 else 'medium' if complexity_score > 0.4 else 'low'
-            }
-            
+            from app.services.pdf_reader_pkg.analysis import analyze_contract_complexity
+            return analyze_contract_complexity(text)
         except Exception as e:
-            logger.error(f"Fehler bei Komplexitätsanalyse / Error in complexity analysis: {str(e)}")
+            logger.warning(f"Delegation der Komplexitätsanalyse fehlgeschlagen: {str(e)}")
             return {'complexity_score': 0.5, 'complexity_level': 'medium'}
     
     def _extract_key_terms(self, text: str) -> List[Dict[str, Any]]:
-        """Extrai termos-chave do contrato / Extrahiert Schlüsselbegriffe des Vertrags"""
         try:
-            # Termos legais importantes / Wichtige rechtliche Begriffe
-            legal_terms = [
-                'kündigung', 'kündigungsfrist', 'verlängerung', 'automatische verlängerung',
-                'vertragsende', 'vertragsbeginn', 'leistung', 'vergütung', 'zahlung',
-                'haftung', 'haftungsausschluss', 'gewährleistung', 'garantie',
-                'streitbeilegung', 'schiedsgericht', 'gerichtsstand', 'anwendbares recht'
-            ]
-            
-            text_lower = text.lower()
-            found_terms = []
-            
-            for term in legal_terms:
-                if term in text_lower:
-                    # Encontrar contexto / Kontext finden
-                    start_pos = text_lower.find(term)
-                    context_start = max(0, start_pos - 30)
-                    context_end = min(len(text), start_pos + len(term) + 30)
-                    context = text[context_start:context_end]
-                    
-                    found_terms.append({
-                        'term': term,
-                        'context': context,
-                        'position': start_pos,
-                        'confidence': 0.8
-                    })
-            
-            return found_terms
-            
+            from app.services.pdf_reader_pkg.analysis import extract_key_terms
+            return extract_key_terms(text)
         except Exception as e:
-            logger.error(f"Fehler bei Schlüsselbegriff-Extraktion / Error in key term extraction: {str(e)}")
+            logger.warning(f"Delegation der Schlüsselbegriff-Extraktion fehlgeschlagen: {str(e)}")
             return []
     
     def _extract_legal_entities(self, text: str) -> List[Dict[str, Any]]:
-        """Extrai entidades legais / Extrahiert rechtliche Entitäten"""
+        """Delegiert an pdf_reader_pkg.analysis.extract_legal_entities (lazy import)"""
         try:
-            # Padrões para entidades legais / Muster für rechtliche Entitäten
-            entity_patterns = [
-                r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:GmbH|GmbH & Co\. KG)\b',
-                r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:AG|Aktiengesellschaft)\b',
-                r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:KG|Kommanditgesellschaft)\b',
-                r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:OHG|Offene Handelsgesellschaft)\b',
-                r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:UG|Unternehmergesellschaft)\b',
-            ]
-            
-            entities = []
-            for pattern in entity_patterns:
-                matches = re.finditer(pattern, text, re.IGNORECASE)
-                for match in matches:
-                    entities.append({
-                        'name': match.group(1).strip(),
-                        'full_text': match.group(0),
-                        'type': 'legal_entity',
-                        'confidence': 0.9
-                    })
-            
-            return entities
-            
+            from app.services.pdf_reader_pkg.analysis import extract_legal_entities
+            return extract_legal_entities(text)
         except Exception as e:
-            logger.error(f"Fehler bei rechtlicher Entitäts-Extraktion / Error in legal entity extraction: {str(e)}")
+            logger.warning(f"Delegation der rechtlichen Entitätsextraktion fehlgeschlagen: {str(e)}")
             return []
     
     def _extract_financial_terms(self, text: str) -> Dict[str, Any]:
-        """Extrai termos financeiros / Extrahiert finanzielle Begriffe"""
+        """Delegiert an pdf_reader_pkg.financials.extract_financial_terms (lazy import)"""
         try:
-            financial_terms = {
-                'payment_terms': [],
-                'penalties': [],
-                'discounts': [],
-                'taxes': []
-            }
-            
-            # Termos de pagamento / Zahlungsbedingungen
-            payment_patterns = [
-                r'(?:zahlung|bezahlung|entgelt)\s+(?:innerhalb|bis)\s+(\d+)\s*(?:tage|tagen)',
-                r'(?:rechnung|rechnungsstellung)\s+(?:innerhalb|bis)\s+(\d+)\s*(?:tage|tagen)',
-                r'(?:fällig|fälligkeit)\s+(?:innerhalb|bis)\s+(\d+)\s*(?:tage|tagen)',
-            ]
-            
-            for pattern in payment_patterns:
-                matches = re.finditer(pattern, text, re.IGNORECASE)
-                for match in matches:
-                    financial_terms['payment_terms'].append({
-                        'term': match.group(0),
-                        'days': int(match.group(1)),
-                        'confidence': 0.8
-                    })
-            
-            # Multas e penalidades / Strafen und Strafen
-            penalty_patterns = [
-                r'(?:strafe|strafzahlung|vertragsstrafe)\s+(?:von|in höhe von)\s*€?\s*(\d+(?:\.\d{3})*(?:,\d{2})?)',
-                r'(?:pönale|pönale)\s+(?:von|in höhe von)\s*€?\s*(\d+(?:\.\d{3})*(?:,\d{2})?)',
-            ]
-            
-            for pattern in penalty_patterns:
-                matches = re.finditer(pattern, text, re.IGNORECASE)
-                for match in matches:
-                    financial_terms['penalties'].append({
-                        'term': match.group(0),
-                        'amount': match.group(1),
-                        'confidence': 0.8
-                    })
-            
-            return financial_terms
-            
+            from app.services.pdf_reader_pkg.financials import extract_financial_terms
+            return extract_financial_terms(text)
         except Exception as e:
-            logger.error(f"Fehler bei finanzieller Begriffs-Extraktion / Error in financial term extraction: {str(e)}")
+            logger.warning(f"Delegation der finanziellen Begriffsextraktion fehlgeschlagen: {str(e)}")
             return {'payment_terms': [], 'penalties': [], 'discounts': [], 'taxes': []}

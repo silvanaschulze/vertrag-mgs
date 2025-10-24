@@ -1,6 +1,8 @@
-"""Mako template for Alembic revision scripts.
+"""Mako-Template für Alembic-Revisionen.
 
-This file intentionally minimal — used as scaffold for generated revisions.
+Diese Datei ist absichtlich minimal — dient als Gerüst für generierte Revisionen.
+Template Mako para scripts de revisão do Alembic.
+Este arquivo é intencionalmente mínimo — usado como esqueleto para revisões geradas.
 """
 from alembic import op
 import sqlalchemy as sa

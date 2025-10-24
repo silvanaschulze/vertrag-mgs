@@ -9,7 +9,8 @@ from sqlalchemy.engine import Connection
 
 from alembic import context
 
-# Ensure project root is on sys.path so `app` imports resolve
+# Sicherstellen, dass das Projekt-Root im sys.path ist, damit `app`-Importe aufgelöst werden
+# Garantir que a raiz do projeto esteja em sys.path para que imports de `app` funcionem
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -17,13 +18,15 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging if available.
+# Logging-Konfiguration aus der .ini nur falls verfügbar.
+# Configuração de logging a partir do arquivo .ini somente se disponível.
 cfg_fname = getattr(config, "config_file_name", None)
 if cfg_fname:
     try:
         fileConfig(cfg_fname)
     except Exception:
-        # best-effort logging configuration; do not fail migrations if logging setup fails
+        # Best-effort: Logging konfigurieren, aber Migration nicht blockieren
+        # Tentativa de configurar logging, mas não falhar a migração
         pass
 
 import importlib
