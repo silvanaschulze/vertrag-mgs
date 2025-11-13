@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 
-from app.routers import auth_router, contracts_router, users_router, alerts_router
+from app.routers import auth_router, contracts_router, users_router, alerts_router, rent_steps_router
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.services.notification_service import NotificationService
@@ -118,6 +118,7 @@ app.include_router(auth_router)
 app.include_router(contracts_router)
 app.include_router(users_router)
 app.include_router(alerts_router)
+app.include_router(rent_steps_router)
 
 @app.get("/")
 def root():

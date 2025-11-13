@@ -109,14 +109,77 @@ class ContractUpdate(BaseModel):
     # Zusätzliche Felder
     terms_and_conditions: Optional[str] = Field(None, description="Geschäftsbedingungen")
     notes: Optional[str] = Field(None, max_length=500, description="Zusätzliche Notizen")
+    
+    # Schemas für RentStep (Mietstaffelung)
+    class RentStepBase(BaseModel):
+        """Basisschema für eine Mietstaffelung (zukünftige Mietanpassung)."""
+        effective_date: date = Field(..., description="Datum, an dem der Betrag wirksam wird")
+        amount: Decimal = Field(..., ge=0, description="Betrag in Vertragswährung")
+        currency: Optional[str] = Field(None, min_length=3, max_length=3, description="ISO 4217 Währungscode (optional)")
+        note: Optional[str] = Field(None, max_length=300, description="Optionaler Hinweis")
+
+    class RentStepCreate(RentStepBase):
+        """Schema zum Erstellen einer RentStep"""
+        pass
+
+    class RentStepUpdate(BaseModel):
+        effective_date: Optional[date] = Field(None, description="Neues Wirksamkeitsdatum")
+        amount: Optional[Decimal] = Field(None, ge=0, description="Neuer Betrag")
+        currency: Optional[str] = Field(None, min_length=3, max_length=3, description="ISO 4217 Währungscode (optional)")
+        note: Optional[str] = Field(None, max_length=300, description="Optionaler Hinweis")
+
+    class RentStepResponse(RentStepBase):
+        id: int = Field(..., description="Eindeutige ID der RentStep")
+        contract_id: int = Field(..., description="ID des zugehörigen Vertrags")
+
+        class Config:
+            from_attributes = True
+            json_encoders = {
+                Decimal: lambda v: float(v),
+                date: lambda v: v.isoformat(),
+            }
 
 # Schema für API-Antworten (enthält Benutzerinformationen)
+class RentStepBase(BaseModel):
+    """Basisschema für eine Mietstaffelung (zukünftige Mietanpassung)."""
+    effective_date: date = Field(..., description="Datum, an dem der Betrag wirksam wird")
+    amount: Decimal = Field(..., ge=0, description="Betrag in Vertragswährung")
+    currency: Optional[str] = Field(None, min_length=3, max_length=3, description="ISO 4217 Währungscode (optional)")
+    note: Optional[str] = Field(None, max_length=300, description="Optionaler Hinweis")
+
+
+class RentStepCreate(RentStepBase):
+    """Schema zum Erstellen einer RentStep"""
+    pass
+
+
+class RentStepUpdate(BaseModel):
+    effective_date: Optional[date] = Field(None, description="Neues Wirksamkeitsdatum")
+    amount: Optional[Decimal] = Field(None, ge=0, description="Neuer Betrag")
+    currency: Optional[str] = Field(None, min_length=3, max_length=3, description="ISO 4217 Währungscode (optional)")
+    note: Optional[str] = Field(None, max_length=300, description="Optionaler Hinweis")
+
+
+class RentStepResponse(RentStepBase):
+    id: int = Field(..., description="Eindeutige ID der RentStep")
+    contract_id: int = Field(..., description="ID des zugehörigen Vertrags")
+
+    class Config:
+        from_attributes = True
+        json_encoders = {
+            Decimal: lambda v: float(v),
+            date: lambda v: v.isoformat(),
+        }
+
+
 class ContractResponse(ContractBase):
     """Schema für Vertragsdaten in API-Antworten"""
     id: int = Field(..., description="Eindeutige Vertrags-ID")
     created_by: int = Field(..., description="Benutzer-ID, die den Vertrag erstellt hat")
     created_at: datetime = Field(..., description="Vertragserstellungszeitstempel")
     updated_at: Optional[datetime] = Field(None, description="Zeitstempel der letzten Aktualisierung")
+    # Mietstaffelungen (zukünftige Anpassungen)
+    rent_steps: Optional[List["RentStepResponse"]] = Field(default_factory=list, description="Liste der zukünftigen Mietstaffelungen")
 
     class Config:
         from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell
@@ -133,6 +196,7 @@ class ContractInDB(ContractBase):
     created_by: int = Field(..., description="Benutzer-ID, die den Vertrag erstellt hat")
     created_at: datetime = Field(..., description="Vertragserstellungszeitstempel")
     updated_at: Optional[datetime] = Field(None, description="Zeitstempel der letzten Aktualisierung")
+    rent_steps: Optional[List["RentStepResponse"]] = Field(default_factory=list, description="Liste der zukünftigen Mietstaffelungen")
     
     class Config:
         from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell

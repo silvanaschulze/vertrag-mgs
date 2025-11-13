@@ -15,6 +15,7 @@ from app.core.database import Base
 if TYPE_CHECKING:
     from .alert import Alert
     from .user import User
+    from .rent_step import RentStep
 
 class ContractStatus(str, enum.Enum):
     DRAFT = "entwurf"               #Entwurf
@@ -75,6 +76,14 @@ class Contract(Base):
 
     # Beziehung zu Alerts
     alerts: Mapped[list["Alert"]] = relationship("Alert", back_populates="contract")
+
+    # Mietstaffelungen / Rent steps
+    rent_steps: Mapped[list["RentStep"]] = relationship(
+        "RentStep",
+        back_populates="contract",
+        cascade="all, delete-orphan",
+        order_by="RentStep.effective_date"
+    )
 
     def __repr__(self) -> str:
         """String-Darstellung des Vertrags"""

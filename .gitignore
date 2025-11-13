@@ -1,6 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
 # Python
 __pycache__/
 *.pyc
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# C extensions
+*.so
 
 # Ambientes virtuais
 .venv/
@@ -20,6 +38,7 @@ dist/
 .idea/
 .DS_Store
 *.log
+Thumbs.db
 
 # Ignorar arquivos temporários e pastas
 *.log
@@ -42,6 +61,10 @@ docs/
 .vscode/
 __pycache__/
 *.pyc
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
 
 
 # Test/cache/coverage
@@ -51,6 +74,7 @@ __pycache__/
 .tox/
 .coverage
 coverage.xml
+htmlcov/
 
 # SQLite / local DB files
 *.sqlite
@@ -64,6 +88,7 @@ build/
 pip-wheel-metadata/
 
 # Temporary files
+*.log
 *.tmp
 *.swp
 *~
@@ -77,4 +102,5 @@ pip-wheel-metadata/
 
 # Ignore pyproject lockfiles or local-generated requirements
 *.lock
+*.pyc
 

@@ -62,7 +62,7 @@ def calculate_notice_period(text: str) -> Optional[Dict[str, Any]]:
             r'(\d+)\s*(?:tage|tagen|monate|monaten|jahre|jahren)\s*(?:vor|vorher)',
         ]
         text_lower = text.lower()
-    notice_periods: List[Dict[str, Any]] = []
+        notice_periods: List[Dict[str, Any]] = []
         for pattern in notice_patterns:
             for match in re.finditer(pattern, text_lower, re.IGNORECASE):
                 period_value = int(match.group(1))

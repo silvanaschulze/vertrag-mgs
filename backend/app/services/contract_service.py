@@ -19,6 +19,13 @@ from ..schemas.contract import (
      ContractInDB,
      ContractStats
 )
+from ..models.rent_step import RentStep
+from ..schemas.contract import (
+    RentStepCreate,
+    RentStepUpdate,
+    RentStepResponse,
+)
+from sqlalchemy.exc import IntegrityError
 
 class ContractService:
     """
@@ -287,6 +294,92 @@ class ContractService:
             total_value=total_value,
             currency="EUR"
         )
+
+    # ----- RentStep (Mietstaffelung) Methoden -----
+    async def list_rent_steps(self, contract_id: int) -> List[RentStepResponse]:
+        """Liste alle RentSteps für einen Vertrag, sortiert nach effective_date."""
+        result = await self.db.execute(select(RentStep).where(RentStep.contract_id == contract_id).order_by(RentStep.effective_date))
+        steps = result.scalars().all()
+        return [RentStepResponse.model_validate(s) for s in steps]
+
+    async def create_rent_step(self, contract_id: int, rent_step: RentStepCreate, created_by: Optional[int] = None) -> RentStepResponse:
+        """Erstellt eine neue RentStep mit Validierungen."""
+        # Prüfen ob Vertrag existiert
+        contract_res = await self.db.execute(select(Contract).where(Contract.id == contract_id))
+        contract = contract_res.scalar_one_or_none()
+        if contract is None:
+            raise ValueError("Vertrag nicht gefunden. / Vertrag nicht gefunden")
+
+        # Validierung: effective_date >= contract.start_date
+        if rent_step.effective_date < contract.start_date:
+            raise ValueError("Das Wirksamkeitsdatum muss gleich oder nach dem Vertragsbeginn liegen. / effective_date muss >= contract.start_date sein.")
+
+        if rent_step.amount is None or rent_step.amount < 0:
+            raise ValueError("Betrag muss >= 0 sein. / amount muss >= 0 sein.")
+
+        db_step = RentStep(
+            contract_id=contract_id,
+            effective_date=rent_step.effective_date,
+            amount=rent_step.amount,
+            currency=rent_step.currency or contract.currency,
+            note=rent_step.note,
+            created_by=created_by
+        )
+        self.db.add(db_step)
+        try:
+            await self.db.commit()
+        except IntegrityError as ie:
+            await self.db.rollback()
+            # Erwartete unique constraint violation auf (contract_id, effective_date)
+            raise ValueError("Eine RentStep für dieses Datum existiert bereits. / Duplicate rent step for this contract and date.")
+
+        await self.db.refresh(db_step)
+        return RentStepResponse.model_validate(db_step)
+
+    async def get_rent_step(self, contract_id: int, step_id: int) -> Optional[RentStepResponse]:
+        result = await self.db.execute(select(RentStep).where(RentStep.contract_id == contract_id, RentStep.id == step_id))
+        step = result.scalar_one_or_none()
+        if not step:
+            return None
+        return RentStepResponse.model_validate(step)
+
+    async def update_rent_step(self, contract_id: int, step_id: int, data: RentStepUpdate) -> Optional[RentStepResponse]:
+        result = await self.db.execute(select(RentStep).where(RentStep.contract_id == contract_id, RentStep.id == step_id))
+        step = result.scalar_one_or_none()
+        if not step:
+            return None
+
+        update_data = data.model_dump(exclude_unset=True)
+        # Wenn effective_date geändert wird, validieren
+        if 'effective_date' in update_data:
+            # Holen Vertrag
+            contract_res = await self.db.execute(select(Contract).where(Contract.id == contract_id))
+            contract = contract_res.scalar_one_or_none()
+            if contract is None:
+                raise ValueError("Vertrag nicht gefunden. / Vertrag nicht gefunden")
+            if update_data['effective_date'] < contract.start_date:
+                raise ValueError("Das Wirksamkeitsdatum muss gleich oder nach dem Vertragsbeginn liegen. / effective_date muss >= contract.start_date sein.")
+
+        for k, v in update_data.items():
+            setattr(step, k, v)
+
+        try:
+            await self.db.commit()
+        except IntegrityError:
+            await self.db.rollback()
+            raise ValueError("Eine RentStep für dieses Datum existiert bereits. / Duplicate rent step for this contract and date.")
+
+        await self.db.refresh(step)
+        return RentStepResponse.model_validate(step)
+
+    async def delete_rent_step(self, contract_id: int, step_id: int) -> bool:
+        result = await self.db.execute(select(RentStep).where(RentStep.contract_id == contract_id, RentStep.id == step_id))
+        step = result.scalar_one_or_none()
+        if not step:
+            return False
+        await self.db.delete(step)
+        await self.db.commit()
+        return True
 
     async def search_contracts(self, query: str, skip: int = 0, limit: int = 10) -> ContractListResponse:
         """

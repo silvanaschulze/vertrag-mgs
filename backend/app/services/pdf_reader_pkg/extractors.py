@@ -26,9 +26,8 @@ def extract_text_with_pdfplumber(reader, pdf_path: str) -> Dict[str, Any]:
         if os.path.getsize(pdf_path) > max_size:
             raise ValueError(f"PDF file too large (>50MB): {pdf_path}")
         logger.info(f"Textextraktion mit pdfplumber gestartet / Extração de texto com pdfplumber iniciada: {pdf_path}")
-
-    text_content: List[Dict[str, Any]] = []
-    metadata: Dict[str, Any] = {}
+        text_content: List[Dict[str, Any]] = []
+        metadata: Dict[str, Any] = {}
 
         with pdfplumber.open(pdf_path) as pdf:
             metadata = {
@@ -83,9 +82,8 @@ def extract_text_with_pypdf2(reader, pdf_path: str) -> Dict[str, Any]:
         if os.path.getsize(pdf_path) > max_size:
             raise ValueError(f"PDF file too large (>50MB): {pdf_path}")
         logger.info(f"Textextraktion mit PyPDF2 gestartet / Extração de texto com PyPDF2 iniciada: {pdf_path}")
-
-    text_content: List[Dict[str, Any]] = []
-    metadata: Dict[str, Any] = {}
+        text_content: List[Dict[str, Any]] = []
+        metadata: Dict[str, Any] = {}
 
         with open(pdf_path, 'rb') as file:
             pdf_reader = PyPDF2.PdfReader(file)
@@ -141,9 +139,8 @@ def extract_text_with_pymupdf(reader, pdf_path: str) -> Dict[str, Any]:
         if os.path.getsize(pdf_path) > max_size:
             raise ValueError(f"PDF file too large (>50MB): {pdf_path}")
         logger.info(f"Textextraktion mit pymupdf gestartet / Extração de texto com pymupdf iniciada: {pdf_path}")
-
-    text_content: List[Dict[str, Any]] = []
-    metadata: Dict[str, Any] = {}
+        text_content: List[Dict[str, Any]] = []
+        metadata: Dict[str, Any] = {}
 
         with fitz.open(pdf_path) as doc:
             raw_md = doc.metadata or {}
@@ -199,7 +196,7 @@ def ocr_with_pytesseract(reader, image_path: str, language: str = 'deu') -> Dict
         image = Image.open(image_path)
         text = pytesseract.image_to_string(image, lang=language)
         data = pytesseract.image_to_data(image, lang=language, output_type=pytesseract.Output.DICT)
-    conf_values: List[int] = [int(conf) for conf in data.get('conf', []) if isinstance(conf, (int, str)) and int(conf) > 0]
+        conf_values: List[int] = [int(conf) for conf in data.get('conf', []) if isinstance(conf, (int, str)) and int(conf) > 0]
         avg_conf = int(sum(conf_values) / len(conf_values)) if conf_values else 0
         result = {
             'method': 'pytesseract',
