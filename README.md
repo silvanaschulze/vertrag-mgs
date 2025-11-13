@@ -1,7 +1,8 @@
 # Contract Management and Automatic Renewal System (MVP)
 
 A Contract Management and Automatic Renewal System designed to prevent delays or unwanted renewals of contracts with suppliers and service providers.
-The system ensures proactive monitoring, centralized digital storage, and automation of contract lifecycle tasks.
+The system ensures proactive monitoring, centralized digital storage, and automation of contract lifecycle tasks. RentStep Entity — Future Rent Adjustments (Mietstaffelung).
+A new entity was added to support scheduled, future rent increases linked to lease contracts.
 
 ## Core Features
 - Contract CRUD (title, counterparty, type, value, start/end dates, department, renewal responsible/email)
@@ -11,6 +12,10 @@ The system ensures proactive monitoring, centralized digital storage, and automa
 - Responsible person management for each contract
 - Basic audit events (who did what, when)
 - Daily backups (DB dump + files)
+- Reports and Statistics
+- Lease / Tenancy Contract Management
+- Rent Step Management (Mietstaffelung) — future rent adjustments
+- Support for Contracts with Pre-Defined Future Adjustments
 
 ## Tech Stack
 - **Backend:** Python (FastAPI, SQLAlchemy 2.0, Alembic, APScheduler)
