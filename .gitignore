@@ -46,8 +46,7 @@ Thumbs.db
 /node_modules/
 
 # Requisitos locais
-backend/requirements.txt
-backend/requirements-compatible.txt
+projeto_info.txt
 
 # Scripts de teste locais
 backend/test_complete.py
