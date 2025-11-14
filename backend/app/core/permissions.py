@@ -168,3 +168,22 @@ def can_upload_documents(user: User) -> bool:
         bool: True if can upload / True se pode fazer upload
     """
     return user.role in [UserRole.USER, UserRole.MANAGER, UserRole.ADMIN]
+
+
+def require_view_original(user: User, owner_id: int) -> None:
+    """
+    Erlaubt Zugriff auf die Original-PDF eines Vertrags:
+    - ADMIN und MANAGER dürfen alle Originale sehen
+    - Der Ersteller (owner_id) darf sein eigenes Original sehen
+    Ansonsten wird HTTP 403 ausgelöst.
+    """
+    if user.role == UserRole.ADMIN:
+        return
+    if user.role == UserRole.MANAGER:
+        return
+    if user.id == owner_id:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Zugriff verweigert: Original-PDF darf nicht eingesehen werden",
+    )

@@ -11,6 +11,18 @@ from decimal import Decimal
 from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from enum import Enum
 import re
+from typing import Optional as _Opt
+
+
+# --- Extraction metadata schema (optional payload for create) ---
+class ExtractionMetadata(BaseModel):
+    """Metadaten, wie sie von der Extraktion/Upload zurückgeliefert werden."""
+    original_file_name: _Opt[str] = Field(None, description="Original hochgeladene PDF-Datei")
+    original_file_storage_name: _Opt[str] = Field(None, description="Interner Dateiname im Upload-Ordner")
+    original_file_sha256: _Opt[str] = Field(None, description="SHA256 Hash der Original-PDF")
+    ocr_text: _Opt[str] = Field(None, description="Extrahierter OCR-Text (optional)")
+    ocr_text_sha256: _Opt[str] = Field(None, description="SHA256 des OCR-Texts")
+    uploaded_at: _Opt[datetime] = Field(None, description="Zeitpunkt des Uploads (UTC)")
 
 #enum für Vertragsstatus
 class ContractStatus(str, Enum):
@@ -79,8 +91,13 @@ class ContractBase(BaseModel):
     
 # Schema zum Erstellen eines neuen Vertrags
 class ContractCreate(ContractBase):
-    """Schema zum Erstellen eines neuen Vertrags"""
-    pass    
+    """Schema zum Erstellen eines neuen Vertrags
+
+    Optional: `extraction_metadata` kann Metadaten enthalten, die von
+    `/contracts/import`/`/contracts/import/upload` zurückgegeben werden.
+    Wenn vorhanden, wird die Datei automatisch an den erstellten Vertrag angehängt.
+    """
+    extraction_metadata: Optional[ExtractionMetadata] = Field(None, description="Metadaten der extrahierten/uploaded PDF, optional")
 
 # Schema zum Aktualisieren von Vertragsdaten
 class ContractUpdate(BaseModel):
@@ -180,6 +197,10 @@ class ContractResponse(ContractBase):
     updated_at: Optional[datetime] = Field(None, description="Zeitstempel der letzten Aktualisierung")
     # Mietstaffelungen (zukünftige Anpassungen)
     rent_steps: Optional[List["RentStepResponse"]] = Field(default_factory=list, description="Liste der zukünftigen Mietstaffelungen")
+    # Original-PDF Metadaten (optional)
+    original_pdf_filename: Optional[str] = Field(None, description="Original hochgeladene PDF-Datei")
+    original_pdf_sha256: Optional[str] = Field(None, description="SHA256 Hash der Original-PDF")
+    uploaded_at: Optional[datetime] = Field(None, description="Zeitpunkt des Uploads der Original-PDF")
 
     class Config:
         from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell
@@ -197,6 +218,12 @@ class ContractInDB(ContractBase):
     created_at: datetime = Field(..., description="Vertragserstellungszeitstempel")
     updated_at: Optional[datetime] = Field(None, description="Zeitstempel der letzten Aktualisierung")
     rent_steps: Optional[List["RentStepResponse"]] = Field(default_factory=list, description="Liste der zukünftigen Mietstaffelungen")
+    # Original-PDF Metadaten
+    original_pdf_path: Optional[str] = Field(None, description="Serverinterner Pfad zur Original-PDF (internal)")
+    original_pdf_filename: Optional[str] = Field(None, description="Original hochgeladene PDF-Datei")
+    original_pdf_sha256: Optional[str] = Field(None, description="SHA256 Hash der Original-PDF")
+    ocr_text_sha256: Optional[str] = Field(None, description="SHA256 des OCR-Texts")
+    uploaded_at: Optional[datetime] = Field(None, description="Zeitpunkt des Uploads der Original-PDF")
     
     class Config:
         from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell

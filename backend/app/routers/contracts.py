@@ -31,6 +31,10 @@ from fastapi.responses import StreamingResponse, Response
 from fastapi import UploadFile, File
 from app.core.config import settings
 from pathlib import Path
+from fastapi import Depends
+from app.core.security import get_current_active_user
+from app.models.user import User
+from app.core.permissions import require_view_original
 
 # Router für Contract-Endpoints
 router = APIRouter(
@@ -106,11 +110,32 @@ async def create_contract(
         ContractResponse: Erstellter Vertrag
     """
     try:
-        return await contract_service.create_contract(contract, created_by)
+        created = await contract_service.create_contract(contract, created_by)
+
+        # Wenn Extraktions-Metadaten vorhanden sind, automatisch die Datei anhängen
+        try:
+            meta = getattr(contract, "extraction_metadata", None)
+            if meta and (meta.original_file_storage_name or meta.original_file_name):
+                storage_name = meta.original_file_storage_name or meta.original_file_name
+                # Pfad zum Upload-Ordner: settings.UPLOAD_DIR/contracts
+                file_path = os.path.join(settings.UPLOAD_DIR, "contracts", storage_name)
+                filename = meta.original_file_name or storage_name
+                file_sha256 = meta.original_file_sha256 or ""
+                ocr_text = meta.ocr_text or ""
+                ocr_sha256 = meta.ocr_text_sha256 or ""
+                # Versuche die Attachment-Operation; Fehler hier sollen den Erstellungsfluss
+                # nicht komplett abbrechen (aber werden geloggt und als 500 zurückgegeben).
+                await contract_service.attach_original_pdf(created.id, file_path, filename, file_sha256, ocr_text, ocr_sha256)
+        except Exception as attach_err:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Fehler beim Anhängen der Original-PDF: {str(attach_err)}")
+
+        return created
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Erstellen des Vertrags")     
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Erstellen des Vertrags")
 
 # GET /contracts/{contract_id} - Ruft einen Vertrag nach ID ab
 @router.get("/{contract_id}", response_model=ContractResponse, status_code=status.HTTP_200_OK)
@@ -308,6 +333,39 @@ async def generate_contract_document(
 
     # fallback: retornar docx com aviso
     return Response(content=docx_bytes, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={"Content-Disposition": f"attachment; filename=contract_{contract_id}.docx"})
+
+
+@router.get("/{contract_id}/original")
+async def download_original_pdf(
+    contract_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Liefert die original hochgeladene PDF-Datei (wenn vorhanden).
+    Berechtigungsprüfung: ADMIN/MANAGER oder Eigentümer des Vertrags.
+    """
+    contract = await ContractService(db).get_contract(contract_id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="Vertrag nicht gefunden")
+
+    # Berechtigung prüfen
+    try:
+        require_view_original(current_user, contract.created_by)
+    except HTTPException:
+        raise
+
+    file_path = getattr(contract, "original_pdf_path", None)
+    if not file_path or not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Original-PDF nicht vorhanden")
+
+    def iterfile():
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b''):
+                yield chunk
+
+    filename = contract.original_pdf_filename or f"contract_{contract_id}.pdf"
+    return StreamingResponse(iterfile(), media_type="application/pdf", headers={"Content-Disposition": f"inline; filename={filename}"})
 
 
 @router.post("/{contract_id}/template", status_code=status.HTTP_201_CREATED)

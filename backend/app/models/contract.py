@@ -85,6 +85,18 @@ class Contract(Base):
         order_by="RentStep.effective_date"
     )
 
+    # =========================
+    # Metadaten der Original-PDF
+    # Persistente Speicherung der hochgeladenen Original-PDF und OCR-Metadaten.
+    # Hinweis: Diese Felder erfordern später eine Alembic-Migration.
+    # =========================
+    original_pdf_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # Serverinterner Pfad zur Original-PDF
+    original_pdf_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # Ursprünglicher Dateiname
+    original_pdf_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)  # SHA256 der Datei (Duplikatprüfung)
+    ocr_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Extrahierter Text (OCR / Text-Extraction)
+    ocr_text_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)  # SHA256 des normalisierten OCR-Texts
+    uploaded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)  # Zeitpunkt des Uploads
+
     def __repr__(self) -> str:
         """String-Darstellung des Vertrags"""
         # Protege contra status == None durante criação/coleção de objetos nos testes

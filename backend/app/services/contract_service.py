@@ -5,6 +5,7 @@ Es fungiert als Vermittler zwischen den Routers (API-Endpunkte) und den Models (
 
 """
 from datetime import date, datetime, timedelta
+from datetime import timezone
 from typing import List, Optional, Dict, Any, cast
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -84,6 +85,26 @@ class ContractService:
         await self.db.commit()
         await self.db.refresh(db_contract)
         return ContractResponse.model_validate(db_contract)
+
+    async def attach_original_pdf(self, contract_id: int, file_path: str, filename: str, file_sha256: str, ocr_text: str, ocr_sha256: str) -> ContractResponse:
+        """
+        Verknüpft eine zuvor hochgeladene Original-PDF mit einem Vertrag und speichert Metadaten.
+        """
+        result = await self.db.execute(select(Contract).where(Contract.id == contract_id))
+        contract = result.scalar_one_or_none()
+        if not contract:
+            raise ValueError("Vertrag nicht gefunden")
+
+        contract.original_pdf_path = file_path
+        contract.original_pdf_filename = filename
+        contract.original_pdf_sha256 = file_sha256
+        contract.ocr_text = ocr_text
+        contract.ocr_text_sha256 = ocr_sha256
+        contract.uploaded_at = datetime.now(timezone.utc)
+
+        await self.db.commit()
+        await self.db.refresh(contract)
+        return ContractResponse.model_validate(contract)
 
     async def get_contract(self, contract_id: int) -> Optional[ContractResponse]:
         """
