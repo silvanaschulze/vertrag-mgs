@@ -18,14 +18,15 @@ if TYPE_CHECKING:
     from .contract import Contract
 
 class AlertType(str, enum.Enum):
-    """Tipo de alerta vinculado ao prazo de expiração.
-    Alerta-Typ verknüpft mit dem Ablaufzeitraum.
+    """Alert-Typ verknüpft mit dem Ablaufzeitraum oder benutzerdefinierten Terminen.
+    Tipo de alerta vinculado ao prazo de expiração ou datas personalizadas.
     """
 
     T_MINUS_60 = "T-60"
     T_MINUS_30 = "T-30"
     T_MINUS_10 = "T-10"
     T_MINUS_1 = "T-1"
+    BENUTZERDEFINIERT = "BENUTZERDEFINIERT"  # Benutzerdefinierte Benachrichtigungen
 
 
 class AlertStatus(str, enum.Enum):

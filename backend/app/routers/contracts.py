@@ -36,6 +36,51 @@ from app.core.security import get_current_active_user
 from app.models.user import User
 from app.core.permissions import require_view_original
 
+# Hilfsfunktionen / Funções auxiliares
+
+def move_temp_to_persisted_contract(temp_file_path: str, contract_id: int, original_filename: str) -> str:
+    """
+    Verschiebt temporäre Datei in organisierte permanente Struktur
+    Move arquivo temporário para estrutura permanente organizada por contrato
+    """
+    if not temp_file_path or not os.path.exists(temp_file_path):
+        raise ValueError("Temporäre Datei nicht gefunden / Arquivo temporário não encontrado")
+    
+    # Verzeichnis für diesen Vertrag erstellen / Criar diretório para este contrato  
+    persisted_dir = os.path.join(settings.UPLOAD_DIR, "contracts", "persisted")
+    contract_dir = os.path.join(persisted_dir, f"contract_{contract_id}")
+    os.makedirs(contract_dir, exist_ok=True)
+    
+    # Zieldatei: immer "original.pdf" / Arquivo destino: sempre "original.pdf"
+    target_path = os.path.join(contract_dir, "original.pdf")
+    
+    # Datei verschieben / Mover arquivo
+    import shutil
+    shutil.move(temp_file_path, target_path)
+    
+    return target_path
+
+def get_contract_pdf_path(contract_id: int) -> Optional[str]:
+    """
+    Lokalisiert PDF-Datei für einen Vertrag in neuer oder alter Struktur
+    Localiza arquivo PDF para um contrato em estrutura nova ou antiga
+    """
+    # Neue Struktur: uploads/contracts/persisted/contract_{id}/original.pdf
+    new_path = os.path.join(settings.UPLOAD_DIR, "contracts", "persisted", f"contract_{contract_id}", "original.pdf")
+    if os.path.exists(new_path):
+        return new_path
+    
+    # Fallback: alte Struktur (für Migration) - suche pattern *_{contract_id}_*
+    old_dir = os.path.join(settings.UPLOAD_DIR, "contracts")
+    if os.path.exists(old_dir):
+        import glob
+        pattern = os.path.join(old_dir, f"*_{contract_id}_*.pdf")
+        matches = glob.glob(pattern)
+        if matches:
+            return matches[0]  # Erstes Match zurückgeben
+    
+    return None
+
 # Router für Contract-Endpoints
 router = APIRouter(
     prefix="/contracts",
@@ -112,19 +157,31 @@ async def create_contract(
     try:
         created = await contract_service.create_contract(contract, created_by)
 
-        # Wenn Extraktions-Metadaten vorhanden sind, automatisch die Datei anhängen
+        # Wenn Extraktions-Metadaten vorhanden sind, automatisch die Datei anhängen und verschieben
         try:
             meta = getattr(contract, "extraction_metadata", None)
-            if meta and (meta.original_file_storage_name or meta.original_file_name):
+            if meta and hasattr(meta, 'temp_file_path') and meta.temp_file_path:
+                # Datei von temp/ zu persisted/contract_{id}/ verschieben
+                final_path = move_temp_to_persisted_contract(
+                    meta.temp_file_path, 
+                    created.id, 
+                    meta.original_file_name or "original.pdf"
+                )
+                filename = meta.original_file_name or "original.pdf"
+                file_sha256 = meta.original_file_sha256 or ""
+                ocr_text = getattr(meta, 'ocr_text', "") or ""
+                ocr_sha256 = meta.ocr_text_sha256 or ""
+                
+                # Attachment-Operation mit finalem Pfad
+                await contract_service.attach_original_pdf(created.id, final_path, filename, file_sha256, ocr_text, ocr_sha256)
+            elif meta and (meta.original_file_storage_name or meta.original_file_name):
+                # Fallback: alte Struktur (für Kompatibilität)
                 storage_name = meta.original_file_storage_name or meta.original_file_name
-                # Pfad zum Upload-Ordner: settings.UPLOAD_DIR/contracts
                 file_path = os.path.join(settings.UPLOAD_DIR, "contracts", storage_name)
                 filename = meta.original_file_name or storage_name
                 file_sha256 = meta.original_file_sha256 or ""
-                ocr_text = meta.ocr_text or ""
+                ocr_text = getattr(meta, 'ocr_text', "") or ""
                 ocr_sha256 = meta.ocr_text_sha256 or ""
-                # Versuche die Attachment-Operation; Fehler hier sollen den Erstellungsfluss
-                # nicht komplett abbrechen (aber werden geloggt und als 500 zurückgegeben).
                 await contract_service.attach_original_pdf(created.id, file_path, filename, file_sha256, ocr_text, ocr_sha256)
         except Exception as attach_err:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Fehler beim Anhängen der Original-PDF: {str(attach_err)}")
@@ -342,8 +399,10 @@ async def download_original_pdf(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Liefert die original hochgeladene PDF-Datei (wenn vorhanden).
+    Lädt die original hochgeladene PDF-Datei herunter (als Attachment).
+    Faz download do arquivo PDF original carregado (como anexo).
     Berechtigungsprüfung: ADMIN/MANAGER oder Eigentümer des Vertrags.
+    Verificação de permissão: ADMIN/MANAGER ou proprietário do contrato.
     """
     contract = await ContractService(db).get_contract(contract_id)
     if not contract:
@@ -355,8 +414,16 @@ async def download_original_pdf(
     except HTTPException:
         raise
 
-    file_path = getattr(contract, "original_pdf_path", None)
-    if not file_path or not os.path.exists(file_path):
+    # PDF-Datei mit neuer Suchfunktion lokalisieren
+    file_path = get_contract_pdf_path(contract_id)
+    
+    # Fallback: aus Datenbank gespeicherter Pfad (für Kompatibilität)
+    if not file_path:
+        db_file_path = getattr(contract, "original_pdf_path", None)
+        if db_file_path and os.path.exists(db_file_path):
+            file_path = db_file_path
+    
+    if not file_path:
         raise HTTPException(status_code=404, detail="Original-PDF nicht vorhanden")
 
     def iterfile():
@@ -365,7 +432,64 @@ async def download_original_pdf(
                 yield chunk
 
     filename = contract.original_pdf_filename or f"contract_{contract_id}.pdf"
-    return StreamingResponse(iterfile(), media_type="application/pdf", headers={"Content-Disposition": f"inline; filename={filename}"})
+    return StreamingResponse(iterfile(), media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+
+@router.get("/{contract_id}/view")
+async def view_original_pdf(
+    contract_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Zeigt die original hochgeladene PDF-Datei inline im Browser an.
+    Exibe o arquivo PDF original carregado inline no navegador.
+    Berechtigungsprüfung: ADMIN/MANAGER oder Eigentümer des Vertrags.
+    Verificação de permissão: ADMIN/MANAGER ou proprietário do contrato.
+    """
+    contract = await ContractService(db).get_contract(contract_id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="Vertrag nicht gefunden / Contrato não encontrado")
+
+    # Berechtigung prüfen / Verificar permissão
+    try:
+        require_view_original(current_user, contract.created_by)
+    except HTTPException:
+        raise
+
+    # PDF-Datei mit neuer Suchfunktion lokalisieren / Localizar arquivo PDF com nova função de busca
+    file_path = get_contract_pdf_path(contract_id)
+    
+    # Fallback: aus Datenbank gespeicherter Pfad (für Kompatibilität)
+    # Fallback: caminho salvo no banco de dados (para compatibilidade)
+    if not file_path:
+        db_file_path = getattr(contract, "original_pdf_path", None)
+        if db_file_path and os.path.exists(db_file_path):
+            file_path = db_file_path
+    
+    if not file_path:
+        raise HTTPException(status_code=404, detail="Original-PDF nicht vorhanden / PDF original não disponível")
+
+    def iterfile():
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b''):
+                yield chunk
+
+    filename = getattr(contract, "original_pdf_filename", None) or f"contract_{contract_id}.pdf"
+    
+    # Header für inline Anzeige im Browser / Header para exibição inline no navegador
+    headers = {
+        "Content-Disposition": f"inline; filename={filename}",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+    
+    return StreamingResponse(
+        iterfile(), 
+        media_type="application/pdf", 
+        headers=headers
+    )
 
 
 @router.post("/{contract_id}/template", status_code=status.HTTP_201_CREATED)

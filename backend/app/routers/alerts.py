@@ -292,3 +292,83 @@ async def get_alerts_summary(
             status_code=500,
             detail=f"Error getting alerts summary / Erro ao obter resumo dos alertas: {str(e)}"
         )
+
+
+@router.post("/manual", response_model=AlertResponse)
+async def create_manual_alert(
+    contract_id: int = Query(..., description="Vertrags-ID für den Alert / ID do contrato para o alerta"),
+    scheduled_for: datetime = Query(..., description="Geplante Sendezeit / Horário agendado para envio"),
+    recipient: Optional[str] = Query(None, description="E-Mail-Empfänger (optional, Standard: Vertragsbesitzer) / Destinatário do email (opcional, padrão: proprietário do contrato)"),
+    subject: Optional[str] = Query(None, description="E-Mail-Betreff (optional) / Assunto do email (opcional)"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Erstellt einen benutzerdefinierten Alert für einen Vertrag.
+    Cria um alerta personalizado para um contrato.
+    
+    Diese Funktion ermöglicht es Benutzern, benutzerdefinierte Alerts für beliebige Daten zu erstellen.
+    Der Alert wird vom Hintergrund-Scheduler zur geplanten Zeit verarbeitet.
+    
+    Esta função permite aos usuários criar alertas personalizados para datas específicas.
+    O alerta será processado pelo scheduler em background no horário agendado.
+    
+    Args / Argumentos:
+        contract_id: ID des Vertrags / ID do contrato
+        scheduled_for: Geplante Zeit für den Versand / Horário agendado para envio
+        recipient: E-Mail-Empfänger (optional) / Destinatário do email (opcional)  
+        subject: E-Mail-Betreff (optional) / Assunto do email (opcional)
+        
+    Returns / Retorna:
+        AlertResponse: Erstellter Alert / Alerta criado
+        
+    Raises / Levanta:
+        HTTPException 404: Vertrag nicht gefunden / Contrato não encontrado
+        HTTPException 400: Ungültige Daten / Dados inválidos
+    """
+    try:
+        # Vertrag prüfen / Verificar contrato
+        result = await db.execute(select(Contract).where(Contract.id == contract_id))
+        contract = result.scalar_one_or_none()
+        
+        if not contract:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Vertrag mit ID {contract_id} nicht gefunden / Contrato com ID {contract_id} não encontrado"
+            )
+        
+        # Standard-Empfänger setzen falls nicht angegeben / Definir destinatário padrão se não especificado
+        if not recipient:
+            recipient = getattr(contract, 'client_email', None)
+            if not recipient:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Kein Empfänger angegeben und Vertrag hat keine E-Mail / Nenhum destinatário especificado e contrato não possui email"
+                )
+        
+        # Standard-Betreff setzen falls nicht angegeben / Definir assunto padrão se não especificado  
+        if not subject:
+            subject = f"Benutzerdefinierte Vertragserinnerung - {getattr(contract, 'title', f'Vertrag {contract_id}')}"
+        
+        # Alert erstellen / Criar alerta
+        alert = Alert(
+            contract_id=contract_id,
+            alert_type=AlertType.BENUTZERDEFINIERT,
+            status=AlertStatus.PENDING,
+            scheduled_for=scheduled_for,
+            recipient=recipient,
+            subject=subject
+        )
+        
+        db.add(alert)
+        await db.commit()
+        await db.refresh(alert)
+        
+        return AlertResponse.model_validate(alert)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Fehler beim Erstellen des benutzerdefinierten Alerts / Erro ao criar alerta personalizado: {str(e)}"
+        )

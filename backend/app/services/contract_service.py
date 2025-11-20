@@ -89,22 +89,53 @@ class ContractService:
     async def attach_original_pdf(self, contract_id: int, file_path: str, filename: str, file_sha256: str, ocr_text: str, ocr_sha256: str) -> ContractResponse:
         """
         Verknüpft eine zuvor hochgeladene Original-PDF mit einem Vertrag und speichert Metadaten.
+        Vincula PDF original previamente carregado a um contrato e armazena metadados.
+        
+        Args:
+            contract_id (int): ID des Vertrags / ID do contrato
+            file_path (str): Pfad zur PDF-Datei / Caminho para arquivo PDF
+            filename (str): Ursprünglicher Dateiname / Nome original do arquivo
+            file_sha256 (str): SHA256 Hash der Datei / Hash SHA256 do arquivo
+            ocr_text (str): Extrahierter Text / Texto extraído
+            ocr_sha256 (str): SHA256 Hash des normalisierten Texts / Hash SHA256 do texto normalizado
         """
+        import os
+        
+        # Vertrag suchen / Buscar contrato
         result = await self.db.execute(select(Contract).where(Contract.id == contract_id))
         contract = result.scalar_one_or_none()
         if not contract:
-            raise ValueError("Vertrag nicht gefunden")
+            raise ValueError(f"Vertrag mit ID {contract_id} nicht gefunden / Contrato com ID {contract_id} não encontrado")
 
+        # Datei-Validierung / Validação do arquivo
+        if not file_path:
+            raise ValueError("Dateipfad ist leer / Caminho do arquivo está vazio")
+        
+        if not os.path.exists(file_path):
+            raise ValueError(f"PDF-Datei nicht gefunden: {file_path} / Arquivo PDF não encontrado: {file_path}")
+        
+        if not os.path.isfile(file_path):
+            raise ValueError(f"Pfad ist keine Datei: {file_path} / Caminho não é um arquivo: {file_path}")
+
+        # Dateiname-Validierung / Validação do nome do arquivo
+        if not filename:
+            filename = os.path.basename(file_path)
+
+        # Metadaten aktualisieren / Atualizar metadados
         contract.original_pdf_path = file_path
         contract.original_pdf_filename = filename
-        contract.original_pdf_sha256 = file_sha256
-        contract.ocr_text = ocr_text
-        contract.ocr_text_sha256 = ocr_sha256
+        contract.original_pdf_sha256 = file_sha256 or ""
+        contract.ocr_text = ocr_text or ""
+        contract.ocr_text_sha256 = ocr_sha256 or ""
         contract.uploaded_at = datetime.now(timezone.utc)
 
-        await self.db.commit()
-        await self.db.refresh(contract)
-        return ContractResponse.model_validate(contract)
+        try:
+            await self.db.commit()
+            await self.db.refresh(contract)
+            return ContractResponse.model_validate(contract)
+        except Exception as e:
+            await self.db.rollback()
+            raise ValueError(f"Fehler beim Speichern der PDF-Metadaten: {str(e)} / Erro ao salvar metadados PDF: {str(e)}")
 
     async def get_contract(self, contract_id: int) -> Optional[ContractResponse]:
         """
@@ -494,6 +525,49 @@ class ContractService:
             page=current_page,
             per_page=limit
         )
+    
+    async def verify_pdf_integrity(self, contract_id: int) -> Dict[str, Any]:
+        """
+        Überprüft die Integrität der PDF-Datei eines Vertrags
+        Verifica integridade do arquivo PDF de um contrato
+        
+        Returns:
+            Dict mit Status-Informationen / Dict com informações de status
+        """
+        import os
+        
+        result = await self.db.execute(select(Contract).where(Contract.id == contract_id))
+        contract = result.scalar_one_or_none()
+        
+        if not contract:
+            return {"status": "error", "message": "Vertrag nicht gefunden / Contrato não encontrado"}
+        
+        pdf_path = getattr(contract, "original_pdf_path", None)
+        if not pdf_path:
+            return {"status": "no_pdf", "message": "Kein PDF-Pfad gespeichert / Nenhum caminho PDF salvo"}
+        
+        if not os.path.exists(pdf_path):
+            return {
+                "status": "missing_file", 
+                "message": f"PDF-Datei nicht gefunden: {pdf_path} / Arquivo PDF não encontrado: {pdf_path}",
+                "stored_path": pdf_path
+            }
+        
+        try:
+            file_size = os.path.getsize(pdf_path)
+            return {
+                "status": "ok",
+                "message": "PDF-Datei gefunden und zugänglich / Arquivo PDF encontrado e acessível",
+                "file_path": pdf_path,
+                "file_size": file_size,
+                "filename": getattr(contract, "original_pdf_filename", None)
+            }
+        except Exception as e:
+            return {
+                "status": "access_error",
+                "message": f"Fehler beim Zugriff auf PDF: {str(e)} / Erro ao acessar PDF: {str(e)}",
+                "stored_path": pdf_path
+            }
 
     async def get_expired_contracts(self, skip: int = 0, limit: int = 10) -> ContractListResponse:
         """

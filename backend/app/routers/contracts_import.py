@@ -56,10 +56,39 @@ router = APIRouter(
 # Globale Konfiguration / Configuração global
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = ['.pdf']
-UPLOAD_DIR = "uploads/contracts"
+TEMP_UPLOAD_DIR = "uploads/contracts/temp"
+PERSISTED_UPLOAD_DIR = "uploads/contracts/persisted"
 
-# Upload-Verzeichnis erstellen / Criar diretório de upload
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# Upload-Verzeichnisse erstellen / Criar diretórios de upload
+os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+os.makedirs(PERSISTED_UPLOAD_DIR, exist_ok=True)
+
+def move_temp_file_to_persisted(temp_file_path: str, contract_id: int, original_filename: str) -> str:
+    """
+    Verschiebt temporäre Datei in organisierte permanente Struktur
+    Move arquivo temporário para estrutura permanente organizada
+    
+    Args:
+        temp_file_path (str): Caminho do arquivo temporário
+        contract_id (int): ID do contrato
+        original_filename (str): Nome original do arquivo
+        
+    Returns:
+        str: Novo caminho do arquivo permanente
+    """
+    # Verzeichnis für diesen Vertrag erstellen / Criar diretório para este contrato
+    contract_dir = os.path.join(PERSISTED_UPLOAD_DIR, f"contract_{contract_id}")
+    os.makedirs(contract_dir, exist_ok=True)
+    
+    # Zieldatei: immer "original.pdf" / Arquivo destino: sempre "original.pdf"
+    target_path = os.path.join(contract_dir, "original.pdf")
+    
+    # Datei verschieben / Mover arquivo
+    import shutil
+    shutil.move(temp_file_path, target_path)
+    
+    logger.info(f"Datei verschoben / Arquivo movido: {temp_file_path} → {target_path}")
+    return target_path
 
 @router.post("/pdf", response_model=ExtractionResponse)
 async def import_contract_pdf(
@@ -122,28 +151,28 @@ async def import_contract_pdf(
                 detail="Leere Datei / Arquivo vazio"
             )
         
-        # Eindeutigen Dateinamen erstellen / Criar nome de arquivo único
+        # Eindeutigen temporären Dateinamen erstellen / Criar nome de arquivo temporário único
         timestamp = int(time.time())
-        safe_filename = f"{current_user.id}_{timestamp}_{file.filename}"
-        file_path = os.path.join(UPLOAD_DIR, safe_filename)
+        safe_filename = f"temp_{current_user.id}_{timestamp}_{file.filename}"
+        temp_file_path = os.path.join(TEMP_UPLOAD_DIR, safe_filename)
         
-        # Datei speichern / Salvar arquivo (in Thread auslagern um Event-Loop nicht zu blockieren)
+        # Datei temporär speichern / Salvar arquivo temporariamente (in Thread auslagern um Event-Loop nicht zu blockieren)
         def _write_file(path: str, content: bytes) -> None:
             with open(path, "wb") as buffer:
                 buffer.write(content)
 
-        await asyncio.to_thread(_write_file, file_path, file_content)
+        await asyncio.to_thread(_write_file, temp_file_path, file_content)
         
-        logger.info(f"Datei gespeichert / Arquivo salvo: {file_path}")
+        logger.info(f"Datei temporär gespeichert / Arquivo salvo temporariamente: {temp_file_path}")
 
         # PDF-Reader-Service initialisieren / Inicializar serviço de leitura de PDF
         pdf_reader = PDFReaderService()
 
         # PDF validieren / Validar PDF (executar em thread se for CPU/IO-bound)
-        validation_result = await asyncio.to_thread(pdf_reader.validate_pdf, file_path)
+        validation_result = await asyncio.to_thread(pdf_reader.validate_pdf, temp_file_path)
         if not validation_result.get('valid'):
             try:
-                os.remove(file_path)
+                os.remove(temp_file_path)
             except Exception:
                 pass
             raise HTTPException(
@@ -153,19 +182,19 @@ async def import_contract_pdf(
 
         # Text extrahieren (möglicherweise IO/CPU-bound) - in Thread auslagern
         if extraction_method == "combined":
-            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_combined, file_path)
+            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_combined, temp_file_path)
         elif extraction_method == "pdfplumber":
-            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_with_pdfplumber, file_path)
+            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_with_pdfplumber, temp_file_path)
         elif extraction_method == "pypdf2":
-            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_with_pypdf2, file_path)
+            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_with_pypdf2, temp_file_path)
         elif extraction_method == "pymupdf":
-            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_with_pymupdf, file_path)
+            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_with_pymupdf, temp_file_path)
         else:
-            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_combined, file_path)
+            extraction_result = await asyncio.to_thread(pdf_reader.extract_text_combined, temp_file_path)
 
         if not extraction_result.get('success'):
             try:
-                os.remove(file_path)
+                os.remove(temp_file_path)
             except Exception:
                 pass
             raise HTTPException(
@@ -189,9 +218,9 @@ async def import_contract_pdf(
             existing_res = await db.execute(select(Contract).where(Contract.original_pdf_sha256 == file_hash))
             existing_contract = existing_res.scalar_one_or_none()
             if existing_contract:
-                # Bei exaktem Duplikat: Datei entfernen und Fehler melden mit Hinweis auf existierenden Vertrag
+                # Bei exaktem Duplikat: temporäre Datei entfernen und Fehler melden mit Hinweis auf existierenden Vertrag
                 try:
-                    os.remove(file_path)
+                    os.remove(temp_file_path)
                 except Exception:
                     pass
                 raise HTTPException(
@@ -204,7 +233,7 @@ async def import_contract_pdf(
             existing_contract2 = existing_res2.scalar_one_or_none()
             if existing_contract2:
                 try:
-                    os.remove(file_path)
+                    os.remove(temp_file_path)
                 except Exception:
                     pass
                 raise HTTPException(
@@ -271,14 +300,14 @@ async def import_contract_pdf(
             extracted_data=extracted_data,
             processing_time=processing_time,
             file_size=file_size,
-            error_message=None
-            ,
-            # Metadaten des persistent gespeicherten Originals
+            error_message=None,
+            # Metadados do arquivo temporário (será movido após criação do contrato)
             original_file_name=file.filename,
             original_file_storage_name=safe_filename,
             original_file_sha256=file_hash,
             ocr_text_sha256=ocr_hash,
-            uploaded_at=uploaded_at
+            uploaded_at=uploaded_at,
+            temp_file_path=temp_file_path  # Caminho temporário para movimentação posterior
         )
         
     except HTTPException:
@@ -359,7 +388,7 @@ async def upload_contract_with_metadata(
         # Datei speichern / Salvar arquivo
         timestamp = int(time.time())
         safe_filename = f"{current_user.id}_{timestamp}_{file.filename}"
-        file_path = os.path.join(UPLOAD_DIR, safe_filename)
+        file_path = os.path.join(TEMP_UPLOAD_DIR, safe_filename)
         
         # Salvar arquivo sem bloquear o event loop
         def _write_file(path: str, content: bytes) -> None:
@@ -489,7 +518,8 @@ async def upload_contract_with_metadata(
             original_file_storage_name=safe_filename,
             original_file_sha256=file_hash,
             ocr_text_sha256=ocr_hash,
-            uploaded_at=uploaded_at
+            uploaded_at=uploaded_at,
+            temp_file_path=file_path
         )
         
     except HTTPException:
@@ -527,17 +557,17 @@ async def get_import_status(
         logger.info(f"Import-Status abgefragt / Status de importação solicitado von Benutzer / do usuário {current_user.id}")
         
         # Upload-Verzeichnis prüfen / Verificar diretório de upload
-        upload_dir_exists = os.path.exists(UPLOAD_DIR)
-        upload_dir_writable = os.access(UPLOAD_DIR, os.W_OK) if upload_dir_exists else False
+        upload_dir_exists = os.path.exists(TEMP_UPLOAD_DIR)
+        upload_dir_writable = os.access(TEMP_UPLOAD_DIR, os.W_OK) if upload_dir_exists else False
         
         # Dateien im Upload-Verzeichnis zählen / Contar arquivos no diretório de upload
         file_count = 0
         if upload_dir_exists:
-            file_count = len([f for f in os.listdir(UPLOAD_DIR) if f.endswith('.pdf')])
+            file_count = len([f for f in os.listdir(TEMP_UPLOAD_DIR) if f.endswith('.pdf')])
         
         return {
             "status": "online" if upload_dir_exists and upload_dir_writable else "offline",
-            "upload_directory": UPLOAD_DIR,
+            "upload_directory": TEMP_UPLOAD_DIR,
             "upload_directory_exists": upload_dir_exists,
             "upload_directory_writable": upload_dir_writable,
             "max_file_size": MAX_FILE_SIZE,

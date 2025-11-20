@@ -30,6 +30,7 @@ class ContractType(str, enum.Enum):
     PRODUCT = "produkt"             #Produkt
     EMPLOYMENT = "beschäftigung"    #Beschäftigung
     LEASE = "miete"                 #Miete
+    PACHT = "pacht"                 #Pacht (Pachtvertrag)
     PARTNERSHIP = "partnerschaft"   #Partnerschaft
     OTHER = "sonstiges"             #Sonstiges
 

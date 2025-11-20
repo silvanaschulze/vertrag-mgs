@@ -256,3 +256,4 @@ class ExtractionResponse(BaseModel):
     original_file_storage_name: Optional[str] = Field(None, description="Interner Dateiname im Upload-Ordner / Nome de armazenamento interno")
     ocr_text_sha256: Optional[str] = Field(None, description="SHA256 des normalisierten OCR-Texts")
     uploaded_at: Optional[datetime] = Field(None, description="Zeitpunkt des Uploads (UTC)")
+    temp_file_path: Optional[str] = Field(None, description="Temporärer Dateipfad für Bewegung / Caminho temporário para movimentação")

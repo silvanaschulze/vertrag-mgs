@@ -22,12 +22,18 @@ pip-delete-this-directory.txt
 
 # Ambientes virtuais
 .venv/
-venv/
-backend/venv/
 
 # Node
 node_modules/
 dist/
+
+# Performance - Cache e logs que afetam AI tools
+.mypy_cache/
+.pytest_cache/
+*.log
+mypy.log
+pytest.log
+flake8.log
 
 # Environment
 .env
@@ -56,7 +62,6 @@ backend/test_local.py
 docs/
 
 # Python e VS Code
-.venv/
 .vscode/
 __pycache__/
 *.pyc
