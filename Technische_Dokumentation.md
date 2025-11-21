@@ -39,13 +39,100 @@
 - **Organisierte Dateiverwaltung / Gerenciamento organizado de arquivos** (temp/persisted)
 
 ### Technologie-Stack / Stack Tecnológico
-- **Backend:** Python 3.11+ / FastAPI / SQLAlchemy 2.0
-- **Datenbank:** SQLite (Entwicklung) / MySQL (Produktion)
-- **Authentifizierung:** JWT (python-jose)
-- **Dokumente:** docxtpl / LibreOffice
-- **E-Mail:** SMTP
-- **Tests:** pytest / asyncio
- - **Migrationen:** Alembic
+
+#### 🚀 **Backend-Framework / Framework Backend**
+- **FastAPI:** Async Web Framework (High Performance)
+- **Uvicorn [standard]:** ASGI Server für Produktion/Entwicklung
+- **python-multipart:** Support für multipart/form-data uploads
+- **SQLAlchemy 2.0:** Async ORM mit modernster API
+- **Alembic:** Database Migrationsmanagement
+
+#### 🗄️ **Datenbank & Persistierung / Database & Persistence**
+- **SQLite:** Entwicklung (sqlite+aiosqlite:///)
+- **MySQL:** Produktion (mysql+aiomysql://) - konfigurierbar
+- **Async Sessions:** Vollständig asynchrone DB-Operationen
+- **SHA256 Hashing:** PDF-Integritätsprüfung
+
+#### 🔐 **Authentifizierung & Sicherheit / Authentication & Security**
+- **JWT:** JSON Web Tokens (python-jose)
+- **BCrypt:** Password Hashing (passlib)
+- **CORS:** Cross-Origin Resource Sharing
+- **RBAC:** Role-Based Access Control (USER, MANAGER, ADMIN)
+- **Security Headers:** XSS-Protection, Content-Type validation
+
+#### 📄 **PDF-Verarbeitung / PDF Processing**
+- **pdfplumber:** Hauptextraktion (beste Qualität)
+- **PyPDF2:** Alternative Extraktionsmethode
+- **PyMuPDF (fitz):** Backup-Extraktionsmethode
+- **pytesseract:** OCR für gescannte PDFs
+- **Tesseract:** OCR-Engine (deutsch/portugiesisch)
+
+#### 📝 **Dokumentenerstellung / Document Generation**
+- **docxtpl:** DOCX Template-Rendering (Jinja2-basiert)
+- **LibreOffice (soffice):** DOCX → PDF Konvertierung
+- **Threading:** Non-blocking I/O für Dokumentkonvertierung
+
+#### 📧 **E-Mail & Benachrichtigungen / Email & Notifications**
+- **SMTP:** Standard E-Mail-Versand
+- **asyncio:** Asynchrone E-Mail-Verarbeitung
+- **HTML Templates:** Zweisprachige Benachrichtigungen (DE/PT)
+- **Background Scheduler:** Automatische Alert-Verarbeitung alle 6h
+
+#### 🧪 **Testing & Qualitätssicherung / Testing & Quality Assurance**
+- **pytest:** Haupttest-Framework
+- **pytest-asyncio:** Async Test Support
+- **unittest.mock:** Mocking für isolierte Tests
+- **Coverage:** Test-Coverage-Reporting
+
+#### 🌐 **Deploy & Infrastructure / Deploy & Infraestrutura**
+- **Apache HTTP Server:** Reverse Proxy für FastAPI
+- **systemd:** Service Management (vertrag-mgs-api.service)
+- **Bash Scripts:** Vollautomatisches bilinguales Deployment
+- **Virtual Environment:** Python-Isolation
+- **File Permissions:** Sichere chmod/chown-Konfigurationen
+
+#### 📊 **Monitoring & Logging / Monitoramento & Logs**
+- **systemd Journal:** Service-Logs (journalctl)
+- **Apache Logs:** Access/Error Logs mit Rotation
+- **Python Logging:** Strukturierte Application Logs
+- **Health Checks:** Automatische Status-Überprüfung
+
+#### 🔧 **Development Tools / Ferramentas de Desenvolvimento**
+- **Git:** Versionskontrolle
+- **Virtual Environment:** Python-Dependency-Isolation
+- **Type Hints:** Vollständige Type Annotations
+- **Pydantic:** Data Validation und Serialization
+- **AsyncIO:** Event Loop für alle async Operations
+
+#### 📦 **Deployment Architecture / Arquitetura de Deployment**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Apache (80)   │◄──►│ FastAPI (8000)  │◄──►│  SQLite DB      │
+│   Static Files  │    │ systemd Service │    │ File Storage    │
+│   Proxy to API │    │ Background Jobs │    │ Upload Management│
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ Security Headers│    │ Alert Scheduler │    │ PDF Organization│
+│ CORS Config     │    │ Email Service   │    │ temp/persisted  │
+│ Static Caching  │    │ Async I/O       │    │ SHA256 Integrity│
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+#### 🚀 **Performance Features / Recursos de Performance**
+- **Async/Await:** Vollständig non-blocking operations
+- **Connection Pooling:** Effiziente DB-Verbindungen
+- **Static File Caching:** Apache-basierte Asset-Optimierung
+- **Gzip Compression:** Reduzierte Übertragungsgrößen
+- **Background Tasks:** Scheduler läuft unabhängig von Web-Requests
+
+#### 🌍 **Internationalization / Internacionalização**
+- **Bilingual System:** Vollständige DE/PT-Unterstützung
+- **Scripts:** Alle Deploy-Scripts zweisprachig
+- **Documentation:** Deutsche und portugiesische Dokumentation
+- **Error Messages:** Lokalisierte Fehlermeldungen
+- **Email Templates:** Zweisprachige HTML-Benachrichtigungen
 
 ---
 
@@ -176,7 +263,13 @@ vertrag-mgs/
 ├── requirements.txt                # Hauptabhängigkeiten
 ├── README.md                       # Projektdokumentation
 ├── Technische_Dokumentation.md    # Detaillierte technische Dokumentation
-└── clean-cache.sh                  # Cache-Bereinigungsskript
+├── clean-cache.sh                  # Cache-Bereinigungsskript
+├── deploy-internal.sh              # Haupt-Deploy-Script (15KB, bilingual)
+├── setup-permissions.sh            # Dateiberechtigungen-Script
+└── deploy/                         # Deploy-Konfigurationen
+    ├── setup-internal.sh           # Apache-Setup-Script
+    ├── apache-internal.conf        # Apache VirtualHost Konfiguration
+    └── README-DEPLOY.md            # Deploy-Dokumentation
 ```
 
 ---
@@ -1101,6 +1194,42 @@ MAX_FILE_SIZE=10485760  # 10MB
 UPLOAD_DIR=uploads
 ```
 
+#### **Deploy-Konfiguration / Configuração de Deploy**
+
+**Automatisierte Deployment-Scripts / Scripts de Deployment Automatizado:**
+
+```bash
+# Hauptverzeichnis / Diretório Principal
+deploy-internal.sh           # Haupt-Deploy-Script (15KB, bilingual)
+setup-permissions.sh         # Dateiberechtigungen
+clean-cache.sh              # Cache-Bereinigung
+
+# Deploy-Verzeichnis / Diretório Deploy
+deploy/
+├── setup-internal.sh        # Apache-Setup
+├── apache-internal.conf     # Apache VirtualHost
+└── README-DEPLOY.md         # Deployment-Dokumentation
+```
+
+**Service-Konfiguration / Configuração de Serviço:**
+```bash
+# Service-Variablen / Variáveis do Serviço
+SERVICE_NAME="vertrag-mgs-api"
+SERVICE_PORT=8000
+PROJECT_DIR="$(pwd)"
+APACHE_CONFIG_DIR="/etc/apache2/sites-available"
+```
+
+**Bilingual Logging / Logging Bilíngue:**
+```bash
+# Beispiel der zweisprachigen Ausgabe / Exemplo de saída bilíngue
+log_info "Konfiguriere Apache für API (Backend-only)..." \
+         "Configurando Apache para API (apenas backend)..."
+
+log_success "Apache konfiguriert (Backend-only)!" \
+            "Apache configurado (apenas backend)!"
+```
+
 ### **Docker / Container**
 
 #### Dockerfile
@@ -1328,6 +1457,9 @@ asyncio_mode = auto
 - **✅ PDF-Organisation:** Strukturierte temp/persisted Ordnerstruktur
 - **✅ Inline-PDF-Viewer:** Direkte Browser-Visualisierung
 - **✅ Mietstaffelung:** RentStep für zukünftige Anpassungen
+- **✅ Deploy-Infrastruktur:** Vollautomatisches bilinguales Deployment-System
+- **✅ Apache-Integration:** Professionelle Proxy-Konfiguration für interne Nutzung
+- **✅ systemd-Service:** FastAPI als robuster Systemdienst
 
 **⏳ Ausstehende Stufen (11, 14-15):**
 11. **⏳ React-Frontend:** Benutzeroberfläche (ausstehend)
@@ -1347,28 +1479,256 @@ asyncio_mode = auto
    - ⏳ End-to-End-Tests
 
 **📈 Gesamtfortschritt:**
-- **Backend:** 98% abgeschlossen
+- **Backend:** 100% abgeschlossen
 - **API:** 100% funktional (inkl. manuelle Alerts, PDF-Viewer)
 - **Datenmodelle:** 100% (User, Contract, Alert, RentStep, Permission)
 - **PDF-System:** 100% (Upload, Organisation, Visualisierung)
+- **Deploy-Infrastruktur:** 100% (vollautomatisches bilinguales System)
+- **Apache-Konfiguration:** 100% (Proxy, Security, Caching)
+- **systemd-Integration:** 100% (Service, Auto-Start, Monitoring)
 - **Tests:** 75% implementiert
 - **Frontend:** 0% (ausstehend)
-- **Deploy:** 0% (ausstehend)
 
 **🎯 Nächste Schritte:**
-1. **Tests vervollständigen:** 90%+ Abdeckung
-2. **Frontend entwickeln:** React + Vite (Priorität)
-3. **Produktions-Deploy:** Docker + Server-Konfiguration
-4. **Berichte implementieren:** Erweiterte Dashboards
-5. **Performance-Optimierung:** Skalierbarkeit und Caching
+1. **Frontend entwickeln:** React + Vite (höchste Priorität)
+2. **Tests vervollständigen:** 90%+ Abdeckung
+3. **Produktions-Deployment:** Deploy-Scripts auf Produktionsserver ausführen
+4. **HTTPS-Konfiguration:** SSL-Zertifikate für sichere Kommunikation
+5. **Berichte implementieren:** Erweiterte Dashboards
+6. **Performance-Optimierung:** Database-Tuning und Caching
 
 **🆕 Aktuelle Implementierungen (Nov 2025):**
 - ✅ **Manuelle Alerts:** Flexibles Scheduling mit BENUTZERDEFINIERT
 - ✅ **PACHT-Verträge:** Neue Vertragsklassifizierung für Pachtverträge
 - ✅ **PDF-Inline-Viewer:** Direkte Browser-Anzeige von PDFs
 - ✅ **Organisierte Uploads:** Strukturierte temp/persisted-Ordner
+- ✅ **Deploy-Infrastruktur:** Vollautomatisches bilinguales Deployment (15KB Script)
+- ✅ **Apache-Konfiguration:** Professionelle interne Server-Konfiguration
+- ✅ **systemd-Service:** Robuste FastAPI-Service-Integration
+- ✅ **Backend-Only Deploy:** Produktionsreif ohne Frontend-Abhängigkeit
 
 ---
+
+## Deploy-Infrastruktur / Infraestrutura de Deploy
+
+### **Automatisiertes Deployment-System / Sistema de Deploy Automatizado**
+
+Das Projekt verfügt über eine vollständige billinguale Deploy-Infrastruktur für interne Unternehmensserver.
+O projeto possui uma infraestrutura completa de deploy bilíngue para servidores internos da empresa.
+
+#### **Deploy-Scripts / Scripts de Deploy**
+
+##### **1. Hauptscript: `deploy-internal.sh`**
+**Beschreibung / Descrição:** Vollautomatisches Deploy-Script mit bilingualer Benutzerführung (Deutsch/Portugiesisch)
+
+**Funktionen / Funcionalidades:**
+```bash
+./deploy-internal.sh deploy      # Vollständiges Deployment
+./deploy-internal.sh status      # System-Status prüfen
+./deploy-internal.sh logs        # Log-Dateien anzeigen
+./deploy-internal.sh help        # Hilfe in DE/PT
+```
+
+**Automatisierte Schritte / Passos Automatizados:**
+- ✅ **Systemabhängigkeiten prüfen:** Apache, Python, SQLite
+- ✅ **Python-Umgebung:** Virtual Environment einrichten
+- ✅ **Datenbank:** Alembic-Migrationen ausführen
+- ✅ **Apache-Konfiguration:** Proxy für FastAPI einrichten
+- ✅ **systemd-Service:** FastAPI als Systemdienst installieren
+- ✅ **Dateiberechtigungen:** Sichere Permissions setzen
+- ✅ **Status-Validierung:** Funktionsprüfung aller Komponenten
+
+##### **2. Setup-Script: `deploy/setup-internal.sh`**
+**Beschreibung / Descrição:** Einmaliges Setup für Apache-Konfiguration und Berechtigungen
+
+**Verwendung / Uso:**
+```bash
+cd deploy/
+./setup-internal.sh
+```
+
+##### **3. Permissions-Script: `setup-permissions.sh`**
+**Beschreibung / Descrição:** Sicherheitskonfiguration für Dateiberechtigungen
+
+**Sicherheitsfeatures / Recursos de Segurança:**
+- Datenbank: `chmod 600` (nur Besitzer kann lesen/schreiben)
+- Scripts: `chmod +x` (ausführbar machen)
+- Upload-Verzeichnisse: Korrekte www-data Berechtigungen
+
+#### **Apache-Konfiguration / Configuração Apache**
+
+##### **Datei: `deploy/apache-internal.conf`**
+**Zweck / Propósito:** Professionelle Apache-Konfiguration für interne Unternehmensnutzung
+
+**Konfigurierte Features / Recursos Configurados:**
+- **Proxy-Setup:** API-Calls an FastAPI weiterleiten (`/api/*` → `127.0.0.1:8000`)
+- **Frontend-Serving:** Statische Dateien für zukünftiges Frontend
+- **Security Headers:** XSS-Schutz, Content-Type-Validation, Frame-Options
+- **CORS-Headers:** Interne API-Zugriffe ermöglichen
+- **Caching:** Optimierte Performance für statische Assets
+- **Komprimierung:** Gzip für bessere Übertragungsgeschwindigkeit
+- **Logging:** Strukturierte Access- und Error-Logs
+
+**VirtualHost-Konfiguration:**
+```apache
+<VirtualHost *:80>
+    ServerName vertrag-mgs.empresa.local
+    DocumentRoot /var/www/html/vertrag-mgs
+    
+    # API Proxy
+    <Location "/api/">
+        ProxyPass "http://127.0.0.1:8000/"
+        ProxyPassReverse "http://127.0.0.1:8000/"
+    </Location>
+    
+    # Security & Performance Headers
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # Static Assets Caching
+    <LocationMatch "\.(css|js|png|jpg|gif|ico)$">
+        ExpiresDefault "access plus 1 month"
+    </LocationMatch>
+</VirtualHost>
+```
+
+#### **systemd-Service-Konfiguration / Configuração systemd**
+
+**Service-Name:** `vertrag-mgs-api.service`
+
+**Eigenschaften / Características:**
+- **Auto-Start:** Startet automatisch beim Server-Boot
+- **Auto-Restart:** Automatischer Neustart bei Fehlern
+- **User:** Läuft unter `www-data` für Sicherheit
+- **Working Directory:** Projekt-Root mit Virtual Environment
+- **Logging:** systemd Journal-Integration
+
+**Service-Konfiguration:**
+```ini
+[Unit]
+Description=Vertragsverwaltungssystem API
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/pfad/zum/projekt
+Environment="PATH=/pfad/zum/projekt/.venv/bin"
+ExecStart=/pfad/zum/projekt/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### **Deployment-Architektur / Arquitetura de Deployment**
+
+```
+┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+│   Apache (Port 80)   │    │  FastAPI (Port 8000) │    │   SQLite Database   │
+│   Frontend Static    │◄──►│     Backend API      │◄──►│     Data Layer      │
+│   Proxy zu FastAPI  │    │   systemd Service    │    │   File Permissions  │
+└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+          │                           │                           │
+          ▼                           ▼                           ▼
+┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+│  Security Headers   │    │   Background Tasks  │    │   Upload Directory  │
+│  CORS Configuration │    │   Alert Scheduler   │    │   temp/persisted    │
+│  Static Asset Cache │    │   Email Service     │    │   PDF Management    │
+└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+```
+
+#### **Bereitstellungsprozess / Processo de Deploy**
+
+**Schritt-für-Schritt Anleitung / Guia Passo-a-Passo:**
+
+1. **Vorbereitung / Preparação:**
+   ```bash
+   git pull origin main
+   chmod +x deploy-internal.sh
+   chmod +x deploy/setup-internal.sh
+   chmod +x setup-permissions.sh
+   ```
+
+2. **Erstkonfiguration / Configuração Inicial:**
+   ```bash
+   cd deploy/
+   ./setup-internal.sh
+   ```
+
+3. **Vollständiges Deployment / Deploy Completo:**
+   ```bash
+   ./deploy-internal.sh deploy
+   ```
+
+4. **Status-Überprüfung / Verificação de Status:**
+   ```bash
+   ./deploy-internal.sh status
+   ```
+
+**Erwartete Ausgabe nach erfolgreichem Deploy / Saída Esperada após Deploy Bem-sucedido:**
+```
+✅ Apache2: Aktiv / Ativo
+✅ FastAPI: Aktiv / Ativo (Port 8000)
+
+🌐 ZUGRIFF / ACESSO:
+   Sistema:  http://servidor-interno/ (→ API docs)
+   API:      http://servidor-interno/api/
+   Docs:     http://servidor-interno/api/docs
+   ⚠️  Frontend: Em desenvolvimento / In Entwicklung
+```
+
+#### **Wartung und Monitoring / Manutenção e Monitoramento**
+
+**Log-Zugriff / Acesso a Logs:**
+```bash
+# Systemd Service Logs
+sudo journalctl -u vertrag-mgs-api.service -f
+
+# Apache Logs
+sudo tail -f /var/log/apache2/vertrag-mgs-access.log
+sudo tail -f /var/log/apache2/vertrag-mgs-error.log
+
+# Script-basierte Logs
+./deploy-internal.sh logs apache
+./deploy-internal.sh logs fastapi
+./deploy-internal.sh logs all
+```
+
+**Service-Management / Gerenciamento de Serviços:**
+```bash
+# FastAPI Service
+sudo systemctl start vertrag-mgs-api
+sudo systemctl stop vertrag-mgs-api
+sudo systemctl restart vertrag-mgs-api
+sudo systemctl status vertrag-mgs-api
+
+# Apache Service
+sudo systemctl restart apache2
+sudo systemctl status apache2
+```
+
+### **Backend-Only Deployment / Deploy Apenas Backend**
+
+**Aktuelle Konfiguration / Configuração Atual:**
+Da das Frontend noch nicht entwickelt wurde, ist das Deploy-System für einen **Backend-Only-Betrieb** konfiguriert:
+Como o frontend ainda não foi desenvolvido, o sistema de deploy está configurado para **operação apenas backend**:
+
+- **Startseite:** Zeigt Entwicklungshinweis und leitet zur API-Dokumentation weiter
+- **API-Zugriff:** Vollständig funktional über `/api/*` Endpunkte
+- **Frontend-Placeholder:** Temporäre HTML-Seite mit Statusinformationen
+- **Erweiterbar:** Bereit für Frontend-Integration ohne Neukonfiguration
+
+**Temporäre Startseite-Inhalte / Conteúdo da Página Inicial Temporária:**
+```html
+🚧 Sistema em Desenvolvimento / System Under Development 🚧
+Deutsch: Das Frontend befindet sich noch in der Entwicklung.
+Português: O frontend ainda está em desenvolvimento.
+API: FastAPI Documentation verfügbar / disponível
+Status: Backend ✅ | Frontend 🚧
+```
 
 ## Entwicklung / Desenvolvimento
 
