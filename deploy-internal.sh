@@ -155,8 +155,17 @@ setup_apache() {
     log_info "Konfiguriere Apache für API (Backend-only)..." \
              "Configurando Apache para API (apenas backend)..."
 
-    # Criar configuração temporária apenas para API / Create temporary API-only configuration
-    cat > "/tmp/vertrag-mgs.conf" << EOF
+    # Usar configuração do arquivo deploy/apache-internal.conf
+    if [ -f "deploy/apache-internal.conf" ]; then
+        sudo cp deploy/apache-internal.conf "$APACHE_CONFIG_DIR/vertrag-mgs.conf"
+        log_success "Apache-Konfiguration aus Datei geladen!" \
+                    "Configuração Apache carregada do arquivo!"
+    else
+        log_warning "deploy/apache-internal.conf nicht gefunden!" \
+                   "deploy/apache-internal.conf não encontrado!"
+        
+        # Criar configuração temporária apenas para API / Create temporary API-only configuration
+        cat > "/tmp/vertrag-mgs.conf" << EOF
 <VirtualHost *:80>
     ServerName vertrag-mgs.local
     
@@ -181,9 +190,10 @@ setup_apache() {
     CustomLog \${APACHE_LOG_DIR}/vertrag-mgs-access.log combined
 </VirtualHost>
 EOF
-
-    # Mover configuração / Move configuration
-    sudo mv "/tmp/vertrag-mgs.conf" "$APACHE_CONFIG_DIR/vertrag-mgs.conf"
+        
+        # Mover configuração apenas se foi gerada / Move configuration only if generated
+        sudo mv "/tmp/vertrag-mgs.conf" "$APACHE_CONFIG_DIR/vertrag-mgs.conf"
+    fi
 
     # Ativar site e módulos / Enable site and modules
     sudo a2enmod proxy
