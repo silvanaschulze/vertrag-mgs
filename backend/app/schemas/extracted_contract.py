@@ -11,7 +11,7 @@ Suporta Confidence-Scores e validação dos dados extraídos.
 from datetime import date, datetime
 from typing import Optional, Dict, Any, List
 from decimal import Decimal
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 # Confidence-Score-Enumeration
@@ -94,8 +94,9 @@ class ExtractedContractDraft(BaseModel):
     overall_confidence: float = Field(0.0, ge=0.0, le=1.0, description="Gesamt-Confidence-Score / Score de confiança geral")
     confidence_level: ConfidenceLevel = Field(ConfidenceLevel.UNKNOWN, description="Confidence-Level / Nível de confiança")
     
-    @validator('overall_confidence', always=True)
-    def calculate_overall_confidence(cls, v, values):
+    @field_validator('overall_confidence', mode='before')
+    @classmethod
+    def calculate_overall_confidence(cls, v, info):
         """
         Berechnet den Gesamt-Confidence-Score
         Calcula o score de confiança geral
@@ -108,20 +109,23 @@ class ExtractedContractDraft(BaseModel):
             'terms_and_conditions_confidence', 'notes_confidence', 'raw_text_confidence'
         ]
         
-        scores = [values.get(field, 0.0) for field in confidence_fields]
+        values_data = info.data if hasattr(info, 'data') else {}
+        scores = [values_data.get(field, 0.0) for field in confidence_fields]
         non_zero_scores = [score for score in scores if score > 0]
         
         if non_zero_scores:
             return sum(non_zero_scores) / len(non_zero_scores)
         return 0.0
     
-    @validator('confidence_level', always=True)
-    def determine_confidence_level(cls, v, values):
+    @field_validator('confidence_level', mode='before')
+    @classmethod
+    def determine_confidence_level(cls, v, info):
         """
         Bestimmt das Confidence-Level basierend auf dem Gesamtscore
         Determina o nível de confiança baseado no score geral
         """
-        overall_confidence = values.get('overall_confidence', 0.0)
+        values_data = info.data if hasattr(info, 'data') else {}
+        overall_confidence = values_data.get('overall_confidence', 0.0)
         
         if overall_confidence >= 0.8:
             return ConfidenceLevel.HIGH

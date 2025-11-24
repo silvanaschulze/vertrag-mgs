@@ -8,7 +8,7 @@ Verschiedene Schemas werden für verschiedene Operationen verwendet (erstellen, 
 from datetime import datetime
 from typing import Optional
 from enum import Enum
-from pydantic import BaseModel, EmailStr, Field, ValidationInfo, field_validator
+from pydantic import BaseModel, EmailStr, Field, ValidationInfo, field_validator, ConfigDict
 
 # Benutzer-Rollen Enumeration
 class UserRole(str, Enum):
@@ -73,8 +73,7 @@ class UserInDB(UserBase):
     created_at: datetime = Field(..., description="Zeitstempel der Benutzererstellung")
     updated_at: Optional[datetime] = Field(None, description="Zeitstempel der letzten Aktualisierung")
     
-    class Config:
-        from_attributes = True  # Ermöglicht Konvertierung vom SQLAlchemy-Modell
+    model_config = ConfigDict(from_attributes=True)
 
 # Schema für API-Antworten (schließt sensible Daten aus)
 class UserResponse(UserBase):
@@ -83,15 +82,13 @@ class UserResponse(UserBase):
     created_at: datetime = Field(..., description="Zeitstempel der Benutzererstellung")
     updated_at: Optional[datetime] = Field(None, description="Zeitstempel der letzten Aktualisierung")
     
-    class Config:
-        from_attributes = True  # Ermöglicht Konvertierung vom SQLAlchemy-Modell
+    model_config = ConfigDict(from_attributes=True)
 
 # Administrator-spezifische Schemas
 class UserAdminCreate(UserCreate):
     """Schema für Administrator zum Erstellen von Benutzern"""
     role: UserRole = Field(default=UserRole.USER, description="Benutzerrolle (Administrator kann jede Rolle setzen)")
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserAdminUpdate(UserUpdate):
     """Schema für Administrator zum Aktualisieren von Benutzern"""

@@ -7,7 +7,7 @@ PT: Router FastAPI para gerenciamento de alertas (listagem, detalhes, reprocessa
 """
 
 from typing import List, Optional, cast
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import OperationalError
@@ -285,7 +285,7 @@ async def get_alerts_summary(
             "total_alerts": 0,
             "by_status": {},
             "by_type": {},
-            "generated_at": datetime.utcnow().isoformat()
+            "generated_at": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
         raise HTTPException(

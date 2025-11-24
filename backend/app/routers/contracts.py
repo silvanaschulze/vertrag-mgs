@@ -351,7 +351,7 @@ async def get_expired_contracts(
 @router.get("/{contract_id}/document", status_code=status.HTTP_200_OK)
 async def generate_contract_document(
     contract_id: int,
-    format: Optional[str] = Query("pdf", regex="^(pdf|docx)$", description="Formato do documento: pdf ou docx"),
+    format: Optional[str] = Query("pdf", pattern="^(pdf|docx)$", description="Formato do documento: pdf ou docx"),
     contract_service: ContractService = Depends(get_contract_service)
 ):
     """

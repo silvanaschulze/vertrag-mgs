@@ -7,6 +7,7 @@ from io import BytesIO
 import requests
 import os
 import json
+import pytest
 
 def create_test_pdf():
     """Cria um PDF simples para teste"""
@@ -98,6 +99,16 @@ def login_user():
     except Exception as e:
         print(f"✗ Erro ao fazer login: {e}")
         return None
+
+@pytest.fixture
+def token():
+    """Fixture que fornece um token de autenticação para testes"""
+    # Tenta fazer login e obter token real
+    login_token = login_user()
+    if login_token:
+        return login_token
+    # Fallback: retorna token fake para testes offline
+    return "fake-test-token-123"
 
 def test_pdf_upload(token):
     """Testa upload de PDF"""

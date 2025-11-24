@@ -8,7 +8,7 @@ Verschiedene Schemas werden für verschiedene Operationen verwendet (erstellen, 
 from datetime import datetime, date
 from typing import Optional, List
 from decimal import Decimal
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
+from pydantic import BaseModel, Field, field_validator, ValidationInfo, ConfigDict, field_serializer
 from enum import Enum
 import re
 from typing import Optional as _Opt
@@ -146,15 +146,18 @@ class ContractUpdate(BaseModel):
         note: Optional[str] = Field(None, max_length=300, description="Optionaler Hinweis")
 
     class RentStepResponse(RentStepBase):
+        model_config = ConfigDict(from_attributes=True)
+        
         id: int = Field(..., description="Eindeutige ID der RentStep")
         contract_id: int = Field(..., description="ID des zugehörigen Vertrags")
-
-        class Config:
-            from_attributes = True
-            json_encoders = {
-                Decimal: lambda v: float(v),
-                date: lambda v: v.isoformat(),
-            }
+        
+        @field_serializer('amount')
+        def serialize_amount(self, amount: Decimal) -> float:
+            return float(amount)
+        
+        @field_serializer('effective_date')
+        def serialize_date(self, dt: date) -> str:
+            return dt.isoformat()
 
 # Schema für API-Antworten (enthält Benutzerinformationen)
 class RentStepBase(BaseModel):
@@ -178,15 +181,18 @@ class RentStepUpdate(BaseModel):
 
 
 class RentStepResponse(RentStepBase):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int = Field(..., description="Eindeutige ID der RentStep")
     contract_id: int = Field(..., description="ID des zugehörigen Vertrags")
-
-    class Config:
-        from_attributes = True
-        json_encoders = {
-            Decimal: lambda v: float(v),
-            date: lambda v: v.isoformat(),
-        }
+    
+    @field_serializer('amount')
+    def serialize_amount(self, amount: Decimal) -> float:
+        return float(amount) if amount else 0.0
+    
+    @field_serializer('effective_date')
+    def serialize_date(self, dt: date) -> str:
+        return dt.isoformat()
 
 
 class ContractResponse(ContractBase):
@@ -200,15 +206,21 @@ class ContractResponse(ContractBase):
     # Original-PDF Metadaten (optional)
     original_pdf_filename: Optional[str] = Field(None, description="Original hochgeladene PDF-Datei")
     original_pdf_sha256: Optional[str] = Field(None, description="SHA256 Hash der Original-PDF")
-    uploaded_at: Optional[datetime] = Field(None, description="Zeitpunkt des Uploads der Original-PDF")
+    uploaded_at: Optional[datetime] = Field(None, description="Zeitpunkt des Uploads der Original-PDF (UTC)")
 
-    class Config:
-        from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell
-        json_encoders = {
-            Decimal: lambda v: float (v),
-            date: lambda v: v.isoformat(),
-            datetime: lambda v: v.isoformat(),
-        }
+    model_config = ConfigDict(from_attributes=True)
+    
+    @field_serializer('value', when_used='unless-none')
+    def serialize_value(self, value: Decimal) -> float:
+        return float(value)
+    
+    @field_serializer('start_date', 'end_date', 'renewal_date', when_used='unless-none')
+    def serialize_dates(self, dt: date) -> str:
+        return dt.isoformat()
+    
+    @field_serializer('created_at', 'updated_at', 'uploaded_at', when_used='unless-none')
+    def serialize_datetimes(self, dt: datetime) -> str:
+        return dt.isoformat()
 
 # Schema für Vertragsdaten in der Datenbank
 class ContractInDB(ContractBase):
@@ -225,13 +237,19 @@ class ContractInDB(ContractBase):
     ocr_text_sha256: Optional[str] = Field(None, description="SHA256 des OCR-Texts")
     uploaded_at: Optional[datetime] = Field(None, description="Zeitpunkt des Uploads der Original-PDF")
     
-    class Config:
-        from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell
-        json_encoders = {
-            Decimal: lambda v: float (v),
-            date: lambda v: v.isoformat(),
-            datetime: lambda v: v.isoformat(),
-        }
+    model_config = ConfigDict(from_attributes=True)
+    
+    @field_serializer('value', when_used='unless-none')
+    def serialize_value(self, value: Decimal) -> float:
+        return float(value)
+    
+    @field_serializer('start_date', 'end_date', 'renewal_date', when_used='unless-none')
+    def serialize_dates(self, dt: date) -> str:
+        return dt.isoformat()
+    
+    @field_serializer('created_at', 'updated_at', 'uploaded_at', when_used='unless-none')
+    def serialize_datetimes(self, dt: datetime) -> str:
+        return dt.isoformat()
 
 # Schema für Vertragslisten-Antworten
 class ContractListResponse(BaseModel):
@@ -241,13 +259,7 @@ class ContractListResponse(BaseModel):
     page: int = Field(..., description="Aktuelle Seitennummer")
     per_page: int = Field(..., description="Anzahl der Verträge pro Seite")
     
-    class Config:
-        from_attributes = True  # Ermöglicht die Konvertierung vom SQLAlchemy-Modell
-        json_encoders = {
-            Decimal: lambda v: float (v),
-            date: lambda v: v.isoformat(),
-            datetime: lambda v: v.isoformat(),
-        }
+    model_config = ConfigDict(from_attributes=True)
 # Schema für Vertragsstatistiken
 class ContractStats(BaseModel):
     """Schema für Vertragsstatistiken"""
@@ -258,10 +270,8 @@ class ContractStats(BaseModel):
     total_value: Decimal = Field(..., description="Gesamtwert aller Verträge")
     currency: str = Field(..., description="Für den Gesamtwert verwendete Währung")
     
-    class Config:
-        from_attributes = True
-        json_encoders = {
-            Decimal: lambda v: float (v),
-            date: lambda v: v.isoformat(),
-            datetime: lambda v: v.isoformat(),
-        }
+    model_config = ConfigDict(from_attributes=True)
+    
+    @field_serializer('total_value')
+    def serialize_total_value(self, value: Decimal) -> float:
+        return float(value)

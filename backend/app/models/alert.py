@@ -6,13 +6,13 @@ PT: Este módulo define o modelo SQLAlchemy para notificações (alertas de
     contrato como T-60/T-30/T-10/T-1) incluindo status.
 """
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey, Text, func
 import enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 if TYPE_CHECKING:
     from .contract import Contract
@@ -71,7 +71,7 @@ class Alert(Base):
         Benachrichtigung als gesendet markieren.
         """
         self.status = AlertStatus.SENT
-        self.sent_at = when or datetime.utcnow()
+        self.sent_at = when or datetime.now(timezone.utc)
 
     def mark_failed(self, message: str) -> None:
         """Marcar alerta como falhado e registrar erro.
@@ -120,6 +120,7 @@ class AlertUpdate(BaseModel):
 
 class AlertInDB(BaseModel):
     """Representação interna (from_attributes) / Interne Darstellung"""
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     contract_id: int
@@ -132,9 +133,6 @@ class AlertInDB(BaseModel):
     error: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class AlertResponse(AlertInDB):
