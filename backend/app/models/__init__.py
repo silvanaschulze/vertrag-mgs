@@ -7,11 +7,12 @@ Datenbankmodelle für das Vertragsverwaltungssystem
 from .contract import Contract, ContractStatus, ContractType
 from .rent_step import RentStep
 from .permission import Permission
-from .user import User, UserRole
+from .user import User, UserRole, AccessLevel
 
 __all__ = [
     "User",
-    "UserRole", 
+    "UserRole",
+    "AccessLevel",
     "Contract",
     "ContractStatus",
     "ContractType",

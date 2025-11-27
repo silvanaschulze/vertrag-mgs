@@ -63,6 +63,11 @@ class Contract(Base):
     client_email: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     client_phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
+    #Organisationsfelder / Campos organizacionais
+    department: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)  # Bereich / Departamento
+    team: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)  # Team / Time
+    responsible_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)  # Verantwortlicher Benutzer / Usuário responsável
+
     #Zusätzliche Felder
     terms_and_conditions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

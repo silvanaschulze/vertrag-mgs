@@ -66,6 +66,10 @@ class PDFReaderService:
                 r'\b[A-ZÄÖÜ][a-zäöüß]+\s+AG\b',    # Nome AG
                 r'\b[A-ZÄÖÜ][a-zäöüß]+\s+KG\b',    # Nome KG
                 r'\b[A-ZÄÖÜ][a-zäöüß]+\s+OHG\b',   # Nome OHG
+                r'\b[A-ZÄÖÜ][a-zäöüß]+\s+UG\b',    # Nome UG
+                r'\b[A-ZÄÖÜ][a-zäöüß]+\s+e\.V\b',  # Nome e.V
+                r'\b[A-ZÄÖÜ][a-zäöüß]+\s+&Co\b',   # Nome &Co
+                
             ],
             'email_patterns': [
                 r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'

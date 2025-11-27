@@ -65,6 +65,8 @@ def extract_legal_entities(text: str) -> List[Dict[str, Any]]:
             r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:KG|Kommanditgesellschaft)\b',
             r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:OHG|Offene Handelsgesellschaft)\b',
             r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:UG|Unternehmergesellschaft)\b',
+            r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:e.V|eingetragener Verein)\b',
+            r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:&Co|Kommanditgesellschaft)\b',
         ]
         entities = []
         for pattern in entity_patterns:

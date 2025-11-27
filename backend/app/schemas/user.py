@@ -7,15 +7,33 @@ Verschiedene Schemas werden für verschiedene Operationen verwendet (erstellen, 
 
 from datetime import datetime
 from typing import Optional
-from enum import Enum
+from enum import Enum, IntEnum
 from pydantic import BaseModel, EmailStr, Field, ValidationInfo, field_validator, ConfigDict
+
+# Zugriffsstufen Enumeration / Enumeração de níveis de acesso
+class AccessLevel(IntEnum):
+    """Zugriffsstufen für hierarchische Berechtigungen.
+    Níveis de acesso para permissões hierárquicas.
+    """
+    LEVEL_1 = 1  # Basis / Básico
+    LEVEL_2 = 2  # Team / Time
+    LEVEL_3 = 3  # Department User / Usuário Departamento
+    LEVEL_4 = 4  # Department Admin / Admin Departamento
+    LEVEL_5 = 5  # Geschäftsführung / Diretoria
+    LEVEL_6 = 6  # System Admin / Admin Sistema
 
 # Benutzer-Rollen Enumeration
 class UserRole(str, Enum):
-    """Benutzer-Rollen Enumeration"""
-    USER = "user"           # Regulärer Benutzer - kann eigene Verträge einsehen
-    MANAGER = "manager"     # Manager - kann Team-Verträge verwalten
-    ADMIN = "admin"         # Administrator -  voller Systemzugriff
+    """Systemrollen für Benutzer.
+    Papéis técnicos do sistema.
+    """
+    SYSTEM_ADMIN = "system_admin"        # TI / Admin técnico
+    DIRECTOR = "director"                # Geschäftsführung / Diretoria
+    DEPARTMENT_USER = "department_user"  # Leiter mit eingeschränkten Funktionen
+    DEPARTMENT_ADM = "department_adm"    # Leiter mit Admin-Funktionen
+    TEAM_LEAD = "team_lead"              # Teamleiter / Líder de time
+    STAFF = "staff"                      # Mitarbeiter / Colaborador
+    READ_ONLY = "read_only"              # Nur Lesezugriff / Somente leitura
     
 
 # Basis-Schema mit gemeinsamen Feldern
@@ -24,7 +42,10 @@ class UserBase(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50, description="Benutzername / Nome de usuário")
     email: EmailStr = Field(..., description="Benutzer-E-Mail-Adresse / Endereço de e-mail do usuário")
     name: str = Field(..., min_length=2, max_length=100, description="Vollständiger Name des Benutzers / Nome completo do usuário")
-    role: UserRole = Field(default=UserRole.USER, description="Benutzerrolle / Função do usuário")
+    department: Optional[str] = Field(None, max_length=100, description="Bereich / Departamento")
+    team: Optional[str] = Field(None, max_length=100, description="Team / Time")
+    role: UserRole = Field(default=UserRole.STAFF, description="Benutzerrolle / Função do usuário")
+    access_level: int = Field(default=AccessLevel.LEVEL_1, ge=1, le=6, description="Zugriffsstufe (1-6) / Nível de acesso (1-6)")
 
 # Schema für die Erstellung eines neuen Benutzers
 class UserCreate(UserBase):
@@ -50,10 +71,12 @@ class UserCreate(UserBase):
     @field_validator("is_superuser")
     @classmethod
     def validate_superuser(cls, v: bool, info: ValidationInfo) -> bool:
-        """Validar que apenas ADMINs podem ser superuser"""
+        """Validar que apenas SYSTEM_ADMIN ou DIRECTOR podem ser superuser.
+        Validar que apenas SYSTEM_ADMIN ou DIRECTOR podem ser superusuários.
+        """
         data = info.data or {}
-        if v and data.get("role") != UserRole.ADMIN:
-            raise ValueError("Nur ADMINs können Superuser sein / Apenas ADMINs podem ser superusuários")
+        if v and data.get("role") not in [UserRole.SYSTEM_ADMIN, UserRole.DIRECTOR]:
+            raise ValueError("Nur SYSTEM_ADMIN oder DIRECTOR können Superuser sein / Apenas SYSTEM_ADMIN ou DIRECTOR podem ser superusuários")
         return v
 
 # Schema für die Aktualisierung von Benutzerdaten
@@ -62,7 +85,10 @@ class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50, description="Benutzername / Nome de usuário")
     email: Optional[EmailStr] = Field(None, description="Benutzer-E-Mail-Adresse / Endereço de e-mail do usuário")
     name: Optional[str] = Field(None, min_length=2, max_length=100, description="Vollständiger Name des Benutzers / Nome completo do usuário")
+    department: Optional[str] = Field(None, max_length=100, description="Bereich / Departamento")
+    team: Optional[str] = Field(None, max_length=100, description="Team / Time")
     role: Optional[UserRole] = Field(None, description="Benutzerrolle / Função do usuário")
+    access_level: Optional[int] = Field(None, ge=1, le=6, description="Zugriffsstufe (1-6) / Nível de acesso (1-6)")
     password: Optional[str] = Field(None, min_length=8, description="Benutzerpasswort / Senha do usuário")
 
 # Schema für Benutzerdaten in der Datenbank (enthält gehashtes Passwort)
@@ -87,7 +113,7 @@ class UserResponse(UserBase):
 # Administrator-spezifische Schemas
 class UserAdminCreate(UserCreate):
     """Schema für Administrator zum Erstellen von Benutzern"""
-    role: UserRole = Field(default=UserRole.USER, description="Benutzerrolle (Administrator kann jede Rolle setzen)")
+    role: UserRole = Field(default=UserRole.STAFF, description="Benutzerrolle (Administrator kann jede Rolle setzen)")
     model_config = ConfigDict(from_attributes=True)
 
 class UserAdminUpdate(UserUpdate):

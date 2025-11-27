@@ -19,13 +19,29 @@ if TYPE_CHECKING:
 from app.core.database import Base
 
 
-class UserRole(str, enum.Enum):
-    """User roles enumeration
-    Benutzerrollen Aufzählung
+class AccessLevel(enum.IntEnum):
+    """Zugriffsstufen für hierarchische Berechtigungen.
+    Níveis de acesso para permissões hierárquicas.
     """
-    USER = "user"
-    MANAGER = "manager" 
-    ADMIN = "admin"
+    LEVEL_1 = 1  # Basis - Nur eigene Verträge / Básico - Apenas contratos próprios
+    LEVEL_2 = 2  # Team - Alle Verträge des Teams / Time - Todos contratos do time
+    LEVEL_3 = 3  # Department User - Bereichsverträge, eingeschränkte Reports / Dept User - Contratos do departamento, relatórios restritos
+    LEVEL_4 = 4  # Department Admin - Volle Bereichsrechte / Dept Admin - Direitos completos do departamento
+    LEVEL_5 = 5  # Geschäftsführung - Unternehmensweiter Zugriff / Diretoria - Acesso em toda empresa
+    LEVEL_6 = 6  # System Admin - Technischer Vollzugriff / Admin Sistema - Acesso técnico completo
+
+
+class UserRole(str, enum.Enum):
+    """Systemrollen für Benutzer.
+    Papéis técnicos do sistema para usuários.
+    """
+    SYSTEM_ADMIN = "system_admin"        # TI / Admin técnico
+    DIRECTOR = "director"                # Geschäftsführung / Diretoria
+    DEPARTMENT_USER = "department_user"  # Leiter mit eingeschränkten Funktionen / Gestor com funções restritas
+    DEPARTMENT_ADM = "department_adm"    # Leiter mit Admin-Funktionen / Gestor com funções administrativas
+    TEAM_LEAD = "team_lead"              # Teamleiter / Líder de time
+    STAFF = "staff"                      # Mitarbeiter / Colaborador
+    READ_ONLY = "read_only"              # Nur Lesezugriff / Somente leitura
 
 class User(Base):
     """User model
@@ -37,11 +53,13 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
    
     #Grundlegende Benutzerinformationen / Informações básicas do usuário
-    username: Mapped[Optional[str]] = mapped_column(String(50), unique=True, index=True, nullable=True)  # ← ADICIONAR CAMPO USERNAME
+    username: Mapped[Optional[str]] = mapped_column(String(50), unique=True, index=True, nullable=True)
     email: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     department: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    team: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.STAFF, nullable=False)
+    access_level: Mapped[int] = mapped_column(Integer, default=AccessLevel.LEVEL_1, nullable=False)
 
 
     #Authentifizierungsinformationen
@@ -81,15 +99,35 @@ class User(Base):
         role_val = getattr(self.role, 'value', self.role)
         role_str = role_val if role_val is not None else 'N/A'
         return f"<User(id={self.id}, email='{self.email}', name='{self.name}', role='{role_str}')>"
-    """Überprüft ob der Benutzer Admin ist """
-    def is_admin(self) -> bool:
-        return self.role == UserRole.ADMIN
-    """Überprüft ob der Benutzer Manager ist """
-    def is_manager(self) -> bool:
-        return self.role == UserRole.MANAGER
-    """Überprüft ob der Benutzer regulärer Benutzer ist """
-    def is_user(self) -> bool:
-        return self.role == UserRole.USER
+    """Prüft, ob der Benutzer Systemadministrator ist.
+    Verifica se o usuário é administrador do sistema.
+    """
+    def is_system_admin(self) -> bool:
+        return self.role == UserRole.SYSTEM_ADMIN
+    
+    """Prüft, ob der Benutzer Geschäftsführung ist.
+    Verifica se o usuário é da diretoria.
+    """
+    def is_director(self) -> bool:
+        return self.role == UserRole.DIRECTOR
+    
+    """Prüft, ob der Benutzer Bereichsleiter (User oder Admin) ist.
+    Verifica se o usuário é gestor de departamento (User ou Admin).
+    """
+    def is_department_leader(self) -> bool:
+        return self.role in [UserRole.DEPARTMENT_USER, UserRole.DEPARTMENT_ADM]
+    
+    """Prüft, ob der Benutzer Zugriff auf Bereich hat (Level >= 3).
+    Verifica se o usuário tem acesso ao departamento (Nível >= 3).
+    """
+    def has_department_access(self) -> bool:
+        return self.access_level >= AccessLevel.LEVEL_3
+    
+    """Prüft, ob der Benutzer nur Lesezugriff hat.
+    Verifica se o usuário tem apenas acesso de leitura.
+    """
+    def is_read_only(self) -> bool:
+        return self.role == UserRole.READ_ONLY
     """Aktualisiert das letzte Login Datum und die IP Adresse"""
     def update_last_login(self, ip_address: Optional[str] = None):
         self.last_login = datetime.now(timezone.utc)
@@ -112,7 +150,7 @@ class User(Base):
 
 
 
-def create_user(db, email: str, name: str, password_hash: str, role: UserRole = UserRole.USER, username: Optional[str] = None) -> User:
+def create_user(db, email: str, name: str, password_hash: str, role: UserRole = UserRole.STAFF, username: Optional[str] = None) -> User:
     """ Neuen Benutzer in der Datenbank erstellen
     Criar novo usuário no banco de dados
    """

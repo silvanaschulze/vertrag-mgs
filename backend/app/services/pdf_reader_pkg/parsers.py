@@ -15,6 +15,10 @@ COMPANY_PATTERNS = [
     r'\b[A-ZÄÖÜ][a-zäöüß]+\s+AG\b',
     r'\b[A-ZÄÖÜ][a-zäöüß]+\s+KG\b',
     r'\b[A-ZÄÖÜ][a-zäöüß]+\s+OHG\b',
+    r'\b[A-ZÄÖÜ][a-zäöüß]+\s+UG\b',
+    r'\b[A-ZÄÖÜ][a-zäöüß]+\s+e\.V\b',
+    r'\b[A-ZÄÖÜ][a-zäöüß]+\s+&Co\b',
+    
 ]
 
 ADDRESS_PATTERNS = [

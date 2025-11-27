@@ -9,10 +9,11 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.schemas.user import UserCreate, UserUpdate, UserResponse, UserRole
+from app.schemas.user import UserCreate, UserUpdate, UserResponse, UserRole, AccessLevel
 from app.services.user_service import UserService
 from app.core.security import get_current_user, get_current_active_user
 from app.models.user import User
+from app.core.permissions import can_manage_users, require_director_or_system_admin, require_min_access_level
 
 # Router-Instanz erstellen 
 router = APIRouter(
@@ -35,10 +36,11 @@ async def read_users(
     Alle Benutzer abrufen.
     Erfordert Authentifizierung.
     """
-    if current_user.role != UserRole.ADMIN:
+    # Requer SYSTEM_ADMIN, DIRECTOR ou DEPARTMENT_ADM
+    if current_user.access_level < AccessLevel.LEVEL_4:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Nur Administratoren können alle Benutzer auflisten"
+            detail="Nur Administratoren können alle Benutzer auflisten / Apenas administradores podem listar usuários"
         )
     users = await UserService(db).get_users(skip=skip, limit=limit)
     return users    
@@ -53,10 +55,11 @@ async def read_user(
     Einen Benutzer nach ID abrufen.
     Erfordert Authentifizierung.
     """
-    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
+    # Admins (Level 4+) podem ver todos, outros apenas próprio perfil
+    if current_user.access_level < AccessLevel.LEVEL_4 and current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Sie können nur Ihr eigenes Profil anzeigen"
+            detail="Sie können nur Ihr eigenes Profil anzeigen / Você pode ver apenas seu próprio perfil"
         )
 
     user = await UserService(db).get_user(user_id=user_id)
@@ -74,10 +77,11 @@ async def create_user(
     Einen neuen Benutzer erstellen.
     Erfordert Authentifizierung.
     """
-    if current_user.role != UserRole.ADMIN:
+    # Verificar permissão para criar usuários
+    if not can_manage_users(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Nur Administratoren können Benutzer erstellen"
+            detail="Nur Administratoren können Benutzer erstellen / Apenas administradores podem criar usuários"
         )
     
     db_user = await UserService(db).get_user_by_email(email=user.email)
@@ -102,10 +106,11 @@ async def update_user(
     Einen vorhandenen Benutzer aktualisieren.
     Erfordert Authentifizierung.
     """
-    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
+    # Admins podem atualizar qualquer usuário, outros apenas seu próprio perfil
+    if current_user.access_level < AccessLevel.LEVEL_4 and current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Sie können nur Ihr eigenes Profil aktualisieren"
+            detail="Sie können nur Ihr eigenes Profil aktualisieren / Você pode atualizar apenas seu próprio perfil"
         )
     
     db_user = await UserService(db).get_user(user_id=user_id)
@@ -176,10 +181,10 @@ async def activate_user(
     Erfordert Admin-Berechtigung 
     """
     # Nur Administratoren können Benutzer aktivieren
-    if current_user.role != UserRole.ADMIN:
+    if not can_manage_users(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Nur Administratoren können Benutzer aktivieren"
+            detail="Nur Administratoren können Benutzer aktivieren / Apenas administradores podem ativar usuários"
         )
     
     db_user = await UserService(db).get_user_by_id(user_id=user_id)
@@ -205,10 +210,10 @@ async def deactivate_user(
     Erfordert Admin-Berechtigung 
     """
     # Nur Administratoren können Benutzer deaktivieren
-    if current_user.role != UserRole.ADMIN:
+    if not can_manage_users(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Nur Administratoren können Benutzer deaktivieren"
+            detail="Nur Administratoren können Benutzer deaktivieren / Apenas administradores podem desativar usuários"
         )
     
     # Verhindern dass sich ein Admin selbst deaktiviert
@@ -242,10 +247,10 @@ async def search_users(
     Erfordert Admin-Berechtigung 
     """
     # Nur Administratoren können Benutzer suchen
-    if current_user.role != UserRole.ADMIN:
+    if current_user.access_level < AccessLevel.LEVEL_4:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Nur Administratoren können Benutzer suchen"
+            detail="Nur Administratoren können Benutzer suchen / Apenas administradores podem buscar usuários"
         )
     
     users = await UserService(db).search_users(query=query, skip=skip, limit=limit)

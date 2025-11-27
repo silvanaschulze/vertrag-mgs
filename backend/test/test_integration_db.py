@@ -24,7 +24,13 @@ async def test_create_and_query_models():
 
     async with async_session() as session:
         # Erstelle einen Benutzer / Criar um usuário
-        user = User(email="test@example.com", name="Test User", password_hash="hash", role=UserRole.USER)
+        user = User(
+            email="test@example.com",
+            name="Test User",
+            password_hash="hash",
+            role=UserRole.STAFF,
+            access_level=1
+        )
         session.add(user)
         await session.commit()
         await session.refresh(user)
