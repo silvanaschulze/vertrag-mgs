@@ -185,91 +185,99 @@ Hinweis: Die modulare Schichtenarchitektur wurde bewusst so gestaltet, dass neue
 
 ```
 vertrag-mgs/
-├── backend/                          # Backend der Anwendung
-│   ├── app/                         # Hauptanwendungscode
-│   │   ├── core/                    # Zentrale Konfigurationen
-│   │   │   ├── config.py           # Anwendungskonfiguration
-│   │   │   ├── database.py         # Datenbankkonfiguration
-│   │   │   ├── security.py         # Sicherheit und JWT
-│   │   │   └── permissions.py      # Berechtigungssystem
-│   │   ├── models/                  # Datenmodelle (SQLAlchemy)
-│   │   │   ├── user.py             # Benutzermodell
-│   │   │   ├── contract.py         # Vertragsmodell
-│   │   │   ├── alert.py            # Alertmodell
-│   │   │   ├── rent_step.py        # Mietstaffelung / RentStep (neu)
-│   │   │   └── permission.py       # Berechtigungsmodell
-│   │   ├── schemas/                 # Pydantic-Schemas
-│   │   │   ├── user.py             # Benutzerschemas
-│   │   │   ├── contract.py         # Vertragsschemas
-│   │   │   ├── token.py            # Authentifizierungsschemas
-│   │   │   ├── extracted_contract.py # Extraktionsschemas
-│   │   │   └── permissions.py      # Berechtigungsschemas
-│   │   ├── routers/                 # API-Endpunkte
-│   │   │   ├── auth.py             # Authentifizierung
-│   │   │   ├── contracts.py        # Verträge
-│   │   │   ├── contracts_import.py  # PDF-Import
-│   │   │   ├── users.py            # Benutzer
-│   │   │   ├── alerts.py           # Benachrichtigungen
-│   │   │   └── rent_steps.py       # Mietstaffelung Endpoints (neu)
-│   │   ├── services/               # Geschäftslogik
-│   │   │   ├── user_service.py     # Benutzerservice
-│   │   │   ├── contract_service.py # Vertragsservice
-│   │   │   ├── notification_service.py # Benachrichtigungsservice
-│   │   │   ├── auth_service.py     # Authentifizierungsservice
-│   │   │   ├── pdf_reader.py       # PDF-Leser
-│   │   │   └── pdf_reader_pkg/     # PDF-Verarbeitungspaket
-│   │   │       ├── analysis.py     # Vertragsanalyse
-│   │   │       ├── dates.py        # Datumsextraktion
-│   │   │       ├── extractors.py  # Extraktoren
-│   │   │       ├── financials.py  # Finanzdaten
+├── backend/                          # Backend der Anwendung / Backend da aplicação
+│   ├── app/                         # Hauptanwendungscode / Código principal da aplicação
+│   │   ├── core/                    # Zentrale Konfigurationen / Configurações centrais
+│   │   │   ├── config.py           # Anwendungskonfiguration / Configuração da aplicação
+│   │   │   ├── database.py         # Datenbankkonfiguration / Configuração do banco de dados
+│   │   │   ├── security.py         # Sicherheit und JWT / Segurança e JWT
+│   │   │   └── permissions.py      # Berechtigungssystem (RBAC mit 7 Rollen, 6 Access Levels) / Sistema de permissões (RBAC com 7 papéis, 6 níveis de acesso)
+│   │   ├── models/                  # Datenmodelle (SQLAlchemy) / Modelos de dados (SQLAlchemy)
+│   │   │   ├── user.py             # Benutzermodell (7 Rollen: SYSTEM_ADMIN, DIRECTOR, DEPARTMENT_ADM, DEPARTMENT_USER, TEAM_LEAD, STAFF, READ_ONLY) / Modelo de usuário (7 papéis)
+│   │   │   ├── contract.py         # Vertragsmodell (mit department, team, responsible_user_id) / Modelo de contrato (com departamento, time, responsável)
+│   │   │   ├── alert.py            # Alertmodell / Modelo de alerta
+│   │   │   ├── rent_step.py        # Mietstaffelung / RentStep (Escalonamentos de aluguel)
+│   │   │   └── permission.py       # Berechtigungsmodell / Modelo de permissões
+│   │   ├── schemas/                 # Pydantic-Schemas / Schemas Pydantic
+│   │   │   ├── user.py             # Benutzerschemas (AccessLevel, UserRole enums) / Schemas de usuário (enums AccessLevel, UserRole)
+│   │   │   ├── contract.py         # Vertragsschemas / Schemas de contrato
+│   │   │   ├── token.py            # Authentifizierungsschemas / Schemas de autenticação
+│   │   │   ├── extracted_contract.py # Extraktionsschemas / Schemas de extração
+│   │   │   └── permissions.py      # Berechtigungsschemas / Schemas de permissões
+│   │   ├── routers/                 # API-Endpunkte / Endpoints da API
+│   │   │   ├── auth.py             # Authentifizierung / Autenticação
+│   │   │   ├── contracts.py        # Verträge / Contratos
+│   │   │   ├── contracts_import.py  # PDF-Import / Importação de PDF
+│   │   │   ├── users.py            # Benutzer (mit neuen Berechtigungsprüfungen) / Usuários (com novas verificações de permissão)
+│   │   │   ├── alerts.py           # Benachrichtigungen / Notificações
+│   │   │   └── rent_steps.py       # Mietstaffelung Endpoints / Endpoints de escalonamento de aluguel
+│   │   ├── services/               # Geschäftslogik / Lógica de negócio
+│   │   │   ├── user_service.py     # Benutzerservice / Serviço de usuário
+│   │   │   ├── contract_service.py # Vertragsservice / Serviço de contrato
+│   │   │   ├── notification_service.py # Benachrichtigungsservice / Serviço de notificação
+│   │   │   ├── auth_service.py     # Authentifizierungsservice / Serviço de autenticação
+│   │   │   ├── pdf_reader.py       # PDF-Leser / Leitor de PDF
+│   │   │   └── pdf_reader_pkg/     # PDF-Verarbeitungspaket / Pacote de processamento de PDF
+│   │   │       ├── analysis.py     # Vertragsanalyse / Análise de contrato
+│   │   │       ├── dates.py        # Datumsextraktion / Extração de datas
+│   │   │       ├── extractors.py  # Extraktoren / Extratores
+│   │   │       ├── financials.py  # Finanzdaten / Dados financeiros
 │   │   │       ├── ocr.py         # OCR
-│   │   │       ├── parsers.py     # Parser
-│   │   │       ├── service.py     # Hauptservice
-│   │   │       └── validate.py    # Validierung
-│   │   ├── utils/                  # Hilfsprogramme
-│   │   │   ├── security.py         # Sicherheit und Hash
-│   │   │   ├── email.py            # E-Mail-Versand
-│   │   │   └── document_generator.py # Dokumentenerstellung
+│   │   │       ├── parsers.py     # Parser / Analisadores
+│   │   │       ├── service.py     # Hauptservice / Serviço principal
+│   │   │       └── validate.py    # Validierung / Validação
+│   │   ├── utils/                  # Hilfsprogramme / Utilitários
+│   │   │   ├── security.py         # Sicherheit und Hash (bcrypt) / Segurança e hash (bcrypt)
+│   │   │   ├── email.py            # E-Mail-Versand / Envio de e-mail
+│   │   │   └── document_generator.py # Dokumentenerstellung / Geração de documentos
 │   │   └── __init__.py
-│   ├── test/                       # Tests (Actual Directory)
-│   │   ├── test_alerts.py          # Alerttests (458 Zeilen)
-│   │   ├── test_contract.py        # Vertragstests (167 Zeilen)
-│   │   ├── test_pdf_unit.py        # PDF-Unit-Tests (210 Zeilen)
-│   │   ├── test_integration_db.py  # Database-Tests (61 Zeilen)
-│   │   ├── test_complete.py        # System-Tests (165 Zeilen)
-│   │   ├── test_local.py           # Dev-Tests (23 Zeilen)
-│   │   └── test_utils.py           # Utility-Tests (86 Zeilen)
-│   ├── templates/                  # Template-Verzeichnis
-│   │   ├── contract_template.docx  # Vertragsvorlage
-│   │   └── email_templates/        # E-Mail-Vorlagen
-│   │       ├── alert_de.html       # Deutsche Alert-Templates
-│   │       └── alert_pt.html       # Portugiesische Alert-Templates
-│   ├── uploads/                     # Upload-Verzeichnis
-│   │   └── contracts/              # Vertragsupload-Organisation
-│   │       ├── temp/               # Temporäre Uploads
-│   │       └── persisted/          # Persistierte PDFs
-│   │           └── {contract_id}/  # Pro Vertrag organisiert
-│   ├── main.py                     # Anwendungseinstiegspunkt
+│   ├── test/                       # Tests / Testes
+│   │   ├── test_alerts.py          # Alerttests (458 Zeilen) / Testes de alertas (458 linhas)
+│   │   ├── test_contract.py        # Vertragstests (167 Zeilen) / Testes de contratos (167 linhas)
+│   │   ├── test_pdf_unit.py        # PDF-Unit-Tests (210 Zeilen) / Testes unitários de PDF (210 linhas)
+│   │   ├── test_integration_db.py  # Database-Tests (61 Zeilen) / Testes de banco de dados (61 linhas)
+│   │   ├── test_complete.py        # System-Tests (165 Zeilen) / Testes de sistema (165 linhas)
+│   │   ├── test_local.py           # Dev-Tests (23 Zeilen) / Testes de desenvolvimento (23 linhas)
+│   │   └── test_utils.py           # Utility-Tests (86 Zeilen) / Testes de utilitários (86 linhas)
+│   ├── templates/                  # Template-Verzeichnis / Diretório de templates
+│   │   ├── contract_template.docx  # Vertragsvorlage / Template de contrato
+│   │   └── email_templates/        # E-Mail-Vorlagen / Templates de e-mail
+│   │       ├── alert_de.html       # Deutsche Alert-Templates / Templates de alerta em alemão
+│   │       └── alert_pt.html       # Portugiesische Alert-Templates / Templates de alerta em português
+│   ├── uploads/                     # Upload-Verzeichnis / Diretório de uploads
+│   │   └── contracts/              # Vertragsupload-Organisation / Organização de upload de contratos
+│   │       ├── temp/               # Temporäre Uploads / Uploads temporários
+│   │       └── persisted/          # Persistierte PDFs / PDFs persistidos
+│   │           └── {contract_id}/  # Pro Vertrag organisiert / Organizado por contrato
+│   ├── main.py                     # Anwendungseinstiegspunkt / Ponto de entrada da aplicação
 │   ├── Dockerfile                  # Docker-Container
-│   └── requirements.txt            # Abhängigkeiten
-├── alembic/                        # Datenbankmigrationen
-│   ├── versions/                   # Migrationsversionen
-│   │   ├── 0001_initial.py         # Initiale Migration
-│   │   ├── 0002_add_rent_steps.py  # Migration für RentStep
-│   │   ├── 0003_add_contract_pdf_fields.py # PDF-Felder für Verträge
-│   │   └── 0004_add_pacht_contract_type.py # PACHT-Vertragstyp
-│   └── env.py                      # Alembic-Konfiguration
-├── alembic.ini                     # Alembic-Konfiguration
-├── requirements.txt                # Hauptabhängigkeiten
-├── README.md                       # Projektdokumentation
-├── Technische_Dokumentation.md    # Detaillierte technische Dokumentation
-├── clean-cache.sh                  # Cache-Bereinigungsskript
-├── deploy-internal.sh              # Haupt-Deploy-Script (15KB, bilingual)
-├── setup-permissions.sh            # Dateiberechtigungen-Script
-└── deploy/                         # Deploy-Konfigurationen
-    ├── setup-internal.sh           # Apache-Setup-Script
-    ├── apache-internal.conf        # Apache VirtualHost Konfiguration
-    └── README-DEPLOY.md            # Deploy-Dokumentation
+│   └── requirements.txt            # Abhängigkeiten / Dependências
+├── scripts/                        # Verwaltungsskripte / Scripts administrativos
+│   └── migrate_user_roles_sql.py  # SQL-basierte Rollenmigration (USER→STAFF, MANAGER→DEPARTMENT_ADM, ADMIN→SYSTEM_ADMIN) / Migração de papéis baseada em SQL
+├── alembic/                        # Datenbankmigrationen / Migrações de banco de dados
+│   ├── versions/                   # Migrationsversionen / Versões de migração
+│   │   ├── 0001_initial.py         # Initiale Migration / Migração inicial
+│   │   ├── 0002_add_rent_steps.py  # RentStep-Migration / Migração para RentStep
+│   │   ├── 0003_add_contract_pdf_fields.py # PDF-Felder für Verträge / Campos PDF para contratos
+│   │   ├── 0004_add_pacht_contract_type.py # PACHT-Vertragstyp / Tipo de contrato PACHT
+│   │   └── 0005_add_access_level_team_and_new_roles.py # Neue Felder: access_level, team, neue Rollen / Novos campos: access_level, team, novos papéis
+│   └── env.py                      # Alembic-Konfiguration / Configuração do Alembic
+├── docs/                           # Dokumentation / Documentação
+│   ├── CHANGELOG.md                # Änderungsprotokoll / Registro de alterações
+│   ├── PERMISSIONS_SYSTEM.md       # Vollständige Berechtigungssystem-Dokumentation (DE/PT) / Documentação completa do sistema de permissões (DE/PT)
+│   ├── projeto_info.txt            # Projektinformationen / Informações do projeto
+│   └── requirements.txt            # Dokumentationsabhängigkeiten / Dependências de documentação
+├── alembic.ini                     # Alembic-Konfiguration / Configuração do Alembic
+├── requirements.txt                # Hauptabhängigkeiten / Dependências principais
+├── README.md                       # Projektdokumentation / Documentação do projeto
+├── Technische_Dokumentation.md    # Detaillierte technische Dokumentation / Documentação técnica detalhada
+├── clean-cache.sh                  # Cache-Bereinigungsskript / Script de limpeza de cache
+├── deploy-internal.sh              # Haupt-Deploy-Script (15KB, bilingual) / Script principal de deploy (15KB, bilíngue)
+├── setup-permissions.sh            # Dateiberechtigungen-Script / Script de permissões de arquivo
+└── deploy/                         # Deploy-Konfigurationen / Configurações de deploy
+    ├── setup-internal.sh           # Apache-Setup-Script / Script de configuração do Apache
+    ├── apache-internal.conf        # Apache VirtualHost Konfiguration / Configuração VirtualHost do Apache
+    └── README-DEPLOY.md            # Deploy-Dokumentation / Documentação de deploy
 ```
 
 ---
@@ -287,7 +295,10 @@ class User(Base):
     username: str                    # Benutzername
     email: str                       # E-Mail
     name: str                        # Vollständiger Name
-    role: UserRole                   # Rolle (USER, MANAGER, ADMIN)
+    department: str                  # Bereich / Departamento (NEU)
+    team: str                        # Team / Time (NEU)
+    role: UserRole                   # Rolle (7 neue Rollen) / Papel (7 novos papéis)
+    access_level: int                # Zugriffsstufe 1-6 / Nível de acesso 1-6 (NEU)
     password_hash: str               # Passwort-Hash
     
     # Audit-Felder / Campos de auditoria
@@ -298,10 +309,31 @@ class User(Base):
     is_deleted: bool                 # Soft Delete
 ```
 
-**Benutzerrollen / Funções de Usuário:**
-- `USER`: Normaler Benutzer - kann eigene Verträge anzeigen und erstellen
-- `MANAGER`: Manager - kann Teamverträge verwalten
-- `ADMIN`: Administrator - vollständiger Systemzugang
+**Neue Benutzerrollen (UserRole) / Novos Papéis de Usuário:**
+- `SYSTEM_ADMIN` (Level 6): Technischer Systemadministrator mit Vollzugriff / Admin técnico com acesso completo
+- `DIRECTOR` (Level 5): Geschäftsführung mit unternehmensweitem Zugriff / Diretoria com acesso em toda empresa
+- `DEPARTMENT_ADM` (Level 4): Bereichsleiter mit vollen Admin-Rechten / Gestor com direitos administrativos completos
+- `DEPARTMENT_USER` (Level 3): Bereichsleiter mit eingeschränkten Funktionen / Gestor com funções restritas
+- `TEAM_LEAD` (Level 2): Teamleiter / Líder de time
+- `STAFF` (Level 1-2): Mitarbeiter / Colaborador
+- `READ_ONLY` (Level 1): Nur Lesezugriff / Somente leitura
+
+**Zugriffsstufen (AccessLevel) / Níveis de Acesso:**
+- **Level 6 (SYSTEM_ADMIN):** Technischer Vollzugriff (Konfiguration, Logs, Backups) / Acesso técnico completo
+- **Level 5 (DIRECTOR):** Unternehmensweiter Zugriff auf alle Verträge / Acesso a todos os contratos da empresa
+- **Level 4 (DEPARTMENT_ADM):** Volle Bereichsrechte (Verträge, Benutzer, Reports) / Direitos completos do departamento
+- **Level 3 (DEPARTMENT_USER):** Bereichsverträge, eingeschränkte Reports / Contratos do departamento, relatórios restritos
+- **Level 2 (TEAM):** Alle Verträge des Teams / Todos contratos do time
+- **Level 1 (BASIS):** Nur eigene Verträge / Apenas contratos próprios
+
+**Hilfsmethoden / Métodos Auxiliares:**
+```python
+def is_system_admin() -> bool        # Prüft SYSTEM_ADMIN / Verifica SYSTEM_ADMIN
+def is_director() -> bool            # Prüft DIRECTOR / Verifica DIRECTOR
+def is_department_leader() -> bool   # Prüft Bereichsleiter / Verifica gestor de departamento
+def has_department_access() -> bool  # Prüft Level >= 3 / Verifica nível >= 3
+def is_read_only() -> bool           # Prüft READ_ONLY / Verifica somente leitura
+```
 
 ### 2. **Contract (Vertrag / Contrato)**
 
@@ -330,6 +362,11 @@ class Contract(Base):
     client_email: str                # Kunden-E-Mail
     client_phone: str                # Kundentelefon
     client_address: str              # Kundenadresse
+    
+    # Organisationsfelder / Campos organizacionais (NEU)
+    department: str                  # Bereich / Departamento
+    team: str                        # Team / Time
+    responsible_user_id: int         # Verantwortlicher Benutzer / Usuário responsável
     
     # PDF-Verwaltung / Gerenciamento PDF
     original_pdf_path: str           # Pfad zur Original-PDF
@@ -481,6 +518,239 @@ async def process_contract_alerts() -> None:
     """Verarbeitet ablaufende Vertragsbenachrichtigungen"""
     try:
         logger.info("Vertrags-Alert-Verarbeitung gestartet")
+        
+        async with SessionLocal() as db:
+            notification_service = NotificationService(db)
+            result = await notification_service.process_due_alerts()
+            
+            logger.info(f"{result.total} Vertragsbenachrichtigungen verarbeitet")
+    except Exception as e:
+        logger.error(f"Fehler bei Alert-Verarbeitung: {e}")
+```
+
+**🎯 Monitoring-Endpunkte:**
+- **`GET /scheduler/status`:** Scheduler-Status
+- **`POST /scheduler/trigger-alerts`:** Manuelle Verarbeitung auslösen
+
+---
+
+## Berechtigungssystem / Sistema de Permissões
+
+### **Übersicht / Visão Geral**
+
+Das Berechtigungssystem wurde vollständig überarbeitet und implementiert ein granulares **RBAC (Role-Based Access Control)** mit hierarchischen Zugriffsstufen.
+
+Das Berechtigungssystem wurde vollständig überarbeitet und implementiert eine granulare **RBAC (Role-Based Access Control)** mit hierarchischen Zugriffsstufen. / O sistema de permissões foi completamente refatorado e implementa um **RBAC (Role-Based Access Control)** granular com níveis hierárquicos de acesso.
+
+**Hauptkomponenten / Componentes Principais:**
+- **7 Benutzerrollen (UserRole)** / 7 Papéis de Usuário
+- **6 Zugriffsstufen (AccessLevel)** / 6 Níveis de Acesso
+- **Organisationsstruktur** (Departments & Teams) / Estrutura Organizacional
+- **Granulare Berechtigungsfunktionen** / Funções de Permissão Granulares
+- **Standardprofile (PERFIS_PADRAO)** / Perfis Padrão
+
+### **Standardprofile / Perfis Padrão (PERFIS_PADRAO)**
+
+Vordefinierte Rollenkombinationen für typische Anwendungsfälle / Combinações de papéis pré-definidas para casos típicos:
+
+```python
+PERFIS_PADRAO = {
+    "Geschäftsführung": {
+        "role": UserRole.DIRECTOR,
+        "access_level": AccessLevel.LEVEL_5,
+        "department": "Geschäftsführung",
+        "team": None
+    },
+    "Leiter_Personal_Organization_Finanzen": {
+        "role": UserRole.DEPARTMENT_ADM,
+        "access_level": AccessLevel.LEVEL_4,
+        "department": "Personal Organization und Finanzen",
+        "team": None
+    },
+    "Leiter_Technischer_Bereich": {
+        "role": UserRole.DEPARTMENT_USER,
+        "access_level": AccessLevel.LEVEL_3,
+        "department": "Technischer Bereich",
+        "team": None
+    },
+    "Leiter_IT_Datenschutz": {
+        "role": UserRole.DEPARTMENT_ADM,
+        "access_level": AccessLevel.LEVEL_4,
+        "department": "IT und Datenschutz",
+        "team": None
+    },
+    "Systemadministrator_TI": {
+        "role": UserRole.SYSTEM_ADMIN,
+        "access_level": AccessLevel.LEVEL_6,
+        "department": "IT und Datenschutz",
+        "team": "Informationstechnologie"
+    },
+    "Mitarbeiter_Team_PR": {
+        "role": UserRole.STAFF,
+        "access_level": AccessLevel.LEVEL_2,
+        "department": "IT und Datenschutz",
+        "team": "PR"
+    },
+    "Mitarbeiter_Team_Finanzen": {
+        "role": UserRole.STAFF,
+        "access_level": AccessLevel.LEVEL_2,
+        "department": "Personal Organization und Finanzen",
+        "team": "Finanzen und Rechnungswesen"
+    }
+}
+```
+
+### **Berechtigungsfunktionen / Funções de Permissão**
+
+#### **Vertragsberechtigungen / Permissões de Contratos:**
+
+```python
+# Anzeigen von Verträgen / Visualizar contratos
+can_view_contract(user: User, contract: Contract) -> bool
+    # Level 6 (SYSTEM_ADMIN): Alle / Todos
+    # Level 5 (DIRECTOR): Alle / Todos
+    # Level 4 (DEPARTMENT_ADM): Bereichsverträge / Contratos do departamento
+    # Level 3 (DEPARTMENT_USER): Bereichsverträge / Contratos do departamento
+    # Level 2 (TEAM): Team-Verträge + eigene / Contratos do time + próprios
+    # Level 1 (BASIS): Nur eigene / Apenas próprios
+
+# Bearbeiten von Verträgen / Editar contratos
+can_edit_contract(user: User, contract: Contract) -> bool
+    # Level 6 (SYSTEM_ADMIN): Alle / Todos
+    # Level 5 (DIRECTOR): Alle / Todos
+    # Level 4 (DEPARTMENT_ADM): Bereichsverträge / Contratos do departamento
+    # Level 3 (DEPARTMENT_USER): Nur eigene / Apenas próprios
+    # Level 2 (TEAM): Team-Verträge + eigene / Contratos do time + próprios
+    # Level 1 (BASIS): Nur eigene / Apenas próprios
+
+# Löschen von Verträgen / Excluir contratos
+can_delete_contract(user: User, contract: Contract) -> bool
+    # Nur Level 4+ (DEPARTMENT_ADM oder höher) / Apenas nível 4+
+
+# Genehmigen von Verträgen / Aprovar contratos
+can_approve_contract(user: User, contract: Contract) -> bool
+    # Level 6 (SYSTEM_ADMIN): Alle / Todos
+    # Level 5 (DIRECTOR): Alle / Todos
+    # Level 4 (DEPARTMENT_ADM): Bereichsverträge / Contratos do departamento
+    # Level 3 (DEPARTMENT_USER): Bereichsverträge / Contratos do departamento
+
+# Zugriff auf Original-PDF / Acesso ao PDF original
+can_view_original_pdf(user: User, contract: Contract) -> bool
+    # Gleiche Logik wie can_view_contract / Mesma lógica que can_view_contract
+```
+
+#### **Benutzerberechtigungen / Permissões de Usuários:**
+
+```python
+# Benutzer verwalten / Gerenciar usuários
+can_manage_users(user: User) -> bool
+    # Nur Level 4+ (DEPARTMENT_ADM oder höher) / Apenas nível 4+
+    # SYSTEM_ADMIN, DIRECTOR, DEPARTMENT_ADM
+
+# Benutzerrollen zuweisen / Atribuir papéis de usuário
+can_set_user_role(user: User, target_role: UserRole) -> bool
+    # SYSTEM_ADMIN: Alle Rollen / Todos papéis
+    # DIRECTOR: Bis Level 5 (nicht SYSTEM_ADMIN) / Até nível 5
+    # DEPARTMENT_ADM: Bis Level 4 / Até nível 4
+
+# Zugriff auf Berichte / Acesso a relatórios
+can_access_reports(user: User, report_type: str) -> bool
+    # financial_details: Level 4+ / Nível 4+
+    # department_summary: Level 3+ / Nível 3+
+    # basic_statistics: Level 2+ / Nível 2+
+```
+
+#### **Organisatorische Prüfungen / Verificações Organizacionais:**
+
+```python
+# Prüfung gleicher Bereich / Verificar mesmo departamento
+is_same_department(user: User, contract: Contract) -> bool
+
+# Prüfung gleiches Team / Verificar mesmo time
+is_same_team(user: User, contract: Contract) -> bool
+
+# Prüfung eigener Vertrag / Verificar contrato próprio
+is_contract_owner(user: User, contract: Contract) -> bool
+
+# Prüfung Mindest-Zugriffsstufe / Verificar nível mínimo
+require_min_access_level(user: User, min_level: int) -> None
+```
+
+### **Endpunkt-Berechtigungen / Permissões de Endpoints**
+
+#### **User-Endpoints / Endpoints de Usuário:**
+
+- **`GET /users/`** - Lista todos usuários / Alle Benutzer auflisten
+  - Erfordert: Level 4+ (DEPARTMENT_ADM oder höher) / Requer: Nível 4+
+  
+- **`GET /users/{user_id}`** - Benutzer nach ID / Usuário por ID
+  - Level 4+: Alle sehen / Ver todos
+  - Level 1-3: Nur eigenes Profil / Apenas perfil próprio
+  
+- **`POST /users/`** - Neuen Benutzer erstellen / Criar novo usuário
+  - Erfordert: `can_manage_users()` / Requer: `can_manage_users()`
+  
+- **`PUT /users/{user_id}`** - Benutzer aktualisieren / Atualizar usuário
+  - Level 4+: Alle aktualisieren / Atualizar todos
+  - Level 1-3: Nur eigenes Profil / Apenas perfil próprio
+  
+- **`DELETE /users/{user_id}`** - Benutzer löschen / Excluir usuário
+  - Erfordert: `can_manage_users()` / Requer: `can_manage_users()`
+  
+- **`GET /users/search/`** - Benutzer suchen / Buscar usuários
+  - Erfordert: Level 4+ / Requer: Nível 4+
+
+#### **Contract-Endpoints / Endpoints de Contratos:**
+
+- **`GET /contracts/`** - Alle Verträge auflisten / Listar todos contratos
+  - Automatische Filterung nach Berechtigungen / Filtragem automática por permissões
+  
+- **`GET /contracts/{id}`** - Vertrag nach ID / Contrato por ID
+  - Prüft: `can_view_contract()` / Verifica: `can_view_contract()`
+  
+- **`POST /contracts/`** - Neuen Vertrag erstellen / Criar novo contrato
+  - Alle authentifizierten Benutzer / Todos usuários autenticados
+  
+- **`PUT /contracts/{id}`** - Vertrag aktualisieren / Atualizar contrato
+  - Prüft: `can_edit_contract()` / Verifica: `can_edit_contract()`
+  
+- **`DELETE /contracts/{id}`** - Vertrag löschen / Excluir contrato
+  - Prüft: `can_delete_contract()` / Verifica: `can_delete_contract()`
+  
+- **`GET /contracts/{id}/view`** - PDF inline anzeigen / Visualizar PDF inline
+  - Prüft: `can_view_original_pdf()` / Verifica: `can_view_original_pdf()`
+  
+- **`GET /contracts/{id}/download`** - PDF herunterladen / Baixar PDF
+  - Prüft: `can_view_original_pdf()` / Verifica: `can_view_original_pdf()`
+
+### **Migration / Migração**
+
+**Script:** `scripts/migrate_user_roles_sql.py`
+
+**Deutsch:** Automatische Migration der alten Rollen zu den neuen:
+**Português:** Migração automática dos papéis antigos para os novos:
+
+- `USER` → `STAFF` (Level 1)
+- `MANAGER` → `DEPARTMENT_ADM` (Level 4)
+- `ADMIN` → `SYSTEM_ADMIN` (Level 6)
+
+**Verwendung / Uso:**
+```bash
+python scripts/migrate_user_roles_sql.py
+```
+
+### **Dokumentation / Documentação**
+
+**Vollständige Dokumentation:** `docs/PERMISSIONS_SYSTEM.md`
+- Detaillierte Beschreibung aller Rollen und Stufen / Descrição detalhada de todos papéis e níveis
+- Beispiele für jeden Anwendungsfall / Exemplos para cada caso de uso
+- Migrationsanleitung / Guia de migração
+- Diagramme und Tabellen / Diagramas e tabelas
+- Zweisprachig (DE/PT) / Bilíngue (DE/PT)
+
+---
+
+**📊 Alert-Verarbeitung:**
         
         async with SessionLocal() as db:
             notification_service = NotificationService(db)
@@ -677,25 +947,63 @@ Die API stellt CRUD-Endpunkte für Mietstaffelungen (RentSteps) bereit. Schreibo
 ### **Benutzer / Usuários**
 
 #### `GET /users/`
-**Beschreibung:** Benutzer auflisten (nur ADMIN)
+**Beschreibung:** Benutzer auflisten / Listar usuários
+**Berechtigung:** Erfordert Level 4+ (DEPARTMENT_ADM oder höher) / Requer Nível 4+
+**Query Parameter:**
+- `skip`: Anzahl zu überspringen (Standard: 0) / Quantidade a pular
+- `limit`: Maximale Anzahl (Standard: 10) / Quantidade máxima
 
 #### `POST /users/`
-**Beschreibung:** Benutzer erstellen (nur ADMIN)
+**Beschreibung:** Benutzer erstellen / Criar usuário
+**Berechtigung:** Erfordert `can_manage_users()` (Level 4+) / Requer `can_manage_users()`
+**Body:**
+```json
+{
+  "username": "string",
+  "email": "string",
+  "name": "string",
+  "password": "string",
+  "role": "staff",
+  "access_level": 1,
+  "department": "string",
+  "team": "string",
+  "is_active": true,
+  "is_superuser": false
+}
+```
 
 #### `GET /users/{user_id}`
-**Beschreibung:** Benutzer nach ID abrufen
+**Beschreibung:** Benutzer nach ID abrufen / Obter usuário por ID
+**Berechtigung:** 
+- Level 4+: Alle Benutzer sehen / Ver todos usuários
+- Level 1-3: Nur eigenes Profil / Apenas perfil próprio
 
 #### `PUT /users/{user_id}`
-**Beschreibung:** Benutzer aktualisieren
+**Beschreibung:** Benutzer aktualisieren / Atualizar usuário
+**Berechtigung:**
+- Level 4+: Alle Benutzer aktualisieren / Atualizar todos usuários
+- Level 1-3: Nur eigenes Profil / Apenas perfil próprio
 
 #### `DELETE /users/{user_id}`
-**Beschreibung:** Benutzer löschen
+**Beschreibung:** Benutzer löschen / Excluir usuário
+**Berechtigung:** Erfordert `can_manage_users()` (Level 4+) / Requer `can_manage_users()`
+**Hinweis:** Kann nicht eigenes Konto löschen / Não pode excluir própria conta
 
 #### `PATCH /users/{user_id}/activate`
-**Beschreibung:** Benutzer aktivieren (nur ADMIN)
+**Beschreibung:** Benutzer aktivieren / Ativar usuário
+**Berechtigung:** Erfordert `can_manage_users()` (Level 4+) / Requer `can_manage_users()`
 
 #### `PATCH /users/{user_id}/deactivate`
-**Beschreibung:** Benutzer deaktivieren (nur ADMIN)
+**Beschreibung:** Benutzer deaktivieren / Desativar usuário
+**Berechtigung:** Erfordert `can_manage_users()` (Level 4+) / Requer `can_manage_users()`
+
+#### `GET /users/search/`
+**Beschreibung:** Benutzer suchen / Buscar usuários
+**Berechtigung:** Erfordert Level 4+ / Requer Nível 4+
+**Query Parameter:**
+- `query`: Suchbegriff (Name, E-Mail, Benutzername) / Termo de busca
+- `skip`: Anzahl zu überspringen / Quantidade a pular
+- `limit`: Maximale Anzahl / Quantidade máxima
 
 ### **Benachrichtigungen / Alertas**
 
@@ -1044,6 +1352,8 @@ ENTITY_PATTERNS = [
     r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:KG|Kommanditgesellschaft)\b',
     r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:OHG|Offene Handelsgesellschaft)\b',
     r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:UG|Unternehmergesellschaft)\b',
+    r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:e.V|eingetragener Verein)\b',
+    r'\b([A-ZÄÖÜ][a-zäöüß\s]+)\s+(?:&Co|Kommanditgesellschaft)\b'
 ]
 ```
 
@@ -1053,6 +1363,8 @@ ENTITY_PATTERNS = [
 - **KG:** Kommanditgesellschaft
 - **OHG:** Offene Handelsgesellschaft
 - **UG:** Unternehmergesellschaft
+- **e.V:** eingetragener Verein
+- **&Co:** Kommanditgesellschaft
 
 **📈 Erweiterte Kontextanalyse:**
 ```python
@@ -1442,7 +1754,7 @@ asyncio_mode = auto
 2. **✅ Datenmodelle:** User, Contract, Alert, Permission, RentStep
 3. **✅ Pydantic-Schemas:** Validierung und Serialisierung
 4. **✅ JWT-Authentifizierung:** Login, Registrierung, Tokens
-5. **✅ Berechtigungssystem:** RBAC (USER, MANAGER, ADMIN)
+5. **✅ Berechtigungssystem:** RBAC (7 neue Rollen, 6 Access Levels, granulare Berechtigungen) / Sistema de permissões (7 novos papéis, 6 níveis de acesso, permissões granulares)
 6. **✅ Vertrags-CRUD:** Erstellung, Auflistung, Bearbeitung, Löschung
 7. **✅ Alert-System:** Hintergrund-Scheduler, Benachrichtigungen (Auto + Manuell)
 8. **✅ Dokumentenerstellung:** DOCX → PDF mit LibreOffice
@@ -1451,7 +1763,7 @@ asyncio_mode = auto
 9. **✅ PDF-Import:** Intelligente Extraktion, Confidence Scores
 10. **✅ PDF-Verwaltung:** Organisierte Speicherung, Inline-Visualisierung, Download
 
-**✅ Neue Implementierungen (2025):**
+**✅ Neue Implementierungen (November 2025):**
 - **✅ Manuelle Alerts:** BENUTZERDEFINIERT mit freier Terminwahl
 - **✅ PACHT-Vertragstyp:** Erweiterte Vertragsklassifizierung
 - **✅ PDF-Organisation:** Strukturierte temp/persisted Ordnerstruktur
@@ -1460,52 +1772,64 @@ asyncio_mode = auto
 - **✅ Deploy-Infrastruktur:** Vollautomatisches bilinguales Deployment-System
 - **✅ Apache-Integration:** Professionelle Proxy-Konfiguration für interne Nutzung
 - **✅ systemd-Service:** FastAPI als robuster Systemdienst
+- **✅ Neues Berechtigungssystem:** 7 Benutzerrollen, 6 Zugriffsstufen, PERFIS_PADRAO / Novo sistema de permissões: 7 papéis, 6 níveis, PERFIS_PADRAO
+- **✅ Granulare Berechtigungen:** can_view_contract, can_edit_contract, can_delete_contract, can_approve_contract, can_manage_users, can_set_user_role, can_access_reports / Permissões granulares
+- **✅ Organisatorische Struktur:** Department & Team-Felder in User und Contract / Estrutura organizacional: campos Department & Team
+- **✅ Migrations-Script:** migrate_user_roles_sql.py für automatische Rollenmigration / Script de migração automática de papéis
+- **✅ Dokumentation:** PERMISSIONS_SYSTEM.md mit vollständiger DE/PT-Dokumentation / Documentação completa DE/PT
 
-**⏳ Ausstehende Stufen (11, 14-15):**
-11. **⏳ React-Frontend:** Benutzeroberfläche (ausstehend)
-14. **⏳ Erweiterte Berichte:** Dashboards und Analytics (ausstehend)
-15. **⏳ Externe Integration:** Drittanbieter-APIs (ausstehend)
+**⏳ Ausstehende Stufen (11, 14-15) / Etapas Pendentes (11, 14-15):**
+11. **⏳ React-Frontend:** Benutzeroberfläche (ausstehend) / Interface do usuário (pendente)
+14. **⏳ Erweiterte Berichte:** Dashboards und Analytics (ausstehend) / Dashboards e Analytics (pendente)
+15. **⏳ Externe Integration:** Drittanbieter-APIs (ausstehend) / APIs de terceiros (pendente)
 
-**🔄 In Bearbeitung (12):**
-12. **🔄 Automatisierte Tests:** ~75% abgeschlossen
-   - ✅ Unit-Tests (test_utils.py): Security, Document Generator, Email Utils
-   - ✅ Alert-Tests (test_alerts.py): Automatische & manuelle Alerts (458 Zeilen)
-   - ✅ Contract-Tests (test_contract.py): CRUD Operations, PDF Integration (167 Zeilen)
-   - ✅ PDF-Tests (test_pdf_unit.py): Schema Validation, File Operations (210 Zeilen)
-   - ✅ Database-Tests (test_integration_db.py): Model Integration (61 Zeilen)
-   - ✅ System-Tests (test_complete.py): Folder Structure, Basic Operations (165 Zeilen)
-   - ✅ Dev-Tests (test_local.py): Local Development Environment (23 Zeilen)
-   - ⏳ Performance-Tests
-   - ⏳ End-to-End-Tests
+**🔄 In Bearbeitung (12) / Em Andamento (12):**
+12. **🔄 Automatisierte Tests / Testes Automatizados:** ~75% abgeschlossen / concluído
+   - ✅ Unit-Tests (test_utils.py): Security, Document Generator, Email Utils / Segurança, Gerador de Documentos, Utilitários de E-mail
+   - ✅ Alert-Tests (test_alerts.py): Automatische & manuelle Alerts (458 Zeilen) / Alertas automáticos e manuais (458 linhas)
+   - ✅ Contract-Tests (test_contract.py): CRUD Operations, PDF Integration (167 Zeilen) / Operações CRUD, Integração PDF (167 linhas)
+   - ✅ PDF-Tests (test_pdf_unit.py): Schema Validation, File Operations (210 Zeilen) / Validação de Schema, Operações de Arquivo (210 linhas)
+   - ✅ Database-Tests (test_integration_db.py): Model Integration (61 Zeilen) / Integração de Modelos (61 linhas)
+   - ✅ System-Tests (test_complete.py): Folder Structure, Basic Operations (165 Zeilen) / Estrutura de Pastas, Operações Básicas (165 linhas)
+   - ✅ Dev-Tests (test_local.py): Local Development Environment (23 Zeilen) / Ambiente de Desenvolvimento Local (23 linhas)
+   - ⏳ Performance-Tests / Testes de Performance
+   - ⏳ End-to-End-Tests / Testes End-to-End
 
-**📈 Gesamtfortschritt:**
-- **Backend:** 100% abgeschlossen
-- **API:** 100% funktional (inkl. manuelle Alerts, PDF-Viewer)
-- **Datenmodelle:** 100% (User, Contract, Alert, RentStep, Permission)
-- **PDF-System:** 100% (Upload, Organisation, Visualisierung)
-- **Deploy-Infrastruktur:** 100% (vollautomatisches bilinguales System)
-- **Apache-Konfiguration:** 100% (Proxy, Security, Caching)
-- **systemd-Integration:** 100% (Service, Auto-Start, Monitoring)
-- **Tests:** 75% implementiert
-- **Frontend:** 0% (ausstehend)
+**📈 Gesamtfortschritt / Progresso Geral:**
+- **Backend:** 100% abgeschlossen / concluído
+- **API:** 100% funktional (inkl. manuelle Alerts, PDF-Viewer) / funcional (incl. alertas manuais, visualizador PDF)
+- **Datenmodelle / Modelos de Dados:** 100% (User, Contract, Alert, RentStep, Permission)
+- **Berechtigungssystem / Sistema de Permissões:** 100% (7 Rollen, 6 Levels, granulare Funktionen) / (7 papéis, 6 níveis, funções granulares)
+- **PDF-System / Sistema PDF:** 100% (Upload, Organisation, Visualisierung) / (Upload, Organização, Visualização)
+- **Deploy-Infrastruktur / Infraestrutura de Deploy:** 100% (vollautomatisches bilinguales System) / (sistema bilíngue totalmente automatizado)
+- **Apache-Konfiguration / Configuração Apache:** 100% (Proxy, Security, Caching) / (Proxy, Segurança, Cache)
+- **systemd-Integration / Integração systemd:** 100% (Service, Auto-Start, Monitoring) / (Serviço, Inicialização Automática, Monitoramento)
+- **Tests / Testes:** 75% implementiert / implementado
+- **Frontend:** 0% (ausstehend) / (pendente)
 
-**🎯 Nächste Schritte:**
-1. **Frontend entwickeln:** React + Vite (höchste Priorität)
-2. **Tests vervollständigen:** 90%+ Abdeckung
-3. **Produktions-Deployment:** Deploy-Scripts auf Produktionsserver ausführen
-4. **HTTPS-Konfiguration:** SSL-Zertifikate für sichere Kommunikation
-5. **Berichte implementieren:** Erweiterte Dashboards
-6. **Performance-Optimierung:** Database-Tuning und Caching
+**🎯 Nächste Schritte / Próximos Passos:**
+1. **Frontend entwickeln / Desenvolver Frontend:** React + Vite (höchste Priorität / maior prioridade)
+2. **Tests vervollständigen / Completar Testes:** 90%+ Abdeckung (insbesondere Berechtigungstests) / 90%+ cobertura (especialmente testes de permissões)
+3. **Produktions-Deployment / Deploy em Produção:** Deploy-Scripts auf Produktionsserver ausführen / Executar scripts de deploy no servidor de produção
+4. **HTTPS-Konfiguration / Configuração HTTPS:** SSL-Zertifikate für sichere Kommunikation / Certificados SSL para comunicação segura
+5. **Berichte implementieren / Implementar Relatórios:** Erweiterte Dashboards mit Berechtigungsprüfung / Dashboards avançados com verificação de permissões
+6. **Performance-Optimierung / Otimização de Performance:** Database-Tuning und Caching / Ajuste de banco de dados e cache
 
-**🆕 Aktuelle Implementierungen (Nov 2025):**
-- ✅ **Manuelle Alerts:** Flexibles Scheduling mit BENUTZERDEFINIERT
-- ✅ **PACHT-Verträge:** Neue Vertragsklassifizierung für Pachtverträge
-- ✅ **PDF-Inline-Viewer:** Direkte Browser-Anzeige von PDFs
-- ✅ **Organisierte Uploads:** Strukturierte temp/persisted-Ordner
-- ✅ **Deploy-Infrastruktur:** Vollautomatisches bilinguales Deployment (15KB Script)
-- ✅ **Apache-Konfiguration:** Professionelle interne Server-Konfiguration
-- ✅ **systemd-Service:** Robuste FastAPI-Service-Integration
-- ✅ **Backend-Only Deploy:** Produktionsreif ohne Frontend-Abhängigkeit
+**🆕 Aktuelle Implementierungen (Nov 2025) / Implementações Atuais (Nov 2025):**
+- ✅ **Manuelle Alerts / Alertas Manuais:** Flexibles Scheduling mit BENUTZERDEFINIERT / Agendamento flexível com PERSONALIZADO
+- ✅ **PACHT-Verträge / Contratos de Arrendamento:** Neue Vertragsklassifizierung für Pachtverträge / Nova classificação de contrato para arrendamentos
+- ✅ **PDF-Inline-Viewer / Visualizador PDF Inline:** Direkte Browser-Anzeige von PDFs / Visualização direta no navegador
+- ✅ **Organisierte Uploads / Uploads Organizados:** Strukturierte temp/persisted-Ordner / Pastas temp/persisted estruturadas
+- ✅ **Deploy-Infrastruktur / Infraestrutura de Deploy:** Vollautomatisches bilinguales Deployment (15KB Script) / Deploy bilíngue totalmente automatizado
+- ✅ **Apache-Konfiguration / Configuração Apache:** Professionelle interne Server-Konfiguration / Configuração profissional de servidor interno
+- ✅ **systemd-Service / Serviço systemd:** Robuste FastAPI-Service-Integration / Integração robusta de serviço FastAPI
+- ✅ **Backend-Only Deploy / Deploy Somente Backend:** Produktionsreif ohne Frontend-Abhängigkeit / Pronto para produção sem dependência de frontend
+- ✅ **RBAC-Upgrade / Atualização RBAC:** Komplettes Berechtigungssystem mit 7 Rollen und 6 Levels / Sistema RBAC completo com 7 papéis e 6 níveis
+- ✅ **Granulare Berechtigungen / Permissões Granulares:** Funktionen für Verträge, Benutzer, Reports / Funções para contratos, usuários, relatórios
+- ✅ **Organisationsstruktur / Estrutura Organizacional:** Department & Team in Models und Schemas / Departamento & Time em Models e Schemas
+- ✅ **Standardprofile / Perfis Padrão:** PERFIS_PADRAO für typische Anwendungsfälle / PERFIS_PADRAO para casos típicos
+- ✅ **Alembic-Migration / Migração Alembic:** 0005_add_access_level_team_and_new_roles.py
+- ✅ **Dokumentation / Documentação:** PERMISSIONS_SYSTEM.md vollständig bilingual (461 Zeilen) / completamente bilíngue (461 linhas)
 
 ---
 
