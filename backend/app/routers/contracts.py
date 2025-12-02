@@ -194,69 +194,11 @@ async def create_contract(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Erstellen des Vertrags")
 
-# GET /contracts/{contract_id} - Ruft einen Vertrag nach ID ab
-@router.get("/{contract_id}", response_model=ContractResponse, status_code=status.HTTP_200_OK)
-async def get_contract(   
-    contract_id: int,
-    contract_service: ContractService = Depends(get_contract_service)
-):
-    """
-    Ruft einen Vertrag nach seiner ID ab.
-    Argumente:
-        contract_id (int): ID des Vertrags
-        contract_service (ContractService): Dienst für Vertragsoperationen
-    Rückgabe:
-        ContractResponse: Abgerufener Vertrag
-    """
-    contract = await contract_service.get_contract(contract_id)
-    if not contract:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden")
-    return contract
-# PUT /contracts/{contract_id} - Aktualisiert einen Vertrag nach ID
-@router.put("/{contract_id}", response_model=ContractResponse, status_code=status.HTTP_200_OK)
-async def update_contract(
-    contract_id: int,
-    contract_data: ContractUpdate,
-    contract_service: ContractService = Depends(get_contract_service)
-):
-    """
-    Aktualisiert einen bestehenden Vertrag nach seiner ID.
-    Argumente:
-        contract_id (int): ID des Vertrags
-        contract_data (ContractUpdate): Aktualisierte Vertragsdaten
-        contract_service (ContractService): Dienst für Vertragsoperationen
-    Rückgabe:
-        ContractResponse: Aktualisierter Vertrag
-    """
-    try:
-        updated_contract = await contract_service.update_contract(contract_id, contract_data)
-        if not updated_contract:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden")
-        return updated_contract
-    except ValueError as ve:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Aktualisieren des Vertrags")
-# DELETE /contracts/{contract_id} - Löscht einen Vertrag nach ID
-@router.delete("/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_contract(
-    contract_id: int,
-    contract_service: ContractService = Depends(get_contract_service)
-):
-    """
-    Löscht einen Vertrag nach seiner ID.
-    Argumente:
-        contract_id (int): ID des Vertrags
-        contract_service (ContractService): Dienst für Vertragsoperationen
-    Rückgabe:
-        None
-    """
-    try:
-        success = await contract_service.delete_contract(contract_id)
-        if not success:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden")
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Löschen des Vertrags")
+# ============================================================================
+# ENDPOINTS COM CAMINHOS FIXOS (devem vir ANTES de /{contract_id})
+# ENDPOINTS MIT FESTEN PFADEN (müssen VOR /{contract_id} kommen)
+# ============================================================================
+
 # GET /contracts/stats - Ruft Vertragsstatistiken ab
 @router.get("/stats", response_model=ContractStats, status_code=status.HTTP_200_OK)
 async def get_contract_stats(
@@ -347,6 +289,92 @@ async def get_expired_contracts(
         limit=per_page
     )
 
+@router.get("/by-client", response_model=ContractListResponse, status_code=status.HTTP_200_OK)
+async def get_contracts_by_client(
+    client_name: str = Query(..., description="Name des Kunden / Nome do cliente"),
+    page: int = Query(1, ge=1, description="Seitennummer / Número da página"),
+    per_page: int = Query(10, ge=1, le=100, description="Anzahl der Verträge pro Seite / Número de contratos por página"),
+    contract_service: ContractService = Depends(get_contract_service)
+):
+    """
+    Verträge nach Kundenname abrufen
+    """
+    return await contract_service.get_contracts_by_client(
+        client_name=client_name,
+        skip=(page - 1) * per_page,
+        limit=per_page
+    )       
+
+# ============================================================================
+# ENDPOINTS COM PATH PARAMETERS (devem vir DEPOIS de caminhos fixos)
+# ENDPOINTS MIT PATH-PARAMETERN (müssen NACH festen Pfaden kommen)
+# ============================================================================
+
+# GET /contracts/{contract_id} - Ruft einen Vertrag nach ID ab
+@router.get("/{contract_id}", response_model=ContractResponse, status_code=status.HTTP_200_OK)
+async def get_contract(   
+    contract_id: int,
+    contract_service: ContractService = Depends(get_contract_service)
+):
+    """
+    Ruft einen Vertrag nach seiner ID ab.
+    Argumente:
+        contract_id (int): ID des Vertrags
+        contract_service (ContractService): Dienst für Vertragsoperationen
+    Rückgabe:
+        ContractResponse: Abgerufener Vertrag
+    """
+    contract = await contract_service.get_contract(contract_id)
+    if not contract:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden")
+    return contract
+
+# PUT /contracts/{contract_id} - Aktualisiert einen Vertrag nach ID
+@router.put("/{contract_id}", response_model=ContractResponse, status_code=status.HTTP_200_OK)
+async def update_contract(
+    contract_id: int,
+    contract_data: ContractUpdate,
+    contract_service: ContractService = Depends(get_contract_service)
+):
+    """
+    Aktualisiert einen bestehenden Vertrag nach seiner ID.
+    Argumente:
+        contract_id (int): ID des Vertrags
+        contract_data (ContractUpdate): Aktualisierte Vertragsdaten
+        contract_service (ContractService): Dienst für Vertragsoperationen
+    Rückgabe:
+        ContractResponse: Aktualisierter Vertrag
+    """
+    try:
+        updated_contract = await contract_service.update_contract(contract_id, contract_data)
+        if not updated_contract:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden")
+        return updated_contract
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Aktualisieren des Vertrags")
+
+# DELETE /contracts/{contract_id} - Löscht einen Vertrag nach ID
+@router.delete("/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_contract(
+    contract_id: int,
+    contract_service: ContractService = Depends(get_contract_service)
+):
+    """
+    Löscht einen Vertrag nach seiner ID.
+    Argumente:
+        contract_id (int): ID des Vertrags
+        contract_service (ContractService): Dienst für Vertragsoperationen
+    Rückgabe:
+        None
+    """
+    try:
+        success = await contract_service.delete_contract(contract_id)
+        if not success:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Löschen des Vertrags")
 
 @router.get("/{contract_id}/document", status_code=status.HTTP_200_OK)
 async def generate_contract_document(
@@ -519,18 +547,3 @@ async def upload_contract_template(
         f.write(contents)
 
     return {"message": "Template uploaded / Template hochgeladen", "path": str(target_path)}
-@router.get("/by-client", response_model=ContractListResponse, status_code=status.HTTP_200_OK)
-async def get_contracts_by_client(
-    client_name: str = Query(..., description="Name des Kunden / Nome do cliente"),
-    page: int = Query(1, ge=1, description="Seitennummer / Número da página"),
-    per_page: int = Query(10, ge=1, le=100, description="Anzahl der Verträge pro Seite / Número de contratos por página"),
-    contract_service: ContractService = Depends(get_contract_service)
-):
-    """
-    Verträge nach Kundenname abrufen
-    """
-    return await contract_service.get_contracts_by_client(
-        client_name=client_name,
-        skip=(page - 1) * per_page,
-        limit=per_page
-    )       

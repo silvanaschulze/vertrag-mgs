@@ -88,7 +88,8 @@ class Contract(Base):
         "RentStep",
         back_populates="contract",
         cascade="all, delete-orphan",
-        order_by="RentStep.effective_date"
+        order_by="RentStep.effective_date",
+        lazy="selectin"  # Eager loading para evitar MissingGreenlet em testes síncronos
     )
 
     # =========================

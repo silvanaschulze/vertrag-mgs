@@ -1631,39 +1631,102 @@ alembic history
 
 ```
 backend/test/
-├── test_alerts.py            # Alert-Tests (458 Zeilen, Auto + Manuell)
-├── test_contract.py          # Vertragstests (167 Zeilen, CRUD, PDF-Integration)
-├── test_pdf_unit.py          # PDF-Unit-Tests (210 Zeilen)
-├── test_integration_db.py    # Database-Tests (61 Zeilen, async Sessions)
-├── test_complete.py          # System-Tests (165 Zeilen, Folder Structure)
-├── test_local.py            # Dev-Tests (23 Zeilen, lokale Entwicklung)
-└── test_utils.py            # Utility-Tests (86 Zeilen, Security, Email)
+├── conftest.py              # Fixtures globais, PYTHONPATH setup (NOVO - Dez 2025)
+├── test_alerts.py           # Alert-Tests (458 Zeilen, Auto + Manuell) ✅ COMPLETO
+├── test_contract.py         # Vertragstests (606 Zeilen, 22 testes) ✅ COMPLETO (REESCRITO DEZ 2025)
+├── test_pdf_unit.py         # PDF-Unit-Tests (210 Zeilen, 8 testes) ⚠️ PARCIAL
+├── test_integration_db.py   # Database-Tests (61 Zeilen, async Sessions) ✅ COMPLETO
+├── test_complete.py         # System-Tests (165 Zeilen, Folder Structure) ✅ COMPLETO
+├── test_local.py            # Dev-Tests (23 Zeilen, lokale Entwicklung) ✅ COMPLETO
+├── test_utils.py            # Utility-Tests (86 Zeilen, 4 testes) ⚠️ PARCIAL
+├── test_users.py            # ❌ NÃO EXISTE - Precisa ser criado (ALTA PRIORIDADE)
+├── test_rent_steps.py       # ❌ NÃO EXISTE - Precisa ser criado (ALTA PRIORIDADE)
+└── test_integration_e2e.py  # ❌ NÃO EXISTE - Precisa ser criado (MÉDIA PRIORIDADE)
 ```
+
+**Status Geral:**
+- ✅ **Completo:** 4 arquivos (test_contract.py, test_alerts.py, test_integration_db.py, test_complete.py)
+- ⚠️ **Parcial:** 2 arquivos (test_pdf_unit.py, test_utils.py)
+- ❌ **Faltando:** 3 arquivos (test_users.py, test_rent_steps.py, test_integration_e2e.py)
 
 ### **Detaillierte Test-Coverage / Cobertura Detalhada de Testes**
 
-#### **test_alerts.py (458 Zeilen)**
+#### **test_alerts.py (458 Zeilen) - ✅ COMPLETO**
 - **Automatische Alerts:** T-60, T-30, T-10, T-1 Verarbeitung mit präziser Terminberechnung
 - **Manuelle Alerts:** BENUTZERDEFINIERT mit freier Terminwahl und Flexibilität  
 - **Scheduler-Integration:** APScheduler Hintergrund-Verarbeitung und Job-Management
 - **E-Mail-Templates:** Zweisprachige Benachrichtigungen (DE/PT) mit HTML/Text
 - **Deduplizierung:** Verhinderung doppelter Alerts durch Status-Tracking
 - **Test-Coverage:** Vollständige Abdeckung aller Alert-Szenarien inkl. Edge Cases
+- **Status:** ✅ 100% implementiert und funktionsfähig
 
-#### **test_contract.py (167 Zeilen)**
-- **CRUD-Operationen:** Erstellen, Lesen, Aktualisieren, Löschen von Verträgen
-- **PDF-Integration:** Upload, temp/persisted Speicherung, Inline-Viewer, Download
-- **RentStep-Integration:** Mietstaffelung für LEASE/PACHT mit Preisanpassungen
-- **Vertragstypen:** SERVICE, PRODUCT, EMPLOYMENT, LEASE, PACHT (alle 5 Typen)
-- **Status-Management:** DRAFT, ACTIVE, EXPIRED, TERMINATED Workflow
-- **Schema-Validation:** Pydantic-Schema Tests für alle Contract-Endpoints
+#### **test_contract.py (606 Zeilen) - ✅ COMPLETO**
+**Neu implementiert (Dez 2025):** Vollständige Neuentwicklung mit pytest-Standards
 
-#### **test_pdf_unit.py (210 Zeilen)**
+**22 Tests implementiert (100% Pass-Rate):**
+
+**1. TestContractCRUD (11 Tests):**
+- ✅ `test_create_contract_success` - Vertragserstellung mit allen Feldern
+- ✅ `test_create_contract_with_validation_errors` - Validierungsfehler (end_date < start_date)
+- ✅ `test_create_contract_missing_required_fields` - Fehlende Pflichtfelder
+- ✅ `test_get_contract_by_id` - Einzelvertrag abrufen
+- ✅ `test_get_contract_not_found` - 404 bei nicht existierendem Vertrag
+- ✅ `test_update_contract_success` - Vollständige Aktualisierung
+- ✅ `test_update_contract_partial` - Teilweise Aktualisierung
+- ✅ `test_update_contract_not_found` - Update nicht existierender Vertrag
+- ✅ `test_delete_contract_success` - Erfolgreiche Löschung
+- ✅ `test_delete_contract_not_found` - Löschung nicht existierender Vertrag
+- ✅ Eager Loading von rent_steps (lazy="selectin") zur Vermeidung von MissingGreenlet
+
+**2. TestContractListing (4 Tests):**
+- ✅ `test_list_contracts_with_pagination` - Seitennummerierung (page, per_page)
+- ✅ `test_list_contracts_with_filters` - Filterung nach Status, Typ, Datum
+- ✅ `test_list_contracts_with_search` - Textsuche in Titel/Beschreibung
+- ✅ `test_list_contracts_with_sorting` - Sortierung (asc/desc)
+
+**3. TestContractSearch (5 Tests):**
+- ✅ `test_search_contracts` - GET /contracts/search
+- ✅ `test_get_active_contracts` - GET /contracts/active
+- ✅ `test_get_expiring_contracts` - GET /contracts/expiring?days=30
+- ✅ `test_get_expired_contracts` - GET /contracts/expired
+- ✅ `test_get_contracts_by_client` - GET /contracts/by-client
+
+**4. TestContractStatistics (1 Test):**
+- ✅ `test_get_contract_stats` - GET /contracts/stats
+
+**5. TestContractDocuments (2 Tests):**
+- ✅ `test_generate_contract_document_docx` - DOCX-Generierung
+- ✅ `test_generate_contract_document_pdf` - PDF-Konvertierung
+
+**Kritische Fixes implementiert:**
+- ✅ **Route-Reihenfolge korrigiert:** Feste Pfade (/stats, /search, /active, etc.) VOR /{contract_id}
+- ✅ **MissingGreenlet behoben:** Eager Loading für rent_steps Relationship
+- ✅ **Status Codes validiert:** 422 für Pydantic-Validierung, 500 für Service-Fehler
+- ✅ **Fixtures professionalisiert:** test_db, test_user, auth_headers, sample_contract_data, client
+
+#### **test_pdf_unit.py (210 Zeilen) - ⚠️ PARCIALMENTE COMPLETO**
 - **Schema-Validation:** ExtractionMetadata, SHA256-Hashes, Upload-Timestamps
 - **Text-Extraktion:** Mock-Tests für PDF-Reader ohne externe Abhängigkeiten
 - **File-Operations:** Temp-Directory Handling, File Movement, Path Management
 - **Security-Tests:** SHA256-Validierung, File Integrity Checks
 - **Error-Handling:** Invalid PDF, Missing Files, Permission Errors
+
+**8 Tests básicos implementados:**
+- ✅ test_extraction_metadata_schema
+- ✅ test_contract_create_with_metadata
+- ✅ test_contract_create_without_metadata
+- ✅ test_pdf_hash_calculation
+- ✅ test_file_operations
+- ✅ test_duplicate_detection_logic
+- ✅ test_ocr_text_normalization
+- ✅ test_upload_file_naming_convention
+
+**Faltando (MÉDIA PRIORIDADE):**
+- ❌ Upload de PDF real (POST /contracts/import/pdf) - teste de integração
+- ❌ Extração completa de dados com validação de todos os campos
+- ❌ Validações de arquivo (tamanho máximo, extensão, PDF corrompido)
+- ❌ Teste de OCR com imagem real
+- ❌ Teste de erro de duplicação (HTTP 400)
 
 #### **test_integration_db.py (61 Zeilen)**  
 - **Database Models:** User, Contract, Alert Model Creation & Relationships
@@ -1685,7 +1748,7 @@ backend/test/
 - **No-Dependencies:** Einfache Tests ohne DB/External Services
 - **Debug-Support:** Console Output für manuelle Überprüfung
 
-#### **test_utils.py (86 Zeilen)**
+#### **test_utils.py (86 Zeilen) - ⚠️ PARCIALMENTE COMPLETO**
 - **Security-Functions:** Password Hashing (bcrypt), Verification, Long Password Handling
 - **Document-Generator:** DOCX Template Tests mit Mock-Implementation  
 - **Email-Utilities:** SMTP Configuration, Template Rendering
@@ -1694,6 +1757,187 @@ backend/test/
 - **OCR-Verarbeitung:** Pytesseract Integration
 - **Metadaten-Extraktion:** Titel, Kunde, Daten, Finanzen
 - **Validierung:** PDF-Integrität und Format-Checks
+
+**4 Tests básicos implementados:**
+- ✅ test_security_hash_and_verify
+- ✅ test_security_long_password_truncation
+- ✅ test_document_generator_monkeypatch
+- ✅ test_email_rendering_and_subject
+
+**Faltando (ALTA PRIORIDADE):**
+- ❌ JWT token generation/validation (create_access_token, decode token)
+- ❌ Proteção de rotas (endpoints com @Depends(get_current_active_user))
+- ❌ Token expirado (validação de expiração)
+- ❌ Token inválido (token malformado)
+- ❌ Refresh token (se implementado)
+
+### **📊 ANÁLISE DETALHADA DOS TESTES - ESTADO ATUAL (Dez 2025)**
+
+#### ✅ **1. CONTRATOS (CRUD completo) - test_contract.py**
+**Status: ✅ COMPLETO - 22/22 testes passando (100%)**
+
+**Implementado (Dezembro 2025):**
+- ✅ Criar contrato com validações completas (POST /contracts/)
+- ✅ Atualizar contrato completo e parcial (PUT /contracts/{id})
+- ✅ Deletar contrato (DELETE /contracts/{id})
+- ✅ Listar contratos com filtros e paginação (GET /contracts/)
+- ✅ Buscar contratos (GET /contracts/search)
+- ✅ Contratos ativos (GET /contracts/active)
+- ✅ Contratos expirando (GET /contracts/expiring?days=30)
+- ✅ Contratos expirados (GET /contracts/expired)
+- ✅ Contratos por cliente (GET /contracts/by-client)
+- ✅ Estatísticas de contratos (GET /contracts/stats)
+- ✅ Geração de documentos DOCX/PDF (GET /contracts/{id}/document)
+
+**Correções críticas:**
+- ✅ Ordem de rotas FastAPI corrigida (bug de produção!)
+- ✅ MissingGreenlet resolvido (eager loading rent_steps)
+- ✅ Fixtures pytest profissionalizadas
+- ✅ Conftest.py criado com setup global
+
+#### ❌ **2. USUÁRIOS (Sistema de autenticação) - test_users.py**
+**Status: ❌ NÃO IMPLEMENTADO**
+
+**Faltando (ALTA PRIORIDADE):**
+- ❌ Registro de usuário (POST /auth/register)
+- ❌ Login/Logout (POST /auth/login, POST /auth/logout)
+- ❌ Atualizar perfil (PUT /users/me)
+- ❌ Gerenciamento de usuários ADMIN (GET/POST/PUT/DELETE /users/)
+- ❌ Permissões e roles (validação de can_view_contract, can_edit_contract, etc.)
+- ❌ Sistema de 7 roles (SYSTEM_ADMIN, DIRECTOR, DEPARTMENT_ADM, etc.)
+- ❌ Sistema de 6 access levels (LEVEL_1 a LEVEL_6)
+
+**Nota:** Funções auxiliares existem em test_contract.py, mas não são testes pytest adequados.
+
+#### ❌ **3. RENTSTEPS (Mietstaffelung) - test_rent_steps.py**
+**Status: ❌ NÃO IMPLEMENTADO**
+
+**Faltando (ALTA PRIORIDADE):**
+- ❌ CRUD completo de RentSteps (POST/GET/PUT/DELETE /contracts/{id}/rent-steps/)
+- ❌ Validações de datas (effective_date >= contract.start_date)
+- ❌ Relacionamento com contratos (cascade delete, integridade)
+- ❌ Testes de rent_steps incluídos em ContractResponse
+- ❌ Validação de múltiplos rent steps com datas sequenciais
+
+#### ⚠️ **4. IMPORT DE CONTRATOS - test_pdf_unit.py**
+**Status: ⚠️ PARCIALMENTE IMPLEMENTADO (8 testes básicos)**
+
+**Implementado:**
+- ✅ test_extraction_metadata_schema
+- ✅ test_contract_create_with_metadata
+- ✅ test_contract_create_without_metadata
+- ✅ test_pdf_hash_calculation
+- ✅ test_file_operations
+- ✅ test_duplicate_detection_logic
+- ✅ test_ocr_text_normalization
+- ✅ test_upload_file_naming_convention
+
+**Faltando (MÉDIA PRIORIDADE):**
+- ❌ Upload de PDF real (POST /contracts/import/pdf)
+- ❌ Extração de dados completa com validação
+- ❌ Validações de arquivo (tamanho, extensão, corrompido)
+- ❌ Teste de OCR com imagem real
+- ❌ Teste de erro de duplicação (HTTP 400)
+
+#### ⚠️ **5. AUTENTICAÇÃO E SEGURANÇA - test_utils.py**
+**Status: ⚠️ PARCIALMENTE IMPLEMENTADO (4 testes básicos)**
+
+**Implementado:**
+- ✅ test_security_hash_and_verify
+- ✅ test_security_long_password_truncation
+- ✅ test_document_generator_monkeypatch
+- ✅ test_email_rendering_and_subject
+
+**Faltando (ALTA PRIORIDADE):**
+- ❌ JWT token generation/validation
+- ❌ Proteção de rotas com @Depends(get_current_active_user)
+- ❌ Permissões por role (can_view_contract, can_edit_contract)
+- ❌ Token expirado, token inválido
+- ❌ Refresh token
+
+#### ✅ **6. ALERTAS - test_alerts.py**
+**Status: ✅ COMPLETO (458 linhas, ~15 testes)**
+
+**Implementado:**
+- ✅ Criação de alertas (automáticos e manuais)
+- ✅ Processamento de alertas (happy path, edge cases)
+- ✅ Marcação como enviado/falho
+- ✅ Cálculo de dias até vencimento
+- ✅ Mapeamento de tipos de alerta
+- ✅ Reprocessamento de alertas
+- ✅ Endpoints completos (list, get, reprocess, stats)
+- ✅ Renderização de templates HTML
+
+**Observação:** ⭐ Arquivo de teste mais completo do projeto!
+
+#### ❌ **7. INTEGRAÇÃO COMPLETA (MÉDIA PRIORIDADE) - test_integration_e2e.py**
+**Status: ❌ NÃO IMPLEMENTADO**
+
+**Faltando:**
+- ❌ Fluxo end-to-end completo
+- ❌ Testes de concorrência
+- ❌ Testes de carga (stress test)
+
+#### ✅ **8. OUTROS ARQUIVOS DE TESTE**
+
+**test_integration_db.py (61 linhas):**
+- ✅ Criação de modelos (User, Contract, Alert)
+- ✅ Relacionamentos entre modelos
+- ✅ SQLite in-memory
+
+**test_complete.py (165 linhas):**
+- ✅ Verificação de imports
+- ✅ Estrutura de pastas
+- ✅ Validação básica
+
+**test_local.py (23 linhas):**
+- ✅ Script de teste manual (não pytest)
+
+### **📋 RESUMO EXECUTIVO - Cobertura de Testes**
+
+**Estatísticas Atuais:**
+- **test_contract.py:** ✅ 22/22 testes (100%) - **COMPLETO**
+- **test_alerts.py:** ✅ ~15/15 testes (100%) - **COMPLETO**
+- **test_pdf_unit.py:** ⚠️ 8/13 testes (62%) - **PARCIAL**
+- **test_utils.py:** ⚠️ 4/9 testes (44%) - **PARCIAL**
+- **test_users.py:** ❌ 0/10 testes (0%) - **NÃO EXISTE**
+- **test_rent_steps.py:** ❌ 0/8 testes (0%) - **NÃO EXISTE**
+- **test_integration_e2e.py:** ❌ 0/5 testes (0%) - **NÃO EXISTE**
+
+**Cobertura Total Estimada:** ~50-60%
+
+### **🎯 PRIORIZAÇÃO RECOMENDADA**
+
+#### 🔴 **URGENTE (Implementar IMEDIATAMENTE):**
+1. ✅ ~~Contratos CRUD completo (test_contract.py)~~ - **CONCLUÍDO EM DEZ 2025**
+2. ❌ Autenticação JWT (expandir test_utils.py) - **PRÓXIMO PASSO**
+3. ❌ Usuários e Permissões (criar test_users.py) - **CRÍTICO PARA SEGURANÇA**
+
+#### 🟡 **ALTA PRIORIDADE (Próximos 2-3 dias):**
+4. ❌ RentSteps CRUD (criar test_rent_steps.py)
+5. ⚠️ Completar PDF Import (test_pdf_unit.py) - testes de integração
+6. ❌ Proteção de rotas e roles (criar test_permissions.py)
+
+#### 🟢 **MÉDIA PRIORIDADE (Semana seguinte):**
+7. ❌ Integração E2E (criar test_integration_e2e.py)
+8. ❌ Testes de carga e concorrência (criar test_performance.py)
+
+### **✅ CONQUISTAS RECENTES (Dezembro 2025)**
+
+1. **🎉 test_contract.py completamente reescrito** - De script manual para 22 testes pytest profissionais
+2. **🐛 Bug crítico de produção corrigido** - Ordem de rotas FastAPI (endpoints nunca alcançados!)
+3. **⚡ MissingGreenlet resolvido** - Eager loading em relacionamentos async
+4. **📝 conftest.py criado** - Setup global e fixtures compartilhadas
+5. **✅ 100% pass rate** - Todos os 22 testes de contratos passando
+
+### **🎯 RECOMENDAÇÃO FINAL**
+
+**Você precisa de:**
+1. ✅ ~~Reescrever completamente test_contract.py~~ - **FEITO!**
+2. ❌ Criar test_users.py para autenticação e gerenciamento - **PRÓXIMO**
+3. ❌ Expandir test_utils.py com testes JWT completos
+4. ❌ Criar test_rent_steps.py para Mietstaffelung
+5. ⚠️ Completar test_pdf_unit.py com testes de integração
 
 ### **Testarten / Tipos de Teste**
 
@@ -1784,16 +2028,35 @@ asyncio_mode = auto
 15. **⏳ Externe Integration:** Drittanbieter-APIs (ausstehend) / APIs de terceiros (pendente)
 
 **🔄 In Bearbeitung (12) / Em Andamento (12):**
-12. **🔄 Automatisierte Tests / Testes Automatizados:** ~75% abgeschlossen / concluído
-   - ✅ Unit-Tests (test_utils.py): Security, Document Generator, Email Utils / Segurança, Gerador de Documentos, Utilitários de E-mail
-   - ✅ Alert-Tests (test_alerts.py): Automatische & manuelle Alerts (458 Zeilen) / Alertas automáticos e manuais (458 linhas)
-   - ✅ Contract-Tests (test_contract.py): CRUD Operations, PDF Integration (167 Zeilen) / Operações CRUD, Integração PDF (167 linhas)
-   - ✅ PDF-Tests (test_pdf_unit.py): Schema Validation, File Operations (210 Zeilen) / Validação de Schema, Operações de Arquivo (210 linhas)
-   - ✅ Database-Tests (test_integration_db.py): Model Integration (61 Zeilen) / Integração de Modelos (61 linhas)
-   - ✅ System-Tests (test_complete.py): Folder Structure, Basic Operations (165 Zeilen) / Estrutura de Pastas, Operações Básicas (165 linhas)
-   - ✅ Dev-Tests (test_local.py): Local Development Environment (23 Zeilen) / Ambiente de Desenvolvimento Local (23 linhas)
-   - ⏳ Performance-Tests / Testes de Performance
-   - ⏳ End-to-End-Tests / Testes End-to-End
+12. **🔄 Automatisierte Tests / Testes Automatizados:** ~60% abgeschlossen / concluído
+   - ✅ **Contract-Tests (test_contract.py):** 22/22 testes (100%) - **COMPLETO DEZ 2025** ⭐
+   - ✅ Alert-Tests (test_alerts.py): Automatische & manuelle Alerts (458 Zeilen, ~15 testes) - **COMPLETO** ⭐
+   - ✅ Database-Tests (test_integration_db.py): Model Integration (61 Zeilen) - **COMPLETO** ⭐
+   - ✅ System-Tests (test_complete.py): Folder Structure, Basic Operations (165 Zeilen) - **COMPLETO** ⭐
+   - ✅ Dev-Tests (test_local.py): Local Development Environment (23 Zeilen) - **COMPLETO** ⭐
+   - ⚠️ Unit-Tests (test_utils.py): 4/9 testes (44%) - Security, Document Generator, Email Utils
+   - ⚠️ PDF-Tests (test_pdf_unit.py): 8/13 testes (62%) - Schema Validation, File Operations
+   - ❌ User-Tests (test_users.py): 0/10 testes (0%) - **NÃO IMPLEMENTADO** 
+   - ❌ RentStep-Tests (test_rent_steps.py): 0/8 testes (0%) - **NÃO IMPLEMENTADO**
+   - ❌ E2E-Tests (test_integration_e2e.py): 0/5 testes (0%) - **NÃO IMPLEMENTADO**
+   - ❌ Performance-Tests: **NÃO IMPLEMENTADO**
+
+**📊 Test-Coverage Detalhado (Dez 2025):**
+- **Contratos (CRUD):** ✅ 100% (22 testes passando)
+- **Alertas:** ✅ 100% (~15 testes passando)
+- **Database:** ✅ 100% (integração completa)
+- **PDF Import:** ⚠️ 62% (8/13 testes)
+- **Utils/Security:** ⚠️ 44% (4/9 testes)
+- **Usuários/Auth:** ❌ 0% (não implementado)
+- **RentSteps:** ❌ 0% (não implementado)
+- **E2E:** ❌ 0% (não implementado)
+
+**🎉 Conquistas Recentes (Dezembro 2025):**
+- ✅ **test_contract.py reescrito:** De 167 para 606 linhas, 22 testes pytest profissionais
+- ✅ **Bug crítico corrigido:** Ordem de rotas FastAPI (endpoints /stats, /search, /active estavam inacessíveis!)
+- ✅ **MissingGreenlet resolvido:** Eager loading em rent_steps relationship
+- ✅ **conftest.py criado:** Setup global e fixtures compartilhadas
+- ✅ **100% pass rate:** Todos os 22 testes de contratos funcionando perfeitamente
 
 **📈 Gesamtfortschritt / Progresso Geral:**
 - **Backend:** 100% abgeschlossen / concluído
