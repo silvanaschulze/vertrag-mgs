@@ -547,3 +547,242 @@ async def upload_contract_template(
         f.write(contents)
 
     return {"message": "Template uploaded / Template hochgeladen", "path": str(target_path)}
+
+
+# ============================================================================
+# ENDPOINTS DE APROVAÇÃO / GENEHMIGUNGSENDPUNKTE
+# ============================================================================
+
+@router.post("/{contract_id}/approve", status_code=status.HTTP_200_OK)
+async def approve_contract(
+    contract_id: int,
+    approval_request: "ApprovalRequest",
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Aprova um contrato / Vertrag genehmigen
+    
+    Logik / Lógica:
+    - Verifica permissões do usuário / Überprüft Benutzerberechtigungen
+    - Cria registro de aprovação / Erstellt Genehmigungsdatensatz
+    - Atualiza status do contrato para ACTIVE / Aktualisiert Vertragsstatus auf ACTIVE
+    
+    Requires / Erfordert:
+    - Access Level 3+ (DEPARTMENT_USER ou superior)
+    - Permissão can_approve_contract()
+    """
+    from app.schemas.approval import ApprovalRequest, ApprovalActionResponse, ApprovalResponse
+    from app.models.contract_approval import ContractApproval
+    from sqlalchemy import select
+    from app.core.permissions import can_approve_contract
+    
+    # Buscar contrato / Vertrag suchen
+    contract_service = ContractService(db)
+    contract_response = await contract_service.get_contract(contract_id)
+    
+    if not contract_response:
+        raise HTTPException(status_code=404, detail="Contrato não encontrado / Vertrag nicht gefunden")
+    
+    # Buscar model real para verificação de permissões
+    result = await db.execute(select(Contract).where(Contract.id == contract_id))
+    contract = result.scalar_one_or_none()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contrato não encontrado / Vertrag nicht gefunden")
+    
+    # Verificar permissão / Berechtigung prüfen
+    if not can_approve_contract(current_user, contract):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sem permissão para aprovar este contrato / Keine Berechtigung, diesen Vertrag zu genehmigen"
+        )
+    
+    # Verificar se já existe aprovação pendente deste usuário
+    existing_result = await db.execute(
+        select(ContractApproval).where(
+            ContractApproval.contract_id == contract_id,
+            ContractApproval.approver_id == current_user.id,
+            ContractApproval.status == "pending"
+        )
+    )
+    existing_approval = existing_result.scalar_one_or_none()
+    
+    if existing_approval:
+        # Atualizar aprovação existente
+        existing_approval.approve(approval_request.comments)
+        await db.commit()
+        await db.refresh(existing_approval)
+        approval = existing_approval
+    else:
+        # Criar nova aprovação
+        approval = ContractApproval(
+            contract_id=contract_id,
+            approver_id=current_user.id,
+            required_approval_level=current_user.access_level,
+            status="approved"
+        )
+        approval.approve(approval_request.comments)
+        db.add(approval)
+        await db.commit()
+        await db.refresh(approval)
+    
+    # Atualizar status do contrato para ACTIVE
+    if contract.status == ContractStatus.PENDING_APPROVAL:
+        contract.status = ContractStatus.ACTIVE
+        await db.commit()
+        await db.refresh(contract)
+    
+    return ApprovalActionResponse(
+        success=True,
+        message="Contrato aprovado com sucesso / Vertrag erfolgreich genehmigt",
+        approval=ApprovalResponse.model_validate(approval),
+        contract_status=contract.status.value
+    )
+
+
+@router.post("/{contract_id}/reject", status_code=status.HTTP_200_OK)
+async def reject_contract(
+    contract_id: int,
+    rejection_request: "RejectionRequest",
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Rejeita um contrato / Vertrag ablehnen
+    
+    Logik / Lógica:
+    - Verifica permissões do usuário / Überprüft Benutzerberechtigungen
+    - Cria registro de rejeição / Erstellt Ablehnungsdatensatz
+    - Atualiza status do contrato para DRAFT / Aktualisiert Vertragsstatus auf DRAFT
+    
+    Requires / Erfordert:
+    - Access Level 3+ (DEPARTMENT_USER ou superior)
+    - Permissão can_approve_contract()
+    """
+    from app.schemas.approval import RejectionRequest, ApprovalActionResponse, ApprovalResponse
+    from app.models.contract_approval import ContractApproval
+    from sqlalchemy import select
+    from app.core.permissions import can_approve_contract
+    
+    # Buscar contrato
+    result = await db.execute(select(Contract).where(Contract.id == contract_id))
+    contract = result.scalar_one_or_none()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contrato não encontrado / Vertrag nicht gefunden")
+    
+    # Verificar permissão
+    if not can_approve_contract(current_user, contract):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sem permissão para rejeitar este contrato / Keine Berechtigung, diesen Vertrag abzulehnen"
+        )
+    
+    # Verificar se já existe aprovação pendente deste usuário
+    existing_result = await db.execute(
+        select(ContractApproval).where(
+            ContractApproval.contract_id == contract_id,
+            ContractApproval.approver_id == current_user.id,
+            ContractApproval.status == "pending"
+        )
+    )
+    existing_approval = existing_result.scalar_one_or_none()
+    
+    if existing_approval:
+        # Atualizar aprovação existente
+        existing_approval.reject(rejection_request.reason, rejection_request.comments)
+        await db.commit()
+        await db.refresh(existing_approval)
+        approval = existing_approval
+    else:
+        # Criar nova rejeição
+        approval = ContractApproval(
+            contract_id=contract_id,
+            approver_id=current_user.id,
+            required_approval_level=current_user.access_level,
+            status="rejected"
+        )
+        approval.reject(rejection_request.reason, rejection_request.comments)
+        db.add(approval)
+        await db.commit()
+        await db.refresh(approval)
+    
+    # Atualizar status do contrato para DRAFT
+    if contract.status == ContractStatus.PENDING_APPROVAL:
+        contract.status = ContractStatus.DRAFT
+        await db.commit()
+        await db.refresh(contract)
+    
+    return ApprovalActionResponse(
+        success=True,
+        message="Contrato rejeitado / Vertrag abgelehnt",
+        approval=ApprovalResponse.model_validate(approval),
+        contract_status=contract.status.value
+    )
+
+
+@router.get("/{contract_id}/approval-history")
+async def get_approval_history(
+    contract_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Obtém histórico de aprovações de um contrato / Ruft Genehmigungsverlauf eines Vertrags ab
+    
+    Returns / Retorna:
+    - Lista de todas as aprovações/rejeições
+    - Liste aller Genehmigungen/Ablehnungen
+    """
+    from app.schemas.approval import ApprovalHistoryResponse, ApprovalWithApprover
+    from app.models.contract_approval import ContractApproval
+    from sqlalchemy import select
+    from app.core.permissions import can_view_contract
+    
+    # Buscar contrato
+    result = await db.execute(select(Contract).where(Contract.id == contract_id))
+    contract = result.scalar_one_or_none()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contrato não encontrado / Vertrag nicht gefunden")
+    
+    # Verificar permissão de visualização
+    if not can_view_contract(current_user, contract):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sem permissão para ver este contrato / Keine Berechtigung, diesen Vertrag zu sehen"
+        )
+    
+    # Buscar todas as aprovações
+    approvals_result = await db.execute(
+        select(ContractApproval, User).join(
+            User, ContractApproval.approver_id == User.id
+        ).where(
+            ContractApproval.contract_id == contract_id
+        ).order_by(ContractApproval.created_at.desc())
+    )
+    
+    approvals_with_users = approvals_result.all()
+    
+    # Montar response com informações do aprovador
+    approvals_list = []
+    pending_count = 0
+    
+    for approval, approver in approvals_with_users:
+        approval_dict = ApprovalWithApprover.model_validate(approval).model_dump()
+        approval_dict['approver_name'] = approver.name
+        approval_dict['approver_email'] = approver.email
+        approvals_list.append(ApprovalWithApprover(**approval_dict))
+        
+        if approval.status.value == "pending":
+            pending_count += 1
+    
+    return ApprovalHistoryResponse(
+        contract_id=contract_id,
+        contract_title=contract.title,
+        total_approvals=len(approvals_list),
+        pending_approvals=pending_count,
+        approvals=approvals_list
+    )
+

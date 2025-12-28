@@ -1,0 +1,78 @@
+# Logrotate Configuration - Vertrag MGS
+# Configuração de Rotação de Logs
+# Log-Rotationskonfiguration
+#
+# DE: Kopieren Sie diese Datei nach /etc/logrotate.d/vertrag-mgs
+# PT: Copie este arquivo para /etc/logrotate.d/vertrag-mgs
+#
+# Installieren / Instalar:
+# sudo cp deploy/logrotate-vertrag-mgs /etc/logrotate.d/vertrag-mgs
+# sudo chmod 644 /etc/logrotate.d/vertrag-mgs
+
+# ============================================================================
+# API LOGS / LOGS DA API
+# ============================================================================
+/var/log/vertrag-mgs/api.log {
+    daily
+    rotate 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0640 www-data www-data
+    sharedscripts
+    postrotate
+        # Recarregar serviço para usar novo arquivo de log
+        # Dienst neu laden, um neue Log-Datei zu verwenden
+        systemctl reload vertrag-mgs-api.service >/dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# ERROR LOGS / LOGS DE ERRO
+# ============================================================================
+/var/log/vertrag-mgs/api-error.log {
+    daily
+    rotate 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0640 www-data www-data
+    sharedscripts
+    postrotate
+        systemctl reload vertrag-mgs-api.service >/dev/null 2>&1 || true
+    endscript
+}
+
+# ============================================================================
+# BACKUP LOGS / LOGS DE BACKUP
+# ============================================================================
+/var/log/vertrag-mgs-backup.log {
+    weekly
+    rotate 12
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0640 root root
+}
+
+# ============================================================================
+# ACCESS LOGS / LOGS DE ACESSO (se usar Nginx)
+# ============================================================================
+/var/log/vertrag-mgs/access.log {
+    daily
+    rotate 14
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0640 www-data www-data
+    sharedscripts
+    postrotate
+        # Recarregar Nginx se estiver em uso
+        # Nginx neu laden, falls verwendet
+        [ -f /var/run/nginx.pid ] && kill -USR1 $(cat /var/run/nginx.pid) >/dev/null 2>&1 || true
+    endscript
+}

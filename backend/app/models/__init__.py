@@ -8,6 +8,7 @@ from .contract import Contract, ContractStatus, ContractType
 from .rent_step import RentStep
 from .permission import Permission
 from .user import User, UserRole, AccessLevel
+from .contract_approval import ContractApproval, ApprovalStatus
 
 __all__ = [
     "User",
@@ -17,6 +18,7 @@ __all__ = [
     "ContractStatus",
     "ContractType",
     "RentStep",
-    "Permission"
-    
+    "Permission",
+    "ContractApproval",
+    "ApprovalStatus"
 ]

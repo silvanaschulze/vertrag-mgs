@@ -1,0 +1,136 @@
+version: '3.8'
+
+# Docker Compose - Vertrag MGS
+# Sistema de Gerenciamento de Contratos
+# Vertragsverwaltungssystem
+
+services:
+  # ============================================================================
+  # BACKEND - FastAPI Application
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vertrag-mgs-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PROJECT_NAME=Contract Management System
+      - API_V1_STR=/api
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - SQLALCHEMY_DATABASE_URI=sqlite+aiosqlite:///./contracts.db
+      - SMTP_HOST=${SMTP_HOST:-localhost}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+      - MAX_FILE_SIZE=10485760
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - ./backend:/app
+      - backend-db:/app/data
+      - backend-uploads:/app/uploads
+      - backend-logs:/app/logs
+    networks:
+      - vertrag-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.vertrag-mgs.description=Backend FastAPI Application"
+      - "com.vertrag-mgs.service=backend"
+
+  # ============================================================================
+  # REVERSE PROXY - Nginx (Opcional - para produção)
+  # ============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: vertrag-mgs-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - backend
+    networks:
+      - vertrag-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "com.vertrag-mgs.description=Reverse Proxy Nginx"
+      - "com.vertrag-mgs.service=proxy"
+
+  # ============================================================================
+  # BACKUP SERVICE - Automated Backups (Opcional)
+  # ============================================================================
+  backup:
+    image: alpine:latest
+    container_name: vertrag-mgs-backup
+    restart: unless-stopped
+    volumes:
+      - backend-db:/data/db:ro
+      - backend-uploads:/data/uploads:ro
+      - ./backups:/backups
+      - ./scripts:/scripts:ro
+    command: |
+      sh -c "
+        echo '0 2 * * * /scripts/backup-system.sh' > /etc/crontabs/root &&
+        crond -f -l 2
+      "
+    networks:
+      - vertrag-network
+    labels:
+      - "com.vertrag-mgs.description=Automated Backup Service"
+      - "com.vertrag-mgs.service=backup"
+
+# ============================================================================
+# VOLUMES - Armazenamento Persistente / Persistent Storage
+# ============================================================================
+volumes:
+  backend-db:
+    driver: local
+    labels:
+      - "com.vertrag-mgs.description=Database SQLite"
+      - "com.vertrag-mgs.volume=db"
+  
+  backend-uploads:
+    driver: local
+    labels:
+      - "com.vertrag-mgs.description=Contract PDFs and Uploads"
+      - "com.vertrag-mgs.volume=uploads"
+  
+  backend-logs:
+    driver: local
+    labels:
+      - "com.vertrag-mgs.description=Application Logs"
+      - "com.vertrag-mgs.volume=logs"
+  
+  nginx-logs:
+    driver: local
+    labels:
+      - "com.vertrag-mgs.description=Nginx Access and Error Logs"
+      - "com.vertrag-mgs.volume=nginx-logs"
+
+# ============================================================================
+# NETWORKS - Rede Isolada / Isolated Network
+# ============================================================================
+networks:
+  vertrag-network:
+    driver: bridge
+    labels:
+      - "com.vertrag-mgs.description=Internal Network for Services"
+      - "com.vertrag-mgs.network=main"

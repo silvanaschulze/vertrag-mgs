@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from .alert import Alert
     from .user import User
     from .rent_step import RentStep
+    from .contract_approval import ContractApproval
 
 class ContractStatus(str, enum.Enum):
     DRAFT = "entwurf"               #Entwurf
@@ -90,6 +91,14 @@ class Contract(Base):
         cascade="all, delete-orphan",
         order_by="RentStep.effective_date",
         lazy="selectin"  # Eager loading para evitar MissingGreenlet em testes síncronos
+    )
+
+    # Aprovações / Genehmigungen
+    approvals: Mapped[list["ContractApproval"]] = relationship(
+        "ContractApproval",
+        back_populates="contract",
+        cascade="all, delete-orphan",
+        lazy="selectin"
     )
 
     # =========================

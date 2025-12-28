@@ -1,0 +1,31 @@
+[Unit]
+Description=Vertrag MGS FastAPI Backend Service
+Documentation=https://github.com/seu-repo/vertrag-mgs
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/vertrag-mgs/backend
+Environment="PATH=/var/www/vertrag-mgs/backend/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/var/www/vertrag-mgs/backend/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/vertrag-mgs/api.log
+StandardError=append:/var/log/vertrag-mgs/api-error.log
+
+# Security / Segurança
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/vertrag-mgs/backend/uploads /var/log/vertrag-mgs
+
+# Resource Limits / Limites de Recursos
+LimitNOFILE=65536
+TasksMax=4096
+
+[Install]
+WantedBy=multi-user.target
