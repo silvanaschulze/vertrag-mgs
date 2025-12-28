@@ -1,0 +1,95 @@
+# ============================================================================
+# VERTRAG-MGS - Contract Management System
+# Sistema de Gerenciamento de Contratos
+# ============================================================================
+# Python Dependencies / Dependências Python
+# Tested with Python 3.11+
+# ============================================================================
+
+# ============================================================================
+# CORE FRAMEWORK / FRAMEWORK PRINCIPAL
+# ============================================================================
+fastapi==0.119.0                    # High-performance async web framework
+uvicorn[standard]==0.37.0           # ASGI server with performance extras
+python-multipart>=0.0.6             # Multipart form data support (file uploads)
+
+# ============================================================================
+# DATABASE / BANCO DE DADOS
+# ============================================================================
+sqlalchemy>=2.0.0                   # Async ORM with modern API
+aiosqlite>=0.19.0                   # SQLite async driver (development)
+aiomysql>=0.2.0                     # MySQL async driver (production)
+alembic==1.17.0                     # Database migration management
+
+# ============================================================================
+# AUTHENTICATION & SECURITY / AUTENTICAÇÃO E SEGURANÇA
+# ============================================================================
+python-jose[cryptography]==3.5.0    # JWT token handling
+passlib==1.7.4                      # Password hashing utilities
+bcrypt==5.0.0                       # Bcrypt password hashing
+python-dotenv==1.1.1                # Environment variable management
+
+# ============================================================================
+# DATA VALIDATION / VALIDAÇÃO DE DADOS
+# ============================================================================
+pydantic==2.12.0                    # Data validation and serialization
+pydantic-settings==2.11.0           # Settings management with Pydantic
+email-validator==2.3.0              # Email validation
+
+# ============================================================================
+# PDF PROCESSING / PROCESSAMENTO DE PDF
+# ============================================================================
+pdfplumber==0.11.7                  # Primary PDF extraction (best quality)
+PyPDF2==3.0.1                       # Alternative PDF extraction
+pymupdf>=1.23.0                     # Backup PDF extraction (fitz)
+pytesseract==0.3.13                 # OCR for scanned PDFs
+dateparser==1.2.2                   # Intelligent date parsing
+
+# ============================================================================
+# DOCUMENT GENERATION / GERAÇÃO DE DOCUMENTOS
+# ============================================================================
+docxtpl==0.20.1                     # DOCX template rendering (Jinja2-based)
+# Note: LibreOffice (soffice) required for DOCX → PDF conversion
+
+# ============================================================================
+# NLP / PROCESSAMENTO DE LINGUAGEM NATURAL
+# ============================================================================
+spacy==3.8.7                        # NLP for PDF text extraction
+# Install German model: python -m spacy download de_core_news_sm
+# Install Portuguese model: python -m spacy download pt_core_news_sm
+
+# ============================================================================
+# TESTING / TESTES
+# ============================================================================
+pytest==8.4.2                       # Main test framework
+pytest-asyncio==1.2.0               # Async test support
+pytest-mock==3.15.1                 # Mocking for tests
+httpx==0.28.1                       # HTTP client for testing async endpoints
+
+# ============================================================================
+# OPTIONAL SYSTEM DEPENDENCIES / DEPENDÊNCIAS DE SISTEMA OPCIONAIS
+# ============================================================================
+# For OCR (pytesseract):
+#   Ubuntu/Debian: sudo apt-get install tesseract-ocr tesseract-ocr-deu tesseract-ocr-por
+#   Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+#
+# For DOCX → PDF conversion (docxtpl):
+#   Ubuntu/Debian: sudo apt-get install libreoffice
+#   Windows: Download from https://www.libreoffice.org/
+#
+# For pymupdf (fitz):
+#   Ubuntu/Debian: sudo apt-get install libmupdf-dev
+# ============================================================================
+
+# ============================================================================
+# INSTALLATION / INSTALAÇÃO
+# ============================================================================
+# Development / Desenvolvimento:
+#   pip install -r requirements.txt
+#
+# Production / Produção:
+#   pip install --no-cache-dir -r requirements.txt
+#
+# With specific Python version / Com versão específica do Python:
+#   python3.11 -m pip install -r requirements.txt
+# ============================================================================
