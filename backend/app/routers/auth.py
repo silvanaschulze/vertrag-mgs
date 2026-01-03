@@ -151,10 +151,20 @@ async def login(
             data={"sub": user.username, "user_id": user.id, "username": user.username}, expires_delta=access_token_expires
         )
 
+        # Retornar token e dados do usuário
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "role": user.role.value if user.role else None,
+                "access_level": user.access_level,
+                "department": user.department,
+                "team": user.team,
+            }
         }
     except HTTPException:
         # re-raise known HTTP exceptions

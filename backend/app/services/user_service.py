@@ -102,7 +102,12 @@ class UserService:
         """
        Benutzer authentifizieren 
         """
+        # Tentar buscar por username ou email
         user = await self.get_user_by_username(username)
+        if not user:
+            # Se não encontrou por username, tenta por email
+            user = await self.get_user_by_email(username)
+        
         if not user:
             return None
         

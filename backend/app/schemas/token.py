@@ -3,7 +3,7 @@
 Pydantic-Modelle für JWT-Tokens und Authentifizierungsantworten
 """
 
-from typing import Optional
+from typing import Optional, Any
 from pydantic import BaseModel, Field
 
 class Token(BaseModel):
@@ -11,6 +11,7 @@ class Token(BaseModel):
     access_token: str = Field(..., description="Access token - Zugriffstoken - Token de acesso")
     token_type: str = Field(default="bearer", description="Token type - Token-Typ - Tipo de token")
     expires_in: int = Field(..., description="Expiration time in seconds - Ablaufzeit in Sekunden - Tempo de expiração em segundos")
+    user: Optional[dict[str, Any]] = Field(None, description="User data - Benutzerdaten - Dados do usuário")
 
 class TokenData(BaseModel):
     """Token data model - Token-Datenmodell """

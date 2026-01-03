@@ -109,7 +109,7 @@ app = FastAPI(
 # CORS-Middleware konfigurieren / Configurar middleware CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS], 
+    allow_origins=["*"],  # Permite qualquer origem em desenvolvimento
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -117,12 +117,12 @@ app.add_middleware(
 
 # Router registrieren / Registrar roteadores
 app.include_router(health_router)  # Health checks sem autenticação
-app.include_router(auth_router)
-app.include_router(contracts_router)
-app.include_router(contracts_import_router)
-app.include_router(users_router)
-app.include_router(alerts_router)
-app.include_router(rent_steps_router)
+app.include_router(auth_router, prefix="/api")
+app.include_router(contracts_router, prefix="/api")
+app.include_router(contracts_import_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
+app.include_router(alerts_router, prefix="/api")
+app.include_router(rent_steps_router, prefix="/api")
 
 @app.get("/")
 def root():
