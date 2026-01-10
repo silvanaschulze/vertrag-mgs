@@ -14,7 +14,6 @@ import {
   Button,
   Card,
   CardContent,
-  Container,
   TextField,
   Typography,
   Alert,
@@ -85,14 +84,16 @@ const Login = () => {
     <Box
       sx={{
         minHeight: '100vh',
+        width: '100vw',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: 'background.default',
+        padding: 2,
+        margin: 0,
       }}
     >
-      <Container maxWidth="sm">
-        <Card elevation={3}>
+      <Card elevation={3} sx={{ width: '100%', maxWidth: 500 }}>
           <CardContent sx={{ p: 4 }}>
             {/* Logo e Título / Logo und Titel */}
             <Box sx={{ textAlign: 'center', mb: 4 }}>
@@ -173,7 +174,6 @@ const Login = () => {
             </Box>
           </CardContent>
         </Card>
-      </Container>
     </Box>
   );
 };

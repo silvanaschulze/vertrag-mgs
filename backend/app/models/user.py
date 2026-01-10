@@ -23,12 +23,12 @@ class AccessLevel(enum.IntEnum):
     """Zugriffsstufen für hierarchische Berechtigungen.
     Níveis de acesso para permissões hierárquicas.
     """
-    LEVEL_1 = 1  # Basis - Nur eigene Verträge / Básico - Apenas contratos próprios
-    LEVEL_2 = 2  # Team - Alle Verträge des Teams / Time - Todos contratos do time
-    LEVEL_3 = 3  # Department User - Bereichsverträge, eingeschränkte Reports / Dept User - Contratos do departamento, relatórios restritos
-    LEVEL_4 = 4  # Department Admin - Volle Bereichsrechte / Dept Admin - Direitos completos do departamento
-    LEVEL_5 = 5  # Geschäftsführung - Unternehmensweiter Zugriff / Diretoria - Acesso em toda empresa
-    LEVEL_6 = 6  # System Admin - Technischer Vollzugriff / Admin Sistema - Acesso técnico completo
+    LEVEL_1 = 1  # Basis (Colaborador) - Nur verantwortliche Verträge, keine Genehmigungen / Básico - Apenas contratos onde é responsável, não aprova
+    LEVEL_2 = 2  # Team - Alle Verträge des Teams, kann erstellen/bearbeiten, keine Reports / Time - Todos contratos do time, pode criar/editar, sem relatórios
+    LEVEL_3 = 3  # Department User - Alle Verträge des Bereichs, kann genehmigen, Reports ohne Werte / Dept User - Todos contratos do depto, pode aprovar, relatórios sem valores
+    LEVEL_4 = 4  # Department Admin - Volle Bereichsrechte, Reports mit Werten / Dept Admin - Direitos completos do depto, relatórios com valores
+    LEVEL_5 = 5  # Geschäftsführung - Unternehmensweiter Zugriff, alle Reports / Diretoria - Acesso em toda empresa, todos relatórios
+    LEVEL_6 = 6  # System Admin - NUR technische Rechte (Configs, Logs, Backups), KEINE Verträge/Reports / Admin Sistema - APENAS direitos técnicos, SEM contratos/relatórios
 
 
 class UserRole(str, enum.Enum):

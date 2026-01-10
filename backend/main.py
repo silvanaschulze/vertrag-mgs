@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth_router, contracts_router, users_router, alerts_router, rent_steps_router
 from app.routers.contracts_import import router as contracts_import_router
 from app.routers.health import router as health_router
+from app.routers.dashboard import router as dashboard_router
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.services.notification_service import NotificationService
@@ -109,10 +110,16 @@ app = FastAPI(
 # CORS-Middleware konfigurieren / Configurar middleware CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite qualquer origem em desenvolvimento
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
+    expose_headers=["Content-Type", "Authorization"],
 )
 
 # Router registrieren / Registrar roteadores
@@ -123,6 +130,7 @@ app.include_router(contracts_import_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(alerts_router, prefix="/api")
 app.include_router(rent_steps_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api")  # Dashboard stats
 
 @app.get("/")
 def root():

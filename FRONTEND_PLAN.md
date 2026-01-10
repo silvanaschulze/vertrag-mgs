@@ -451,45 +451,56 @@ export const getAccessLevel = (userRole) => {
 
 ---
 
-### **SPRINT 2: Layout + Dashboard (3-4 dias)**
+### **SPRINT 2: Dashboard por Role (2-3 dias)** ⚡ LAYOUT JÁ PRONTO!
 
-**Objetivo:** Layout completo, sidebar com menus por role, dashboard básico
+**Objetivo:** Dashboards específicos por role com widgets e estatísticas do backend
 
-**Tarefas:**
-1. Implementar Sidebar com navegação
-2. Criar menu items baseados em roles (canAccessMenu)
-3. Adicionar AppBar com user info + logout
-4. Implementar uiStore (sidebar aberta/fechada, tema)
-5. Criar /api/dashboard/stats endpoint (backend)
-6. Implementar dashboardApi.js (frontend)
+**⚠️ MUDANÇA: Sprint 1 foi ALÉM do planejado!**
+Já temos pronto (não precisa fazer):
+- ✅ Sidebar com navegação completa (240px, filtro por role)
+- ✅ Menu items usando canAccessMenu()
+- ✅ AppBar com user info + logout
+- ✅ AppLayout funcionando
+
+**Tarefas REAIS da Sprint 2:**
+1. ~~Implementar Sidebar com navegação~~ ✅ **JÁ FEITO NA SPRINT 1**
+2. ~~Criar menu items baseados em roles (canAccessMenu)~~ ✅ **JÁ FEITO NA SPRINT 1**
+3. ~~Adicionar AppBar com user info + logout~~ ✅ **JÁ FEITO NA SPRINT 1**
+4. Implementar uiStore (sidebar aberta/fechada, tema) - **OPCIONAL**
+5. Criar /api/dashboard/stats endpoint (backend) - **OBRIGATÓRIO**
+6. Implementar dashboardApi.js (frontend) - **OBRIGATÓRIO**
 7. Criar componentes de dashboard por role:
-   - SystemAdminDashboard.jsx
-   - DirectorDashboard.jsx
-   - DepartmentAdminDashboard.jsx
-   - DepartmentUserDashboard.jsx
-   - TeamLeadDashboard.jsx
-   - StaffDashboard.jsx
+   - DashboardStaff.jsx - **COMEÇAR AQUI** (mais simples)
+   - DashboardTeamLead.jsx
+   - DashboardDepartmentUser.jsx
+   - DashboardDepartmentAdm.jsx
+   - DashboardDirector.jsx
+   - DashboardSystemAdmin.jsx - **MAIS COMPLEXO** (fazer por último)
 8. Criar Dashboard.jsx (renderiza componente correto por role)
-9. Adicionar Cards de métricas (MUI Card)
-10. Testar cada role (criar usuários de teste no backend)
+9. Adicionar Cards de métricas (MUI Card) + Gráficos (Recharts)
+10. Criar usuários de teste para cada role
+11. Testar cada dashboard individualmente
 
 **Arquivos principais:**
-- `src/components/layout/Sidebar.jsx`
-- `src/components/layout/Header.jsx`
-- `src/store/uiStore.js`
-- `src/services/dashboardApi.js`
-- `src/components/dashboard/*Dashboard.jsx` (6 componentes)
-- `src/pages/Dashboard.jsx`
-- `backend/app/routers/dashboard.py` (endpoint novo)
+- ~~`src/components/layout/Sidebar.jsx`~~ ✅ **PRONTO**
+- ~~`src/components/layout/Header.jsx`~~ ✅ **PRONTO**
+- `src/store/uiStore.js` (opcional)
+- `src/services/dashboardApi.js` ⏳
+- `src/components/dashboard/*Dashboard.jsx` (6 componentes) ⏳
+- `src/pages/Dashboard.jsx` ⏳
+- `backend/app/schemas/dashboard.py` (novo) ⏳
+- `backend/app/services/dashboard_service.py` (novo) ⏳
+- `backend/app/routers/dashboard.py` (novo) ⏳
 
 **Critério de sucesso:**
-✅ Menu lateral mostra apenas itens permitidos por role
+✅ Menu lateral mostra apenas itens permitidos por role - **JÁ FUNCIONA**
 ✅ Dashboard renderiza widgets corretos por role
-✅ SYSTEM_ADMIN vê dados técnicos
-✅ DIRECTOR vê dados de toda empresa
+✅ SYSTEM_ADMIN vê dados técnicos (total contratos, usuários, backups, logs)
+✅ DIRECTOR vê dados de toda empresa (todos contratos, valores, gráficos executivos)
 ✅ DEPARTMENT_ADM vê apenas seu departamento
-✅ STAFF vê apenas próprios contratos
-✅ Sidebar abre/fecha corretamente
+✅ STAFF vê apenas próprios contratos (sem gráficos)
+✅ Sidebar abre/fecha corretamente - **JÁ FUNCIONA**
+✅ Backend filtra stats por role automaticamente
 
 ---
 

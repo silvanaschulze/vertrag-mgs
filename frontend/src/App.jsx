@@ -14,10 +14,10 @@ import RequirePermission from './components/auth/RequirePermission';
 import AppLayout from './components/layout/AppLayout';
 import Login from './pages/Login';
 import Unauthorized from './pages/Unauthorized';
+import Dashboard from './pages/Dashboard';
 
 // Páginas temporárias (vamos criar depois)
 // Temporäre Seiten (werden später erstellt)
-const DashboardPage = () => <div><h1>Dashboard</h1><p>Em construção / In Arbeit</p></div>;
 const ContractsPage = () => <div><h1>Verträge / Contracts</h1><p>Em construção / In Arbeit</p></div>;
 const ImportPage = () => <div><h1>Import</h1><p>Em construção / In Arbeit</p></div>;
 const AlertsPage = () => <div><h1>Warnungen / Alerts</h1><p>Em construção / In Arbeit</p></div>;
@@ -55,7 +55,7 @@ function App() {
                   <AppLayout>
                     <Routes>
                       {/* Dashboard - Todos podem acessar / Dashboard - Alle können zugreifen */}
-                      <Route path="dashboard" element={<DashboardPage />} />
+                      <Route path="dashboard" element={<Dashboard />} />
 
                       {/* Contratos - Todos podem acessar / Verträge - Alle können zugreifen */}
                       <Route path="contracts" element={<ContractsPage />} />

@@ -156,6 +156,30 @@ def require_min_access_level(user: User, min_level: int) -> None:
         )
 
 
+def has_technical_access(user: User) -> bool:
+    """Prüft, ob der Benutzer technische Systemrechte hat.
+    Verifica se o usuário tem direitos técnicos do sistema.
+    
+    Nur SYSTEM_ADMIN (Level 6) hat Zugriff auf:
+    - Systemkonfigurationen / Configurações do sistema
+    - Integrationen / Integrações
+    - Sicherheitseinstellungen / Configurações de segurança
+    - Logs / Logs
+    - Backups / Backups
+    - Erweiterte Berechtigungen / Permissões avançadas
+    
+    KEIN Zugriff auf Verträge/Reports/Finanzen!
+    SEM acesso a contratos/relatórios/financeiro!
+    
+    Args:
+        user: Benutzerobjekt / Objeto usuário
+        
+    Returns:
+        bool: True wenn SYSTEM_ADMIN / True se SYSTEM_ADMIN
+    """
+    return user.access_level >= AccessLevel.LEVEL_6 and user.role == UserRole.SYSTEM_ADMIN
+
+
 # =============================================================================
 # FUNÇÕES DE PERMISSÃO DE CONTRATOS / CONTRACT PERMISSION FUNCTIONS
 # =============================================================================
@@ -165,13 +189,12 @@ def can_view_contract(user: User, contract: Contract) -> bool:
     Verifica se o usuário pode visualizar o contrato.
     
     Logik / Lógica:
-    - SYSTEM_ADMIN (Level 6): Alles / Tudo
+    - SYSTEM_ADMIN (Level 6): NUR eigenes Team + eigene (KEIN voller Zugriff!) / APENAS time próprio + próprios (SEM acesso total!)
     - DIRECTOR (Level 5): Alles / Tudo
     - DEPARTMENT_ADM (Level 4): Alle Verträge des eigenen Bereichs / Todos contratos do próprio departamento
     - DEPARTMENT_USER (Level 3): Alle Verträge des eigenen Bereichs / Todos contratos do próprio departamento
-    - TEAM_LEAD (Level 2): Verträge des eigenen Teams / Contratos do próprio time
-    - STAFF (Level 2): Verträge des eigenen Teams oder eigene / Contratos do próprio time ou próprios
-    - STAFF (Level 1): Nur eigene Verträge / Apenas contratos próprios
+    - TEAM (Level 2): Verträge des eigenen Teams / Contratos do próprio time
+    - STAFF (Level 1): Nur eigene Verträge (verantwortlich) / Apenas contratos próprios (responsável)
     - READ_ONLY: Je nach Level / Conforme o nível
     
     Args:
@@ -181,10 +204,6 @@ def can_view_contract(user: User, contract: Contract) -> bool:
     Returns:
         bool: True wenn erlaubt / True se permitido
     """
-    # Level 6: SYSTEM_ADMIN - sieht alles
-    if user.access_level >= AccessLevel.LEVEL_6:
-        return True
-    
     # Level 5: DIRECTOR - sieht alles
     if user.access_level >= AccessLevel.LEVEL_5:
         return True
@@ -196,7 +215,8 @@ def can_view_contract(user: User, contract: Contract) -> bool:
     # Level 3: DEPARTMENT_USER - sieht alle Verträge des eigenen Bereichs
     if user.access_level >= AccessLevel.LEVEL_3:
         return contract.department == user.department
-    # Level 2: TEAM_LEAD oder STAFF - sieht Verträge des eigenen Teams
+    
+    # Level 2: TEAM (e Level 6 SYSTEM_ADMIN) - sieht Verträge des eigenen Teams
     if user.access_level >= AccessLevel.LEVEL_2:
         # Kann Team-Verträge sehen
         if contract.team is not None and user.team is not None and contract.team == user.team:
@@ -206,7 +226,9 @@ def can_view_contract(user: User, contract: Contract) -> bool:
             return True
         if contract.responsible_user_id is not None and contract.responsible_user_id == user.id:
             return True
-    # Level 1: Nur eigene Verträge
+        return False
+    
+    # Level 1: Nur eigene Verträge (verantwortlich)
     is_creator = contract.created_by == user.id
     is_responsible = contract.responsible_user_id is not None and contract.responsible_user_id == user.id
     return bool(is_creator or is_responsible)
@@ -217,12 +239,12 @@ def can_edit_contract(user: User, contract: Contract) -> bool:
     Verifica se o usuário pode editar o contrato.
     
     Logik / Lógica:
-    - SYSTEM_ADMIN (Level 6): Alles / Tudo
+    - SYSTEM_ADMIN (Level 6): NUR eigenes Team (KEIN voller Zugriff!) / APENAS time próprio (SEM acesso total!)
     - DIRECTOR (Level 5): Alles / Tudo
     - DEPARTMENT_ADM (Level 4): Alle Verträge des eigenen Bereichs / Todos contratos do próprio departamento
     - DEPARTMENT_USER (Level 3): Alle Verträge des eigenen Bereichs / Todos contratos do próprio departamento
-    - TEAM_LEAD: Verträge des eigenen Teams / Contratos do próprio time
-    - STAFF: Nur eigene Verträge oder Team-Verträge (wenn Level 2) / Apenas próprios ou do time (se Level 2)
+    - TEAM (Level 2): Verträge des eigenen Teams / Contratos do próprio time
+    - STAFF (Level 1): Nichts (nur lesen) / Nada (apenas leitura)
     - READ_ONLY: Nichts / Nada
     
     Args:
@@ -236,10 +258,6 @@ def can_edit_contract(user: User, contract: Contract) -> bool:
     if user.role == UserRole.READ_ONLY:
         return False
     
-    # Level 6: SYSTEM_ADMIN
-    if user.access_level >= AccessLevel.LEVEL_6:
-        return True
-    
     # Level 5: DIRECTOR
     if user.access_level >= AccessLevel.LEVEL_5:
         return True
@@ -249,27 +267,19 @@ def can_edit_contract(user: User, contract: Contract) -> bool:
         return contract.department == user.department
     
     # Level 3: DEPARTMENT_USER - kann alle Verträge des Bereichs bearbeiten
-    # TEAM_LEAD - kann Team-Verträge bearbeiten
-    if user.role == UserRole.TEAM_LEAD:
+    if user.access_level >= AccessLevel.LEVEL_3:
+        return contract.department == user.department
+    
+    # Level 2: TEAM (inclui SYSTEM_ADMIN Level 6) - kann Team-Verträge bearbeiten
+    if user.access_level >= AccessLevel.LEVEL_2:
         if contract.team is not None and user.team is not None and contract.team == user.team:
             return True
-        # Kann eigene bearbeiten
+        # Pode editar próprios
         if contract.created_by == user.id:
-            return True
-    # STAFF Level 2 - kann Team-Verträge und eigene bearbeiten
-    if user.role == UserRole.STAFF and user.access_level >= AccessLevel.LEVEL_2:
-        if contract.team is not None and user.team is not None and contract.team == user.team:
-            return True
-        if contract.created_by == user.id:
-            return True
-    # STAFF Level 1 - nur eigene Verträge
-    if user.role == UserRole.STAFF:
-        if contract.created_by == user.id:
-            return True
-        if contract.responsible_user_id is not None and contract.responsible_user_id == user.id:
             return True
         return False
     
+    # Level 1: STAFF - NÃO pode editar (apenas visualizar próprios)
     return False
 
 
@@ -278,7 +288,7 @@ def can_delete_contract(user: User, contract: Contract) -> bool:
     Verifica se o usuário pode deletar o contrato.
     
     Logik / Lógica:
-    - SYSTEM_ADMIN (Level 6): Alles / Tudo
+    - SYSTEM_ADMIN (Level 6): NEIN (nur technische Rechte) / NÃO (apenas direitos técnicos)
     - DIRECTOR (Level 5): Alles / Tudo
     - DEPARTMENT_ADM (Level 4): Alle Verträge des eigenen Bereichs / Todos contratos do próprio departamento
     - DEPARTMENT_USER (Level 3): Keine Löschrechte / Sem direitos de exclusão
@@ -291,10 +301,6 @@ def can_delete_contract(user: User, contract: Contract) -> bool:
     Returns:
         bool: True wenn erlaubt / True se permitido
     """
-    # Level 6: SYSTEM_ADMIN
-    if user.access_level >= AccessLevel.LEVEL_6:
-        return True
-    
     # Level 5: DIRECTOR
     if user.access_level >= AccessLevel.LEVEL_5:
         return True
@@ -303,6 +309,7 @@ def can_delete_contract(user: User, contract: Contract) -> bool:
     if user.access_level >= AccessLevel.LEVEL_4 and user.role == UserRole.DEPARTMENT_ADM:
         return contract.department == user.department
     
+    # System Admin (Level 6) NÃO pode deletar contratos
     return False
 
 
@@ -311,12 +318,12 @@ def can_approve_contract(user: User, contract: Contract) -> bool:
     Verifica se o usuário pode aprovar o contrato.
     
     Logik / Lógica:
-    - SYSTEM_ADMIN (Level 6): Alles / Tudo
+    - SYSTEM_ADMIN (Level 6): NEIN (nur technische Rechte) / NÃO (apenas direitos técnicos)
     - DIRECTOR (Level 5): Alles (strategisch relevante) / Tudo (estratégicos)
     - DEPARTMENT_ADM (Level 4): Verträge des eigenen Bereichs / Contratos do próprio departamento
     - DEPARTMENT_USER (Level 3): Verträge des eigenen Bereichs / Contratos do próprio departamento
-    - TEAM_LEAD: Verträge des eigenen Teams / Contratos do próprio time
-    - Andere: Keine Genehmigungsrechte / Outros: Sem direitos de aprovação
+    - TEAM (Level 2): NEIN / NÃO
+    - STAFF (Level 1): NEIN / NÃO
     
     Args:
         user: Benutzerobjekt / Objeto usuário
@@ -325,10 +332,6 @@ def can_approve_contract(user: User, contract: Contract) -> bool:
     Returns:
         bool: True wenn erlaubt / True se permitido
     """
-    # Level 6: SYSTEM_ADMIN
-    if user.access_level >= AccessLevel.LEVEL_6:
-        return True
-    
     # Level 5: DIRECTOR - genehmigt strategisch relevante Verträge
     if user.access_level >= AccessLevel.LEVEL_5:
         return True
@@ -341,10 +344,8 @@ def can_approve_contract(user: User, contract: Contract) -> bool:
     if user.access_level >= AccessLevel.LEVEL_3 and user.role == UserRole.DEPARTMENT_USER:
         return contract.department == user.department
     
-    # TEAM_LEAD - genehmigt Team-Verträge
-    if user.role == UserRole.TEAM_LEAD:
-        return contract.team is not None and user.team is not None and contract.team == user.team
-    
+    # Level 2 e 1 NÃO aprovam contratos
+    # System Admin (Level 6) NÃO aprova contratos (apenas técnico)
     return False
 
 
@@ -357,10 +358,10 @@ def can_manage_users(user: User, target_user: Optional[User] = None) -> bool:
     Verifica se o usuário pode gerenciar outros usuários.
     
     Logik / Lógica:
-    - SYSTEM_ADMIN (Level 6): Alle Benutzer / Todos usuários
-    - DIRECTOR (Level 5): Alle Benutzer / Todos usuários
+    - SYSTEM_ADMIN (Level 6): JA (técnico, pode gerenciar usuários do sistema) / SIM (técnico, pode gerenciar usuários do sistema)
+    - DIRECTOR (Level 5): Alle Benutzer in allen Bereichen / Todos usuários em todos setores
     - DEPARTMENT_ADM (Level 4): Benutzer des eigenen Bereichs / Usuários do próprio departamento
-    - DEPARTMENT_USER (Level 3): Benutzer des eigenen Bereichs (eingeschränkt) / Usuários do próprio departamento (restrito)
+    - DEPARTMENT_USER (Level 3): Benutzer des eigenen Bereichs (eingeschränkt bis Level 3) / Usuários do próprio departamento (restrito até Level 3)
     - Andere: Keine Verwaltungsrechte / Outros: Sem direitos de gerenciamento
     
     Args:
@@ -370,7 +371,7 @@ def can_manage_users(user: User, target_user: Optional[User] = None) -> bool:
     Returns:
         bool: True wenn erlaubt / True se permitido
     """
-    # Level 6: SYSTEM_ADMIN - kann alle Benutzer verwalten
+    # Level 6: SYSTEM_ADMIN - kann alle Benutzer verwalten (technisches Recht)
     if user.access_level >= AccessLevel.LEVEL_6:
         return True
     
@@ -399,8 +400,8 @@ def can_set_user_role(user: User, target_role: UserRole, target_level: int) -> b
     Verifica se o usuário pode definir uma função e nível específicos.
     
     Logik / Lógica:
-    - SYSTEM_ADMIN (Level 6): Alle Rollen und Levels / Todas funções e níveis
-    - DIRECTOR (Level 5): Alle Rollen bis Level 5 / Todas funções até nível 5
+    - SYSTEM_ADMIN (Level 6): Alle Rollen und Levels (technisches Recht) / Todas funções e níveis (direito técnico)
+    - DIRECTOR (Level 5): Alle Rollen in allen Bereichen / Todas funções em todos setores
     - DEPARTMENT_ADM (Level 4): Rollen bis Level 4 / Funções até nível 4
     - DEPARTMENT_USER (Level 3): Rollen bis Level 3 / Funções até nível 3
     - Andere: Keine Rechte / Outros: Sem direitos
@@ -413,13 +414,13 @@ def can_set_user_role(user: User, target_role: UserRole, target_level: int) -> b
     Returns:
         bool: True wenn erlaubt / True se permitido
     """
-    # Level 6: SYSTEM_ADMIN - kann alles setzen
+    # Level 6: SYSTEM_ADMIN - kann alles setzen (technisches Recht)
     if user.access_level >= AccessLevel.LEVEL_6:
         return True
     
-    # Level 5: DIRECTOR - kann bis Level 5 setzen
+    # Level 5: DIRECTOR - kann alle Rollen und Levels setzen
     if user.access_level >= AccessLevel.LEVEL_5:
-        return target_level <= AccessLevel.LEVEL_5
+        return True
     
     # Level 4: DEPARTMENT_ADM - kann bis Level 4 setzen
     if user.access_level >= AccessLevel.LEVEL_4 and user.role == UserRole.DEPARTMENT_ADM:
@@ -437,10 +438,11 @@ def can_access_reports(user: User, include_financials: bool = False) -> bool:
     Verifica se o usuário pode acessar relatórios.
     
     Logik / Lógica:
-    - SYSTEM_ADMIN (Level 6): Alle Reports / Todos relatórios
-    - DIRECTOR (Level 5): Alle Reports / Todos relatórios
+    - SYSTEM_ADMIN (Level 6): KEINE Reports (nur technische Rechte) / SEM relatórios (apenas direitos técnicos)
+    - DIRECTOR (Level 5): Alle Reports mit Finanzinformationen / Todos relatórios com informações financeiras
     - DEPARTMENT_ADM (Level 4): Vollständige Reports des Bereichs / Relatórios completos do departamento
-    - DEPARTMENT_USER (Level 3): Eingeschränkte Reports (ohne Beträge) / Relatórios restritos (sem valores)
+    - DEPARTMENT_USER (Level 3): Eingeschränkte Reports (ohne Werte) / Relatórios restritos (sem valores)
+    - TEAM (Level 2): KEINE Reports / SEM relatórios
     - Andere: Keine Reports / Outros: Sem relatórios
     
     Args:
@@ -450,11 +452,7 @@ def can_access_reports(user: User, include_financials: bool = False) -> bool:
     Returns:
         bool: True wenn erlaubt / True se permitido
     """
-    # Level 6: SYSTEM_ADMIN
-    if user.access_level >= AccessLevel.LEVEL_6:
-        return True
-    
-    # Level 5: DIRECTOR
+    # Level 5: DIRECTOR - volle Reports
     if user.access_level >= AccessLevel.LEVEL_5:
         return True
     
@@ -462,10 +460,12 @@ def can_access_reports(user: User, include_financials: bool = False) -> bool:
     if user.access_level >= AccessLevel.LEVEL_4 and user.role == UserRole.DEPARTMENT_ADM:
         return True
     
-    # Level 3: DEPARTMENT_USER - eingeschränkte Reports (keine Beträge)
+    # Level 3: DEPARTMENT_USER - eingeschränkte Reports (keine Finanzwerte)
     if user.access_level >= AccessLevel.LEVEL_3 and user.role == UserRole.DEPARTMENT_USER:
         return not include_financials
     
+    # System Admin (Level 6) NÃO tem acesso a relatórios (apenas técnico)
+    # Level 2 (TEAM) NÃO tem acesso a relatórios
     return False
 
 
@@ -526,7 +526,8 @@ def require_view_original(user: User, owner_id: int) -> None:
     Permite acesso ao PDF original de um contrato.
     
     Logik / Lógica:
-    - SYSTEM_ADMIN, DIRECTOR: Alle Originale / Todos originais
+    - SYSTEM_ADMIN (Level 6): Nur eigenes Team / Apenas time próprio
+    - DIRECTOR (Level 5): Alle Originale / Todos originais
     - DEPARTMENT_ADM, DEPARTMENT_USER: Originale des eigenen Bereichs / Originais do próprio departamento
     - Ersteller: Eigene Originale / Próprios originais
     
@@ -534,13 +535,17 @@ def require_view_original(user: User, owner_id: int) -> None:
         user: Benutzerobjekt / Objeto usuário
         owner_id: ID des Vertragserstellers / ID do criador do contrato
     """
-    # Level 5+: DIRECTOR, SYSTEM_ADMIN
+    # Level 5: DIRECTOR
     if user.access_level >= AccessLevel.LEVEL_5:
         return
     
-    # Level 3+: DEPARTMENT_USER, DEPARTMENT_ADM
+    # Level 3+: DEPARTMENT_USER, DEPARTMENT_ADM (e Level 6 SYSTEM_ADMIN para time próprio)
     if user.access_level >= AccessLevel.LEVEL_3:
         return  # Bereichszugriff wird in der Hauptlogik geprüft
+    
+    # Level 2: TEAM (inclui SYSTEM_ADMIN Level 6)
+    if user.access_level >= AccessLevel.LEVEL_2:
+        return  # Team-Zugriff wird in der Hauptlogik geprüft
     
     # Eigene Verträge
     if user.id == owner_id:
