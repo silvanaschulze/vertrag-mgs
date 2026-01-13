@@ -952,11 +952,25 @@ export const darkTheme = createTheme({
 - [ ] Header com user info
 - [ ] uiStore (sidebar, theme)
 
-### Dashboard
-- [ ] Endpoint backend /api/dashboard/stats
-- [ ] dashboardApi.js
-- [ ] 6 componentes de dashboard (um por role)
-- [ ] Dashboard.jsx (renderiza correto)
+### Dashboard ✅ SPRINT 2 CONCLUÍDA
+- [x] Endpoint backend /api/dashboard/stats
+- [x] dashboardApi.js
+- [x] 6 componentes de dashboard (um por role)
+  - [x] DashboardSystemAdmin.jsx (Level 6 - Technical only)
+  - [x] DashboardDirector.jsx (Level 5 - Company wide)
+  - [x] DashboardDepartmentAdm.jsx (Level 4 - Department with finance)
+  - [x] DashboardDepartmentUser.jsx (Level 3 - Department without finance)
+  - [x] DashboardTeamLead.jsx (Level 2 - Team contracts)
+  - [x] DashboardStaff.jsx (Level 1 - Own contracts only)
+- [x] Dashboard.jsx (renderiza correto)
+- [x] Correções de permissões (Level 6 = technical only, NO contracts)
+- [x] Backend schemas (DashboardStats with Optional fields)
+- [x] Backend services (6 role-specific methods)
+- [x] Backend routers (GET /api/dashboard/stats)
+- [x] Frontend API integration (dashboardApi.js)
+- [x] Teste com usuários Level 5 e 6 (director@test.com, admin@test.com)
+- [x] Tradução de todos dashboards para inglês (standardização)
+- **Data de conclusão:** Janeiro 2025
 
 ### Contratos
 - [ ] ContractTable (DataGrid)

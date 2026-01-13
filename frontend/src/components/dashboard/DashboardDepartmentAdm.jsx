@@ -81,8 +81,8 @@ export default function DashboardDepartmentAdm() {
         const data = await dashboardApi.getStats();
         setStats(data);
       } catch (err) {
-        console.error('Erro ao carregar estatísticas:', err);
-        setError('Erro ao carregar estatísticas do dashboard.');
+        console.error('Error loading statistics:', err);
+        setError('Error loading dashboard statistics.');
       } finally {
         setLoading(false);
       }
@@ -123,30 +123,30 @@ export default function DashboardDepartmentAdm() {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Cabeçalho */}
+      {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ mb: 0.5, fontWeight: 600 }}>
-            Dashboard Administrativo
+            Administrative Dashboard
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            {stats?.department_name && `Departamento: ${stats.department_name}`}
+            {stats?.department_name && `Department: ${stats.department_name}`}
           </Typography>
         </Box>
         <Chip 
-          label="Admin Departamento" 
+          label="Department Admin" 
           color="primary" 
           icon={<PeopleIcon />}
         />
       </Box>
 
-      {/* Cards de Estatísticas - Linha 1 */}
+      {/* Statistics Cards - Row 1 */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Total Contratos"
+            title="Total Contracts"
             value={stats?.total_contracts}
-            subtitle="Departamento"
+            subtitle="Department"
             icon={ContractIcon}
             color="primary"
           />
@@ -154,9 +154,9 @@ export default function DashboardDepartmentAdm() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Contratos Ativos"
+            title="Active Contracts"
             value={stats?.active_contracts}
-            subtitle="Em andamento"
+            subtitle="In progress"
             icon={CheckCircle}
             color="success"
           />
@@ -164,9 +164,9 @@ export default function DashboardDepartmentAdm() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Valor Mensal"
+            title="Monthly Value"
             value={stats?.monthly_value}
-            subtitle="Total ativo"
+            subtitle="Active total"
             icon={MoneyIcon}
             color="success"
             isCurrency={true}
@@ -175,22 +175,22 @@ export default function DashboardDepartmentAdm() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Usuários Depto"
+            title="Department Users"
             value={stats?.department_users}
-            subtitle="Membros da equipe"
+            subtitle="Team members"
             icon={PeopleIcon}
             color="info"
           />
         </Grid>
       </Grid>
 
-      {/* Cards de Estatísticas - Linha 2 */}
+      {/* Statistics Cards - Row 2 */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Expirando 30 Dias"
+            title="Expiring in 30 Days"
             value={stats?.expiring_30_days}
-            subtitle="Ação necessária"
+            subtitle="Action needed"
             icon={WarningIcon}
             color="warning"
           />
@@ -198,9 +198,9 @@ export default function DashboardDepartmentAdm() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Expirando 90 Dias"
+            title="Expiring in 90 Days"
             value={stats?.expiring_90_days}
-            subtitle="Monitoramento"
+            subtitle="Monitoring"
             icon={WarningIcon}
             color="warning"
           />
@@ -208,7 +208,7 @@ export default function DashboardDepartmentAdm() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Alertas"
+            title="Alerts"
             value={stats?.unread_alerts}
             subtitle={`${stats?.total_alerts || 0} total`}
             icon={AlertIcon}
@@ -218,23 +218,23 @@ export default function DashboardDepartmentAdm() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Aprovações"
+            title="Approvals"
             value={stats?.pending_approvals}
-            subtitle="Aguardando"
+            subtitle="Waiting"
             icon={ApprovalIcon}
             color="info"
           />
         </Grid>
       </Grid>
 
-      {/* Gráficos */}
+      {/* Charts */}
       <Grid container spacing={3}>
-        {/* Gráfico de Status */}
+        {/* Status Chart */}
         <Grid item xs={12} md={6}>
           <Card elevation={3}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Contratos por Status
+                Contracts by Status
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {statusData.length > 0 ? (
@@ -259,18 +259,18 @@ export default function DashboardDepartmentAdm() {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <Typography variant="body2" color="text.secondary">Nenhum dado disponível</Typography>
+                <Typography variant="body2" color="text.secondary">No data available</Typography>
               )}
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Gráfico de Tipos */}
+        {/* Types Chart */}
         <Grid item xs={12} md={6}>
           <Card elevation={3}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Contratos por Tipo
+                Contracts by Type
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {typeData.length > 0 ? (
@@ -285,41 +285,41 @@ export default function DashboardDepartmentAdm() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <Typography variant="body2" color="text.secondary">Nenhum dado disponível</Typography>
+                <Typography variant="body2" color="text.secondary">No data available</Typography>
               )}
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Informações Adicionais */}
+        {/* Additional Information */}
         <Grid item xs={12}>
           <Card elevation={1}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Suas Permissões Administrativas
+                Your Administrative Permissions
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Visualizar e editar todos contratos do departamento
+                    ✅ View and edit all department contracts
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Aprovar contratos do departamento
+                    ✅ Approve department contracts
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Acessar relatórios completos com valores financeiros
+                    ✅ Access complete reports with financial values
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Criar e gerenciar usuários do departamento
+                    ✅ Create and manage department users
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Definir roles até nível 4
+                    ✅ Define roles up to level 4
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ❌ Acessar outros departamentos (solicitar à Diretoria)
+                    ❌ Access other departments (request from Board)
                   </Typography>
                 </Grid>
               </Grid>

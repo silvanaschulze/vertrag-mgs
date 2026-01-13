@@ -135,14 +135,14 @@ export default function DashboardDirector() {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Cabeçalho Executivo */}
+      {/* Executive Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ mb: 0.5, fontWeight: 600 }}>
             Executive Dashboard
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Unternehmensübersicht • Company Overview
+            Company Overview
           </Typography>
         </Box>
         <Chip 
@@ -152,13 +152,13 @@ export default function DashboardDirector() {
         />
       </Box>
 
-      {/* KPIs Principais - Linha 1 */}
+      {/* Main KPIs - Row 1 */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Verträge Gesamt"
+            title="Total Contracts"
             value={stats?.total_contracts}
-            subtitle="Im gesamten Unternehmen"
+            subtitle="Across entire company"
             icon={ContractIcon}
             color="primary"
           />
@@ -166,9 +166,9 @@ export default function DashboardDirector() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Aktive Verträge"
+            title="Active Contracts"
             value={stats?.active_contracts}
-            subtitle="Laufend"
+            subtitle="In progress"
             icon={TrendIcon}
             color="success"
           />
@@ -176,9 +176,9 @@ export default function DashboardDirector() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Monatswert Gesamt"
+            title="Total Monthly Value"
             value={stats?.monthly_value}
-            subtitle="Wiederkehrende Einnahmen"
+            subtitle="Recurring revenue"
             icon={MoneyIcon}
             color="success"
             isCurrency={true}
@@ -187,22 +187,22 @@ export default function DashboardDirector() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Benutzer Gesamt"
+            title="Total Users"
             value={stats?.total_users}
-            subtitle="Auf der Plattform"
+            subtitle="On platform"
             icon={PeopleIcon}
             color="info"
           />
         </Grid>
       </Grid>
 
-      {/* KPIs Secundários - Linha 2 */}
+      {/* Secondary KPIs - Row 2 */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Ablauf 30 Tage"
+            title="Expiring in 30 Days"
             value={stats?.expiring_30_days}
-            subtitle="Sofortige Aufmerksamkeit"
+            subtitle="Immediate attention"
             icon={WarningIcon}
             color="warning"
           />
@@ -210,9 +210,9 @@ export default function DashboardDirector() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Ablauf 90 Tage"
+            title="Expiring in 90 Days"
             value={stats?.expiring_90_days}
-            subtitle="Planung"
+            subtitle="Planning"
             icon={WarningIcon}
             color="warning"
           />
@@ -220,9 +220,9 @@ export default function DashboardDirector() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Offene Warnungen"
+            title="Pending Alerts"
             value={stats?.unread_alerts}
-            subtitle={`${stats?.total_alerts || 0} gesamt`}
+            subtitle={`${stats?.total_alerts || 0} total`}
             icon={AlertIcon}
             color="error"
           />
@@ -230,23 +230,23 @@ export default function DashboardDirector() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Genehmigungen"
+            title="Approvals"
             value={stats?.pending_approvals}
-            subtitle="Warten auf Entscheidung"
+            subtitle="Awaiting decision"
             icon={ApprovalIcon}
             color="info"
           />
         </Grid>
       </Grid>
 
-      {/* Gráficos Executivos */}
+      {/* Executive Charts */}
       <Grid container spacing={3}>
-        {/* Contratos por Departamento */}
+        {/* Contracts by Department */}
         <Grid item xs={12} md={6}>
           <Card elevation={3}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Verträge nach Abteilung
+                Contracts by Department
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {departmentData.length > 0 ? (
@@ -261,18 +261,18 @@ export default function DashboardDirector() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <Typography variant="body2" color="text.secondary">Keine Daten verfügbar</Typography>
+                <Typography variant="body2" color="text.secondary">No data available</Typography>
               )}
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Contratos por Status */}
+        {/* Contracts by Status */}
         <Grid item xs={12} md={6}>
           <Card elevation={3}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Verteilung nach Status
+                Distribution by Status
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {statusData.length > 0 ? (
@@ -297,18 +297,18 @@ export default function DashboardDirector() {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <Typography variant="body2" color="text.secondary">Keine Daten verfügbar</Typography>
+                <Typography variant="body2" color="text.secondary">No data available</Typography>
               )}
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Contratos por Tipo */}
+        {/* Contracts by Type */}
         <Grid item xs={12} md={6}>
           <Card elevation={3}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Vertragstypen
+                Contract Types
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {typeData.length > 0 ? (
@@ -323,36 +323,36 @@ export default function DashboardDirector() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <Typography variant="body2" color="text.secondary">Keine Daten verfügbar</Typography>
+                <Typography variant="body2" color="text.secondary">No data available</Typography>
               )}
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Permissões e Informações */}
+        {/* Permissions and Information */}
         <Grid item xs={12} md={6}>
           <Card elevation={1}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Vollständiger Executive-Zugriff
+                Complete Executive Access
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Grid container spacing={1}>
                 <Grid item xs={12}>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Alle Verträge des Unternehmens einsehen
+                    ✅ View all company contracts
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Strategische Verträge genehmigen
+                    ✅ Approve strategic contracts
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Alle Berichte mit Finanzwerten einsehen
+                    ✅ Access all reports with financial values
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Benutzer und Rollen in allen Bereichen verwalten
+                    ✅ Manage users and roles in all sectors
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Alle Zugriffsebenen definieren (1-5)
+                    ✅ Define all access levels (1-5)
                   </Typography>
                 </Grid>
               </Grid>

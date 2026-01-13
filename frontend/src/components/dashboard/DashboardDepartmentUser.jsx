@@ -74,8 +74,8 @@ export default function DashboardDepartmentUser() {
         const data = await dashboardApi.getStats();
         setStats(data);
       } catch (err) {
-        console.error('Erro ao carregar estatísticas:', err);
-        setError('Erro ao carregar estatísticas do dashboard.');
+        console.error('Error loading statistics:', err);
+        setError('Error loading dashboard statistics.');
       } finally {
         setLoading(false);
       }
@@ -109,31 +109,31 @@ export default function DashboardDepartmentUser() {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Cabeçalho */}
+      {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ mb: 0.5, fontWeight: 600 }}>
-            Dashboard do Departamento
+            Department Dashboard
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            {stats?.department_name && `Departamento: ${stats.department_name}`}
+            {stats?.department_name && `Department: ${stats.department_name}`}
           </Typography>
         </Box>
         <Chip 
-          label="Usuário Departamento" 
+          label="Department User" 
           color="primary" 
           variant="outlined"
           icon={<DepartmentIcon />}
         />
       </Box>
 
-      {/* Cards de Estatísticas */}
+      {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Total Contratos"
+            title="Total Contracts"
             value={stats?.total_contracts}
-            subtitle="Departamento"
+            subtitle="Department"
             icon={ContractIcon}
             color="primary"
           />
@@ -141,9 +141,9 @@ export default function DashboardDepartmentUser() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Contratos Ativos"
+            title="Active Contracts"
             value={stats?.active_contracts}
-            subtitle="Em andamento"
+            subtitle="In progress"
             icon={CheckCircle}
             color="success"
           />
@@ -151,9 +151,9 @@ export default function DashboardDepartmentUser() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Expirando 30 Dias"
+            title="Expiring in 30 Days"
             value={stats?.expiring_30_days}
-            subtitle="Requerem renovação"
+            subtitle="Require renewal"
             icon={WarningIcon}
             color="warning"
           />
@@ -161,20 +161,20 @@ export default function DashboardDepartmentUser() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Aprovações Pendentes"
+            title="Pending Approvals"
             value={stats?.pending_approvals}
-            subtitle="Aguardando aprovação"
+            subtitle="Waiting approval"
             icon={ApprovalIcon}
             color="info"
           />
         </Grid>
       </Grid>
 
-      {/* Linha 2 - Alertas e Expirando 90 dias */}
+      {/* Row 2 - Alerts and Expiring 90 days */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Alertas Não Lidos"
+            title="Unread Alerts"
             value={stats?.unread_alerts}
             subtitle={`${stats?.total_alerts || 0} total`}
             icon={AlertIcon}
@@ -184,22 +184,22 @@ export default function DashboardDepartmentUser() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Expirando 90 Dias"
+            title="Expiring in 90 Days"
             value={stats?.expiring_90_days}
-            subtitle="Monitoramento"
+            subtitle="Monitoring"
             icon={WarningIcon}
             color="warning"
           />
         </Grid>
       </Grid>
 
-      {/* Gráficos */}
+      {/* Charts */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
           <Card elevation={3}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Status dos Contratos
+                Contract Status
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {statusData.length > 0 ? (
@@ -225,7 +225,7 @@ export default function DashboardDepartmentUser() {
                 </ResponsiveContainer>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  Nenhum dado disponível
+                  No data available
                 </Typography>
               )}
             </CardContent>
@@ -236,27 +236,27 @@ export default function DashboardDepartmentUser() {
           <Card elevation={1} sx={{ mb: 2 }}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Suas Permissões
+                Your Permissions
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="body2" color="text.secondary" paragraph>
-                ✅ Visualizar contratos do departamento
+                ✅ View department contracts
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                ✅ Aprovar contratos do departamento
+                ✅ Approve department contracts
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                ✅ Acessar relatórios (sem valores financeiros)
+                ✅ Access reports (without financial values)
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                ✅ Criar e gerenciar usuários até nível 3
+                ✅ Create and manage users up to level 3
               </Typography>
             </CardContent>
           </Card>
 
           <Alert severity="info">
-            <strong>Nota:</strong> Você tem acesso a relatórios limitados sem valores financeiros. 
-            Para acessar relatórios completos, solicite ao gestor do departamento.
+            <strong>Note:</strong> You have access to limited reports without financial values. 
+            To access complete reports, request from the department manager.
           </Alert>
         </Grid>
       </Grid>

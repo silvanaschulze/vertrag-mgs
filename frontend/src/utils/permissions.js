@@ -31,16 +31,13 @@ export const ROLE_PERMISSIONS = {
   SYSTEM_ADMIN: {
     level: 6,
     permissions: [
-      'contracts:*',
       'users:*',
       'alerts:*',
       'system:config',
       'system:logs',
-      'system:backups',
-      'approvals:*',
-      'reports:*'
+      'system:backups'
     ],
-    menu: ['dashboard', 'contracts', 'import', 'alerts', 'users', 'approvals', 'system']
+    menu: ['dashboard', 'alerts', 'users', 'system']
   },
   
   DIRECTOR: {
@@ -118,15 +115,24 @@ export const ROLE_PERMISSIONS = {
 };
 
 /**
+ * Normaliza role para uppercase (backend retorna lowercase)
+ * Normalisiert Rolle zu Großbuchstaben (Backend gibt Kleinbuchstaben zurück)
+ */
+const normalizeRole = (role) => {
+  if (!role) return null;
+  return role.toUpperCase();
+};
+
+/**
  * Verifica se usuário tem permissão específica
  * Prüft, ob Benutzer eine bestimmte Berechtigung hat
  * 
- * @param {string} userRole - Role do usuário (ex: 'SYSTEM_ADMIN')
+ * @param {string} userRole - Role do usuário (ex: 'SYSTEM_ADMIN' ou 'system_admin')
  * @param {string} permission - Permissão a verificar (ex: 'contracts:edit_all')
  * @returns {boolean} True se tem permissão
  */
 export const hasPermission = (userRole, permission) => {
-  const roleConfig = ROLE_PERMISSIONS[userRole];
+  const roleConfig = ROLE_PERMISSIONS[normalizeRole(userRole)];
   if (!roleConfig) return false;
   
   // Wildcard: se tem '*', pode tudo
@@ -149,7 +155,7 @@ export const hasPermission = (userRole, permission) => {
  * @returns {boolean} True se pode ver
  */
 export const canAccessMenu = (userRole, menuItem) => {
-  const roleConfig = ROLE_PERMISSIONS[userRole];
+  const roleConfig = ROLE_PERMISSIONS[normalizeRole(userRole)];
   return roleConfig?.menu.includes(menuItem) || false;
 };
 
@@ -161,6 +167,6 @@ export const canAccessMenu = (userRole, menuItem) => {
  * @returns {number} Access level (1-6)
  */
 export const getAccessLevel = (userRole) => {
-  const roleConfig = ROLE_PERMISSIONS[userRole];
+  const roleConfig = ROLE_PERMISSIONS[normalizeRole(userRole)];
   return roleConfig?.level || 0;
 };

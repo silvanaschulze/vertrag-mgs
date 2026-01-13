@@ -40,8 +40,38 @@ class ContractType(str, Enum):
     PRODUCT = "produkt"
     EMPLOYMENT = "beschäftigung"
     LEASE = "miete"
+    PACHT = "pacht"
     PARTNERSHIP = "partnerschaft"
     OTHER = "sonstiges"
+
+#enum für Rechtsformen
+class LegalForm(str, Enum):
+    """Rechtsformen für Unternehmen / Formas jurídicas"""
+    GMBH = "gmbh"
+    UG = "ug"
+    AG = "ag"
+    KG = "kg"
+    OHG = "ohg"
+    GBR = "gbr"
+    EK = "ek"
+    EV = "ev"
+    KGAA = "kgaa"
+    GMBH_CO_KG = "gmbh_co_kg"
+    PARTG = "partg"
+    STIFTUNG = "stiftung"
+    GENOSSENSCHAFT = "genossenschaft"
+    SE = "se"
+    OTHER = "sonstiges"
+
+#enum für Zahlungsfrequenz
+class PaymentFrequency(str, Enum):
+    """Zahlungsfrequenz / Payment frequency"""
+    MONTHLY = "monatlich"
+    QUARTERLY = "vierteljährlich"
+    SEMI_ANNUAL = "halbjährlich"
+    ANNUAL = "jährlich"
+    CUSTOM_YEARS = "alle_x_jahre"
+    ONE_TIME = "einmalig"
 
 #basisschema mit gemeinsamen feldern
 class ContractBase(BaseModel):
@@ -54,6 +84,8 @@ class ContractBase(BaseModel):
    #Finanzfelder
     value: Optional[Decimal] = Field (None, ge=0, description="")
     currency: str =Field(default="EUR", min_length=3, max_length=3, description="Währungscode (ISO 4217)")
+    payment_frequency: Optional[PaymentFrequency] = Field(None, description="Zahlungsfrequenz / Payment frequency")
+    payment_custom_years: Optional[int] = Field(None, ge=1, le=100, description="Anzahl Jahre für 'alle X Jahre' Option")
 
     #Datumsfelder
     start_date: date=Field(..., description="Vertragsbeginn")
@@ -63,6 +95,8 @@ class ContractBase(BaseModel):
 
     #Beteiligte Parteien
     client_name: str = Field(..., min_length=2, max_length=200, description="Kunden-/Auftragnehmername") #z.B. Firma oder Einzelperso
+    company_name: Optional[str] = Field(None, min_length=2, max_length=200, description="Firmenname / Nome da empresa")
+    legal_form: Optional[LegalForm] = Field(None, description="Rechtsform / Forma jurídica")
     client_document: Optional[str] = Field(None, max_length=20, description="Kundendokument") #z.B. Steuernummer, Handelsregisternummer
     client_address: Optional[str] = Field(None, max_length=300, description="Kundenadresse (Rechnungsadresse)")
     client_email: Optional[str] = Field(None, max_length=100, description="Kunden-E-Mail")
@@ -199,6 +233,7 @@ class ContractResponse(ContractBase):
     """Schema für Vertragsdaten in API-Antworten"""
     id: int = Field(..., description="Eindeutige Vertrags-ID")
     created_by: int = Field(..., description="Benutzer-ID, die den Vertrag erstellt hat")
+    created_by_name: Optional[str] = Field(None, description="Name des Benutzers, der den Vertrag erstellt hat")
     created_at: datetime = Field(..., description="Vertragserstellungszeitstempel")
     updated_at: Optional[datetime] = Field(None, description="Zeitstempel der letzten Aktualisierung")
     # Mietstaffelungen (zukünftige Anpassungen)

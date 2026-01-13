@@ -142,20 +142,20 @@ async def list_contracts(
 @router.post("/", response_model=ContractResponse, status_code=status.HTTP_201_CREATED)
 async def create_contract(    
     contract: ContractCreate,
-    created_by: int = Query(..., description="ID des Benutzers, der den Vertrag erstellt"),
+    current_user: User = Depends(get_current_active_user),
     contract_service: ContractService = Depends(get_contract_service)
 ):
     """
     Erstellt einen neuen Vertrag.
     Argumente:
         contract (ContractCreate): Vertragsdaten
-        created_by (int): ID des Benutzers, der den Vertrag erstellt
+        current_user (User): Aktueller authentifizierter Benutzer
         contract_service (ContractService): Dienst für Vertragsoperationen
     Rückgabe:
         ContractResponse: Erstellter Vertrag
     """
     try:
-        created = await contract_service.create_contract(contract, created_by)
+        created = await contract_service.create_contract(contract, current_user.id)
 
         # Wenn Extraktions-Metadaten vorhanden sind, automatisch die Datei anhängen und verschieben
         try:

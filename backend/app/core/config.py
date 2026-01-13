@@ -32,7 +32,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: Annotated[int, Field(description="Default expiration time for access tokens in minutes.")] = 30
     REFRESH_TOKEN_EXPIRE_DAYS: Annotated[int, Field(description="Default expiration time for refresh tokens in days.")] = 7
 
-    SQLALCHEMY_DATABASE_URI: Annotated[str, Field(description="Database connection string.")] = "sqlite+aiosqlite:///./contracts.db"
+    # Usar banco da raiz onde estão os 252 contratos existentes
+    SQLALCHEMY_DATABASE_URI: Annotated[str, Field(description="Database connection string.")] = "sqlite+aiosqlite:////home/sschulze/projects/vertrag-mgs/contracts.db"
 
     # listas com default_factory (mantém Field, agora visível para type checker)
     BACKEND_CORS_ORIGINS: Annotated[

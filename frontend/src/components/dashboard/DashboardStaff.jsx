@@ -1,17 +1,11 @@
 /**
- * Dashboard STAFF (Level 1) - Dashboard für Mitarbeiter
+ * Dashboard STAFF (Level 1) - Employee Dashboard
  * 
- * Dashboard mais simples:
- * - 3 cards com estatísticas básicas
- * - Apenas contratos próprios
- * - SEM gráficos
- * - SEM valores financeiros
- * 
- * Einfachstes Dashboard:
- * - 3 Karten mit grundlegenden Statistiken
- * - Nur eigene Verträge
- * - KEINE Diagramme
- * - KEINE Finanzwerte
+ * Simplest dashboard:
+ * - 3 cards with basic statistics
+ * - Only own contracts
+ * - NO charts
+ * - NO financial values
  */
 
 import { useState, useEffect } from 'react';
@@ -32,8 +26,7 @@ import {
 import dashboardApi from '../../services/dashboardApi';
 
 /**
- * Componente de Card com Estatística
- * Statistikkarte-Komponente
+ * Statistics Card Component
  */
 function StatCard({ title, value, subtitle, icon: Icon, color = 'primary' }) {
   return (
@@ -59,8 +52,7 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'primary' }) {
 }
 
 /**
- * Dashboard para STAFF (Level 1)
- * Dashboard für STAFF (Level 1)
+ * Dashboard for STAFF (Level 1)
  */
 export default function DashboardStaff() {
   const [stats, setStats] = useState(null);
@@ -68,8 +60,7 @@ export default function DashboardStaff() {
   const [error, setError] = useState(null);
 
   /**
-   * Buscar estatísticas do backend
-   * Statistiken vom Backend abrufen
+   * Fetch statistics from backend
    */
   useEffect(() => {
     const fetchStats = async () => {
@@ -79,8 +70,8 @@ export default function DashboardStaff() {
         const data = await dashboardApi.getStats();
         setStats(data);
       } catch (err) {
-        console.error('Erro ao carregar estatísticas:', err);
-        setError('Erro ao carregar estatísticas do dashboard. Tente novamente mais tarde.');
+        console.error('Error loading statistics:', err);
+        setError('Error loading dashboard statistics. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -107,61 +98,57 @@ export default function DashboardStaff() {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Cabeçalho / Kopfzeile */}
+      {/* Header */}
       <Typography variant="h4" sx={{ mb: 3, fontWeight: 600 }}>
-        Meus Contratos
+        My Contracts
         <Typography component="span" variant="body1" color="text.secondary" sx={{ ml: 2 }}>
-          Mitarbeiter Dashboard
+          Employee Dashboard
         </Typography>
       </Typography>
 
-      {/* Cards de Estatísticas / Statistikkarten */}
+      {/* Statistics Cards */}
       <Grid container spacing={3}>
-        {/* Total de Contratos */}
+        {/* Total Contracts */}
         <Grid item xs={12} md={4}>
           <StatCard
-            title="Meus Contratos"
+            title="My Contracts"
             value={stats?.total_contracts}
-            subtitle="Total de contratos onde sou responsável"
+            subtitle="Total contracts where I'm responsible"
             icon={ContractIcon}
             color="primary"
           />
         </Grid>
 
-        {/* Contratos Expirando */}
+        {/* Expiring Contracts */}
         <Grid item xs={12} md={4}>
           <StatCard
-            title="Expirando em 30 Dias"
+            title="Expiring in 30 Days"
             value={stats?.expiring_30_days}
-            subtitle="Contratos que vencem em breve"
+            subtitle="Contracts expiring soon"
             icon={WarningIcon}
             color="warning"
           />
         </Grid>
 
-        {/* Alertas */}
+        {/* Alerts */}
         <Grid item xs={12} md={4}>
           <StatCard
-            title="Meus Alertas"
+            title="My Alerts"
             value={stats?.unread_alerts}
-            subtitle={`${stats?.total_alerts || 0} alertas no total`}
+            subtitle={`${stats?.total_alerts || 0} total alerts`}
             icon={AlertIcon}
             color="info"
           />
         </Grid>
       </Grid>
 
-      {/* Informação Adicional / Zusätzliche Informationen */}
+      {/* Additional Information */}
       <Box sx={{ mt: 4 }}>
         <Card elevation={1}>
           <CardContent>
             <Typography variant="body2" color="text.secondary">
-              <strong>Dica:</strong> Você tem acesso apenas aos contratos onde é responsável. 
-              Para criar novos contratos ou acessar relatórios, solicite permissões ao seu gestor.
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              <strong>Tipp:</strong> Sie haben nur Zugriff auf Verträge, für die Sie verantwortlich sind.
-              Um neue Verträge zu erstellen oder auf Berichte zuzugreifen, fordern Sie Berechtigungen von Ihrem Manager an.
+              <strong>Tip:</strong> You only have access to contracts where you are responsible. 
+              To create new contracts or access reports, request permissions from your manager.
             </Typography>
           </CardContent>
         </Card>

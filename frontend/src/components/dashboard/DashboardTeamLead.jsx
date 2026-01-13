@@ -74,8 +74,8 @@ export default function DashboardTeamLead() {
         const data = await dashboardApi.getStats();
         setStats(data);
       } catch (err) {
-        console.error('Erro ao carregar estatísticas:', err);
-        setError('Erro ao carregar estatísticas do dashboard.');
+        console.error('Error loading statistics:', err);
+        setError('Error loading dashboard statistics.');
       } finally {
         setLoading(false);
       }
@@ -110,22 +110,22 @@ export default function DashboardTeamLead() {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Cabeçalho */}
+      {/* Header */}
       <Typography variant="h4" sx={{ mb: 1, fontWeight: 600 }}>
-        Dashboard do Time
+        Team Dashboard
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        {stats?.team_name && `Time: ${stats.team_name}`}
-        {stats?.department_name && ` • Departamento: ${stats.department_name}`}
+        {stats?.team_name && `Team: ${stats.team_name}`}
+        {stats?.department_name && ` • Department: ${stats.department_name}`}
       </Typography>
 
-      {/* Cards de Estatísticas */}
+      {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Contratos do Time"
+            title="Team Contracts"
             value={stats?.total_contracts}
-            subtitle="Total de contratos"
+            subtitle="Total contracts"
             icon={TeamIcon}
             color="primary"
           />
@@ -133,9 +133,9 @@ export default function DashboardTeamLead() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Contratos Ativos"
+            title="Active Contracts"
             value={stats?.active_contracts}
-            subtitle="Em andamento"
+            subtitle="In progress"
             icon={ContractIcon}
             color="success"
           />
@@ -143,9 +143,9 @@ export default function DashboardTeamLead() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Expirando em 30 Dias"
+            title="Expiring in 30 Days"
             value={stats?.expiring_30_days}
-            subtitle="Requerem atenção"
+            subtitle="Require attention"
             icon={WarningIcon}
             color="warning"
           />
@@ -153,23 +153,23 @@ export default function DashboardTeamLead() {
 
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Alertas Não Lidos"
+            title="Unread Alerts"
             value={stats?.unread_alerts}
-            subtitle={`${stats?.total_alerts || 0} alertas no total`}
+            subtitle={`${stats?.total_alerts || 0} total alerts`}
             icon={AlertIcon}
             color="info"
           />
         </Grid>
       </Grid>
 
-      {/* Gráfico de Status dos Contratos */}
+      {/* Team Contract Status Chart */}
       {statusData.length > 0 && (
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Card elevation={3}>
               <CardContent>
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  Status dos Contratos do Time
+                  Team Contract Status
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
                 <ResponsiveContainer width="100%" height={300}>
@@ -200,20 +200,20 @@ export default function DashboardTeamLead() {
             <Card elevation={1}>
               <CardContent>
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  Suas Permissões
+                  Your Permissions
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  ✅ Visualizar contratos do time
+                  ✅ View team contracts
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  ✅ Criar e editar contratos do time
+                  ✅ Create and edit team contracts
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  ❌ Aprovar contratos (solicitar ao gestor do departamento)
+                  ❌ Approve contracts (request from department manager)
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  ❌ Acessar relatórios (solicitar ao gestor do departamento)
+                  ❌ Access reports (request from department manager)
                 </Typography>
               </CardContent>
             </Card>

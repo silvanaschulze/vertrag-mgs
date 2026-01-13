@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, or_, desc, asc, select, and_
 #schemas models
 from ..models.contract import Contract, ContractStatus, ContractType
+from ..models.user import User
 from ..schemas.contract import (
      ContractCreate, 
      ContractUpdate, 
@@ -148,11 +149,14 @@ class ContractService:
             Optional[ContractResponse]: Vertrag oder None / Contrato ou None
         """
         result = await self.db.execute(
-            select(Contract).where(Contract.id == contract_id)
+            select(Contract, User.name).join(User, Contract.created_by == User.id, isouter=True).where(Contract.id == contract_id)
         )
-        db_contract = result.scalar_one_or_none()
-        if db_contract:
-            return ContractResponse.model_validate(db_contract)
+        row = result.one_or_none()
+        if row:
+            contract, creator_name = row
+            contract_dict = ContractResponse.model_validate(contract).model_dump()
+            contract_dict['created_by_name'] = creator_name
+            return ContractResponse(**contract_dict)
         return None
 
     async def update_contract(self, contract_id: int, update_data: ContractUpdate) -> Optional[ContractResponse]:
@@ -223,8 +227,8 @@ class ContractService:
         max_limit = 100
         limit = min(limit, max_limit)
 
-        # Base query / Query base
-        query = select(Contract)
+        # Base query com join para pegar o nome do criador / Query base com join para buscar nome do criador
+        query = select(Contract, User.name).join(User, Contract.created_by == User.id, isouter=True)
         
         # Filter anwenden / Aplicar filtros
         if filters:
@@ -272,8 +276,15 @@ class ContractService:
         query = query.offset(skip).limit(limit)
         
         result = await self.db.execute(query)
-        contracts = result.scalars().all()
-        contract_list = [ContractResponse.model_validate(c) for c in contracts]
+        rows = result.all()  # Retorna tuplas (Contract, User.name)
+        
+        # Construir lista com nome do criador
+        contract_list = []
+        for contract, creator_name in rows:
+            contract_dict = ContractResponse.model_validate(contract).model_dump()
+            contract_dict['created_by_name'] = creator_name
+            contract_list.append(ContractResponse(**contract_dict))
+        
         current_page = (skip // limit) + 1 if limit else 1
         
         return ContractListResponse(total=total, contracts=contract_list, page=current_page, per_page=limit)  

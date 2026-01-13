@@ -15,10 +15,13 @@ import AppLayout from './components/layout/AppLayout';
 import Login from './pages/Login';
 import Unauthorized from './pages/Unauthorized';
 import Dashboard from './pages/Dashboard';
+import ContractsList from './pages/contracts/ContractsList';
+import ContractCreate from './pages/contracts/ContractCreate';
+import ContractEdit from './pages/contracts/ContractEdit';
+import ContractView from './pages/contracts/ContractView';
 
 // Páginas temporárias (vamos criar depois)
 // Temporäre Seiten (werden später erstellt)
-const ContractsPage = () => <div><h1>Verträge / Contracts</h1><p>Em construção / In Arbeit</p></div>;
 const ImportPage = () => <div><h1>Import</h1><p>Em construção / In Arbeit</p></div>;
 const AlertsPage = () => <div><h1>Warnungen / Alerts</h1><p>Em construção / In Arbeit</p></div>;
 const ApprovalsPage = () => <div><h1>Genehmigungen / Approvals</h1><p>Em construção / In Arbeit</p></div>;
@@ -58,7 +61,10 @@ function App() {
                       <Route path="dashboard" element={<Dashboard />} />
 
                       {/* Contratos - Todos podem acessar / Verträge - Alle können zugreifen */}
-                      <Route path="contracts" element={<ContractsPage />} />
+                      <Route path="contracts" element={<ContractsList />} />
+                      <Route path="contracts/new" element={<ContractCreate />} />
+                      <Route path="contracts/:id" element={<ContractView />} />
+                      <Route path="contracts/:id/edit" element={<ContractEdit />} />
 
                       {/* Import - Requer permissão / Import - Berechtigung erforderlich */}
                       <Route
