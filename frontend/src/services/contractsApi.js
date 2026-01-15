@@ -33,7 +33,7 @@ const contractsApi = {
    */
   getContracts: async (params = {}) => {
     try {
-      const response = await api.get('/contracts', { params });
+      const response = await api.get('/contracts/', { params });
       // Backend retorna 'contracts', mapeamos para 'items' para consistência
       return {
         items: response.data.contracts || [],

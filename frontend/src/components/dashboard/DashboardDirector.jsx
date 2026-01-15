@@ -122,19 +122,19 @@ export default function DashboardDirector() {
   const typeData = stats?.contracts_by_type
     ? Object.entries(stats.contracts_by_type).map(([type, count]) => ({
         name: type,
-        quantidade: count
+        quantity: count
       }))
     : [];
 
   const departmentData = stats?.contracts_by_department
     ? Object.entries(stats.contracts_by_department).map(([dept, count]) => ({
         departamento: dept,
-        contratos: count
+        contracts: count
       }))
     : [];
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3, width: '100%', mx: 'auto' }}>
       {/* Executive Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
@@ -242,24 +242,26 @@ export default function DashboardDirector() {
       {/* Executive Charts */}
       <Grid container spacing={3}>
         {/* Contracts by Department */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={3}>
-            <CardContent>
+        <Grid item xs={12} md={8} lg={8}>
+          <Card elevation={3} sx={{ minHeight: 480, width: '100%', maxWidth: '100%' }}>
+            <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Contracts by Department
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {departmentData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={departmentData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="departamento" angle={-15} textAnchor="end" height={80} />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="contratos" fill="#2563EB" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <Box sx={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
+                  <ResponsiveContainer width="100%" height={380}>
+                    <BarChart data={departmentData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="departamento" angle={-15} textAnchor="end" height={80} />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="contracts" fill="#2563EB" name="Contracts" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">No data available</Typography>
               )}
@@ -268,34 +270,55 @@ export default function DashboardDirector() {
         </Grid>
 
         {/* Contracts by Status */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={3}>
-            <CardContent>
+        <Grid item xs={12} md={4} lg={4}>
+          <Card elevation={3} sx={{ minHeight: 520, width: '100%', minWidth: 0 }}>
+            <CardContent sx={{ 
+              height: '100%', 
+              p: 3, 
+              minWidth: 0, 
+              display: 'flex', 
+              flexDirection: 'column',
+              alignItems: 'stretch'
+            }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Distribution by Status
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {statusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Box 
+                  ref={(el) => {
+                    if (el) {
+                      console.log('Distribution by Status container width:', el.getBoundingClientRect().width);
+                    }
+                  }}
+                  sx={{ 
+                    flexGrow: 1,
+                    minWidth: 0,
+                    width: '100%',
+                    alignSelf: 'stretch'
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height={380}>
+                    <PieChart>
+                      <Pie
+                        data={statusData}
+                        dataKey="value"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={90}
+                        label={false}
+                        labelLine={false}
+                        fill="#8884d8"
+                      >
+                        {statusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" height={36} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">No data available</Typography>
               )}
@@ -304,24 +327,26 @@ export default function DashboardDirector() {
         </Grid>
 
         {/* Contracts by Type */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={3}>
-            <CardContent>
+        <Grid item xs={12} md={8} lg={8}>
+          <Card elevation={3} sx={{ minHeight: 480, width: '100%', maxWidth: '100%' }}>
+            <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Contract Types
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {typeData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={typeData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={100} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="quantidade" fill="#10B981" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <Box sx={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
+                  <ResponsiveContainer width="100%" height={380}>
+                    <BarChart data={typeData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis dataKey="name" type="category" width={100} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="quantity" fill="#10B981" name="Quantity" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">No data available</Typography>
               )}
@@ -330,7 +355,7 @@ export default function DashboardDirector() {
         </Grid>
 
         {/* Permissions and Information */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4} lg={4}>
           <Card elevation={1}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>

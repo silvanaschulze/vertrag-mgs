@@ -11,11 +11,11 @@
  * Vertragsstatus (muss mit Backend ContractStatus enum übereinstimmen)
  */
 export const CONTRACT_STATUS = {
-  DRAFT: 'entwurf',                    // Draft / Entwurf
-  ACTIVE: 'aktiv',                     // Active / Aktiv
-  EXPIRED: 'abgelaufen',               // Expired / Abgelaufen
-  TERMINATED: 'beendet',               // Terminated / Beendet
-  PENDING_APPROVAL: 'wartet_auf_genehmigung' // Pending Approval / Wartet auf Genehmigung
+  DRAFT: 'DRAFT',                      // Draft / Entwurf
+  ACTIVE: 'ACTIVE',                    // Active / Aktiv
+  EXPIRED: 'EXPIRED',                  // Expired / Abgelaufen
+  TERMINATED: 'TERMINATED',            // Terminated / Beendet
+  PENDING_APPROVAL: 'PENDING_APPROVAL' // Pending Approval / Wartet auf Genehmigung
 };
 
 /**
@@ -59,13 +59,13 @@ export const CONTRACT_STATUS_COLORS = {
  * Vertragstypen (muss mit Backend ContractType enum übereinstimmen)
  */
 export const CONTRACT_TYPES = {
-  SERVICE: 'dienstleistung',         // Service / Dienstleistung
-  PRODUCT: 'produkt',                // Product / Produkt
-  EMPLOYMENT: 'beschäftigung',       // Employment / Beschäftigung
-  LEASE: 'miete',                    // Lease / Miete
-  PACHT: 'pacht',                    // Pacht / Pacht
-  PARTNERSHIP: 'partnerschaft',      // Partnership / Partnerschaft
-  OTHER: 'sonstiges'                 // Other / Sonstiges
+  SERVICE: 'SERVICE',                // Service / Dienstleistung
+  PRODUCT: 'PRODUCT',                // Product / Produkt
+  EMPLOYMENT: 'EMPLOYMENT',          // Employment / Beschäftigung
+  LEASE: 'LEASE',                    // Lease / Miete (antiga: miete)
+  RENTAL: 'RENTAL',                  // Rental / Vermietung
+  PARTNERSHIP: 'PARTNERSHIP',        // Partnership / Partnerschaft
+  OTHER: 'OTHER'                     // Other / Sonstiges
 };
 
 /**
@@ -76,8 +76,8 @@ export const CONTRACT_TYPE_LABELS = {
   [CONTRACT_TYPES.SERVICE]: 'Dienstleistung',
   [CONTRACT_TYPES.PRODUCT]: 'Produkt',
   [CONTRACT_TYPES.EMPLOYMENT]: 'Beschäftigung',
-  [CONTRACT_TYPES.LEASE]: 'Miete',
-  [CONTRACT_TYPES.PACHT]: 'Pacht',
+  [CONTRACT_TYPES.LEASE]: 'Pacht',
+  [CONTRACT_TYPES.RENTAL]: 'Miete',
   [CONTRACT_TYPES.PARTNERSHIP]: 'Partnerschaft',
   [CONTRACT_TYPES.OTHER]: 'Sonstiges'
 };
@@ -91,7 +91,7 @@ export const CONTRACT_TYPE_LABELS_EN = {
   [CONTRACT_TYPES.PRODUCT]: 'Product',
   [CONTRACT_TYPES.EMPLOYMENT]: 'Employment',
   [CONTRACT_TYPES.LEASE]: 'Lease',
-  [CONTRACT_TYPES.PACHT]: 'Pacht',
+  [CONTRACT_TYPES.RENTAL]: 'Rental',
   [CONTRACT_TYPES.PARTNERSHIP]: 'Partnership',
   [CONTRACT_TYPES.OTHER]: 'Other'
 };

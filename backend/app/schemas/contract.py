@@ -27,22 +27,22 @@ class ExtractionMetadata(BaseModel):
 #enum für Vertragsstatus
 class ContractStatus(str, Enum):
     """vertragsstatus-Enumeration"""
-    DRAFT = "entwurf"                       
-    ACTIVE = "aktiv"        
-    EXPIRED = "abgelaufen"
-    TERMINATED = "beendet"
-    PENDING_APPROVAL = "wartet_auf_genehmigung"
+    DRAFT = "DRAFT"                       
+    ACTIVE = "ACTIVE"        
+    EXPIRED = "EXPIRED"
+    TERMINATED = "TERMINATED"
+    PENDING_APPROVAL = "PENDING_APPROVAL"
 
 #enum für Vertragstyp
 class ContractType(str, Enum):
     """vertragstyp-Enumeration"""
-    SERVICE = "dienstleistung"
-    PRODUCT = "produkt"
-    EMPLOYMENT = "beschäftigung"
-    LEASE = "miete"
-    PACHT = "pacht"
-    PARTNERSHIP = "partnerschaft"
-    OTHER = "sonstiges"
+    SERVICE = "SERVICE"
+    PRODUCT = "PRODUCT"
+    EMPLOYMENT = "EMPLOYMENT"
+    LEASE = "LEASE"
+    RENTAL = "RENTAL"
+    PARTNERSHIP = "PARTNERSHIP"
+    OTHER = "OTHER"
 
 #enum für Rechtsformen
 class LegalForm(str, Enum):
@@ -118,9 +118,9 @@ class ContractBase(BaseModel):
     def validate_client_document(cls, v):
         """Überprüft des Kundendokumentformats"""
         if v: 
-            # Akzeptiere jedes Format, das Zahlen, / und - enthält
-            if not re.match(r'^[\d/-]+$', v):
-                raise ValueError('Kundendokument darf nur Zahlen, / und - enthalten.')
+            # Akzeptiere alfanumerische Zeichen, Leerzeichen, /, - und .
+            if not re.match(r'^[A-Za-z0-9\s/.-]+$', v):
+                raise ValueError('Kundendokument darf nur Buchstaben, Zahlen, Leerzeichen, /, - und . enthalten.')
         return v
     
 # Schema zum Erstellen eines neuen Vertrags

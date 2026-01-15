@@ -19,21 +19,21 @@ if TYPE_CHECKING:
     from .contract_approval import ContractApproval
 
 class ContractStatus(str, enum.Enum):
-    DRAFT = "entwurf"               #Entwurf
-    ACTIVE = "aktiv"                #Aktiv  
-    EXPIRED = "abgelaufen"          #Abgelaufen
-    TERMINATED = "beendet"          #Beendet
-    PENDING_APPROVAL = "wartet_auf_genehmigung" #Wartet auf Genehmigung
+    DRAFT = "DRAFT"                 # Draft / Entwurf
+    ACTIVE = "ACTIVE"               # Active / Aktiv  
+    EXPIRED = "EXPIRED"             # Expired / Abgelaufen
+    TERMINATED = "TERMINATED"       # Terminated / Beendet
+    PENDING_APPROVAL = "PENDING_APPROVAL"  # Pending Approval / Wartet auf Genehmigung
 
 class ContractType(str, enum.Enum):
     """Vertragstyp Aufzählung"""
-    SERVICE = "dienstleistung"      #Dienstleistung
-    PRODUCT = "produkt"             #Produkt
-    EMPLOYMENT = "beschäftigung"    #Beschäftigung
-    LEASE = "miete"                 #Miete
-    PACHT = "pacht"                 #Pacht (Pachtvertrag)
-    PARTNERSHIP = "partnerschaft"   #Partnerschaft
-    OTHER = "sonstiges"             #Sonstiges
+    SERVICE = "SERVICE"             # Service / Dienstleistung
+    PRODUCT = "PRODUCT"             # Product / Produkt
+    EMPLOYMENT = "EMPLOYMENT"       # Employment / Beschäftigung
+    LEASE = "LEASE"                 # Lease / Pacht
+    RENTAL = "RENTAL"               # Rental / Miete
+    PARTNERSHIP = "PARTNERSHIP"     # Partnership / Partnerschaft
+    OTHER = "OTHER"                 # Other / Sonstiges
 
 class LegalForm(str, enum.Enum):
     """Rechtsformen für Unternehmen / Formas jurídicas para empresas"""
@@ -78,7 +78,7 @@ class Contract(Base):
     #Finanzfelder
     value: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)  #Maximalwert 9999999999.99
     currency: Mapped[str] = mapped_column(String(3), default="EUR", nullable=False)  #ISO 4217 Währungscode
-    payment_frequency: Mapped[Optional[PaymentFrequency]] = mapped_column(Enum(PaymentFrequency), nullable=True)  # Zahlungsfrequenz
+    payment_frequency: Mapped[Optional[PaymentFrequency]] = mapped_column(Enum(PaymentFrequency, values_callable=lambda x: [e.value for e in x]), nullable=True)  # Zahlungsfrequenz
     payment_custom_years: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Anzahl Jahre für "alle X Jahre" Option
 
     #Datumsfelder
@@ -89,7 +89,7 @@ class Contract(Base):
     #Kundenfelder
     client_name: Mapped[str] = mapped_column(String(200), nullable=False)  #z.B. Firma oder Einzelperson
     company_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)  # Firmenname / Nome da empresa
-    legal_form: Mapped[Optional[LegalForm]] = mapped_column(Enum(LegalForm), nullable=True)  # Rechtsform / Forma jurídica
+    legal_form: Mapped[Optional[LegalForm]] = mapped_column(Enum(LegalForm, values_callable=lambda x: [e.value for e in x]), nullable=True)  # Rechtsform / Forma jurídica
     client_document: Mapped[Optional[str]] = mapped_column(String(20), nullable=True) #z.B. Steuernummer, Handelsregisternummer
     client_address: Mapped[Optional[str]] = mapped_column(String(300), nullable=True) #Rechnungsadresse
     client_email: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

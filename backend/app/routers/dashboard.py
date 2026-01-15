@@ -112,7 +112,13 @@ async def get_dashboard_stats(
         return stats
     
     except Exception as e:
-        # Log do erro (implementar logger se necessário)
+        # Log do erro
+        import traceback
+        print(f"\n{'='*80}")
+        print(f"ERRO NO DASHBOARD: {str(e)}")
+        print(f"{'='*80}")
+        traceback.print_exc()
+        print(f"{'='*80}\n")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching dashboard stats / Fehler beim Abrufen der Dashboard-Statistiken: {str(e)}"

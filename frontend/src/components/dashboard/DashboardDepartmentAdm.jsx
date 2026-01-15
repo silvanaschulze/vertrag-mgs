@@ -117,7 +117,7 @@ export default function DashboardDepartmentAdm() {
   const typeData = stats?.contracts_by_type
     ? Object.entries(stats.contracts_by_type).map(([type, count]) => ({
         name: type,
-        quantidade: count
+        quantity: count
       }))
     : [];
 
@@ -230,34 +230,36 @@ export default function DashboardDepartmentAdm() {
       {/* Charts */}
       <Grid container spacing={3}>
         {/* Status Chart */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={3}>
-            <CardContent>
+        <Grid item xs={12} md={12} lg={8}>
+          <Card elevation={3} sx={{ minHeight: 480, width: '100%', maxWidth: '100%' }}>
+            <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Contracts by Status
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {statusData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Box sx={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
+                  <ResponsiveContainer width="100%" height={380}>
+                    <PieChart>
+                      <Pie
+                        data={statusData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {statusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" height={36} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">No data available</Typography>
               )}
@@ -266,24 +268,26 @@ export default function DashboardDepartmentAdm() {
         </Grid>
 
         {/* Types Chart */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={3}>
-            <CardContent>
+        <Grid item xs={12} md={12} lg={8}>
+          <Card elevation={3} sx={{ minHeight: 480, width: '100%', maxWidth: '100%' }}>
+            <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Contracts by Type
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {typeData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={typeData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="quantidade" fill="#2563EB" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <Box sx={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
+                  <ResponsiveContainer width="100%" height={380}>
+                    <BarChart data={typeData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="quantity" fill="#2563EB" name="Quantity" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">No data available</Typography>
               )}

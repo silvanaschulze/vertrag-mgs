@@ -13,17 +13,21 @@ const DRAWER_WIDTH = 240;
 const AppLayout = ({ children }) => {
   return (
     <Box sx={{ display: 'flex' }}>
-      {/* Sidebar Fixa / Feste Sidebar */}
-      <Sidebar />
+      {/* Sidebar Fixa / Feste Sidebar - Apenas em md+ */}
+      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+        <Sidebar />
+      </Box>
 
       {/* Área Principal / Hauptbereich */}
+      
       <Box
         component="main"
         sx={{
-          flexGrow: 1,
+          flex: 1,
           bgcolor: 'background.default',
           minHeight: '100vh',
-          width: `calc(100% - ${DRAWER_WIDTH}px)`,
+          minWidth: 0,
+          overflow: 'auto',
         }}
       >
         {/* Header */}
@@ -33,7 +37,7 @@ const AppLayout = ({ children }) => {
         <Toolbar />
 
         {/* Conteúdo da Página / Seiteninhalt */}
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 3, minWidth: 0, maxWidth: '100%' }}>
           {children}
         </Box>
       </Box>

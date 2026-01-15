@@ -165,33 +165,35 @@ export default function DashboardTeamLead() {
       {/* Team Contract Status Chart */}
       {statusData.length > 0 && (
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Card elevation={3}>
-              <CardContent>
+          <Grid item xs={12} md={12} lg={8}>
+            <Card elevation={3} sx={{ minHeight: 480, width: '100%', maxWidth: '100%' }}>
+              <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                   Team Contract Status
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Box sx={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
+                  <ResponsiveContainer width="100%" height={380}>
+                    <PieChart>
+                      <Pie
+                        data={statusData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {statusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" height={36} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
               </CardContent>
             </Card>
           </Grid>
