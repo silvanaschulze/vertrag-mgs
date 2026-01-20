@@ -220,26 +220,63 @@ const ContractTable = ({
             <Tooltip title="PDF anzeigen / View PDF">
               <IconButton 
                 size="small" 
-                onClick={() => {
-                  // Abrir PDF em nova aba / Open PDF in new tab
-                  api.get(`/contracts/${params.row.id}/view`, {
-                    responseType: 'blob'
-                  })
-                    .then(response => {
-                      const blob = new Blob([response.data], { type: 'application/pdf' });
-                      const blobUrl = URL.createObjectURL(blob);
-                      const newWindow = window.open(blobUrl, '_blank');
-                      
-                      // Revogar URL após 1 segundo para liberar memória
-                      // Revoke URL after 1 second to free memory
-                      if (newWindow) {
-                        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-                      }
-                    })
-                    .catch(error => {
-                      console.error('Error viewing PDF:', error);
-                      alert('Fehler beim Öffnen der PDF / Error opening PDF');
+                onClick={async () => {
+                  try {
+                    console.log('🔍 Abrindo PDF do contrato:', params.row.id);
+                    
+                    // Baixar PDF com autenticação / Download PDF with authentication
+                    const response = await api.get(`/contracts/${params.row.id}/view`, {
+                      responseType: 'blob'
                     });
+                    console.log('✅ PDF carregado com sucesso');
+                    
+                    // Criar blob URL / Create blob URL
+                    const blob = new Blob([response.data], { type: 'application/pdf' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    
+                    // Abrir em nova janela com object/embed para forçar visualização
+                    // Open in new window with object/embed to force viewing
+                    const newWindow = window.open('', '_blank');
+                    if (newWindow) {
+                      newWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                          <head>
+                            <title>PDF - Contrato ${params.row.id}</title>
+                            <meta charset="utf-8">
+                            <style>
+                              * { margin: 0; padding: 0; box-sizing: border-box; }
+                              html, body { height: 100%; width: 100%; overflow: hidden; }
+                              object, embed { width: 100%; height: 100%; }
+                            </style>
+                          </head>
+                          <body>
+                            <object data="${blobUrl}" type="application/pdf" width="100%" height="100%">
+                              <embed src="${blobUrl}" type="application/pdf" width="100%" height="100%" />
+                              <p>Seu navegador não suporta visualização de PDF. 
+                                 <a href="${blobUrl}" download="contract_${params.row.id}.pdf">Clique aqui para baixar</a>
+                              </p>
+                            </object>
+                          </body>
+                        </html>
+                      `);
+                      newWindow.document.close();
+                      console.log('✅ PDF aberto em nova aba');
+                      
+                      // Limpar blob após 5 minutos
+                      setTimeout(() => URL.revokeObjectURL(blobUrl), 300000);
+                    } else {
+                      URL.revokeObjectURL(blobUrl);
+                      alert('Pop-up bloqueado. Permita pop-ups para visualizar PDF / Pop-up blocked. Allow pop-ups to view PDF');
+                    }
+                  } catch (error) {
+                    console.error('Error viewing PDF:', error);
+                    if (error.response?.status === 401) {
+                      alert('Sessão expirada. Faça login novamente. / Session expired. Please login again.');
+                    } else {
+                      alert('Fehler beim Öffnen der PDF / Error opening PDF: ' + (error.response?.data?.detail || error.message));
+                    }
+                  }
                 }}
                 color="error"
               >

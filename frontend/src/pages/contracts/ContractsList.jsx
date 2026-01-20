@@ -34,7 +34,9 @@ const ContractsList = () => {
     contract_type: '',
     search: ''
   });
-  const [sortModel, setSortModel] = useState([]);
+  const [sortModel, setSortModel] = useState([
+    { field: 'id', sort: 'asc' } // Ordenação padrão: ID crescente
+  ]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState(null);
 
@@ -57,6 +59,14 @@ const ContractsList = () => {
    * Lädt Verträge vom Backend
    */
   const loadContracts = useCallback(async () => {
+    console.log('🔄 [PAGINAÇÃO] Iniciando carregamento de contratos...');
+    console.log('📊 [PAGINAÇÃO] Estado atual:', {
+      page: page,
+      pageSize: pageSize,
+      filters: filters,
+      sortModel: sortModel
+    });
+    
     setLoading(true);
     setError(null);
 
@@ -76,14 +86,23 @@ const ContractsList = () => {
       if (sortModel.length > 0) {
         const { field, sort } = sortModel[0];
         params.sort_by = sort === 'desc' ? `-${field}` : field;
+        console.log('🔀 [ORDENAÇÃO] Aplicando ordenação:', { field, sort, sort_by: params.sort_by });
       }
 
+      console.log('📤 [PAGINAÇÃO] Parâmetros enviados à API:', params);
       const response = await contractsApi.getContracts(params);
+      console.log('📥 [PAGINAÇÃO] Resposta da API:', {
+        items_count: response.items?.length || 0,
+        total: response.total,
+        page: response.page,
+        page_size: response.page_size
+      });
 
       setContracts(response.items || []);
       setTotalRows(response.total || 0);
+      console.log('✅ [PAGINAÇÃO] Contratos carregados com sucesso');
     } catch (err) {
-      console.error('Error loading contracts:', err);
+      console.error('❌ [PAGINAÇÃO] Error loading contracts:', err);
       setError(err.message || 'Failed to load contracts');
       enqueueSnackbar('Error loading contracts', { variant: 'error' });
     } finally {
@@ -104,6 +123,12 @@ const ContractsList = () => {
    * Event-Handler
    */
   const handlePageChange = (newPage) => {
+    console.log('🔄 [PAGINAÇÃO] Mudança de página solicitada:', {
+      página_atual: page,
+      nova_página: newPage,
+      total_registros: totalRows,
+      registros_por_página: pageSize
+    });
     setPage(newPage);
   };
 

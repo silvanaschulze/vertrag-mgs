@@ -21,13 +21,13 @@ import DashboardStaff from '../components/dashboard/DashboardStaff';
  * Zuordnung von Rollen zu Dashboard-Komponenten
  */
 const DASHBOARD_COMPONENTS = {
-  system_admin: DashboardSystemAdmin,
-  director: DashboardDirector,
-  department_adm: DashboardDepartmentAdm,
-  department_user: DashboardDepartmentUser,
-  team_lead: DashboardTeamLead,
-  staff: DashboardStaff,
-  read_only: DashboardStaff  // READ_ONLY usa o mesmo dashboard que STAFF
+  SYSTEM_ADMIN: DashboardSystemAdmin,
+  DIRECTOR: DashboardDirector,
+  DEPARTMENT_ADM: DashboardDepartmentAdm,
+  DEPARTMENT_USER: DashboardDepartmentUser,
+  TEAM_LEAD: DashboardTeamLead,
+  STAFF: DashboardStaff,
+  READ_ONLY: DashboardStaff  // READ_ONLY usa o mesmo dashboard que STAFF
 };
 
 /**

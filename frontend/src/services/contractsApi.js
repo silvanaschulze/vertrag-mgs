@@ -102,10 +102,19 @@ const contractsApi = {
    */
   createContract: async (data) => {
     try {
+      console.log('🚀 [API] createContract chamado com dados:', {
+        tem_pdf: !!data.pdfFile,
+        client_document: data.client_document,
+        client_email: data.client_email,
+        client_phone: data.client_phone,
+        client_address: data.client_address
+      });
+      
       // Decidir qual endpoint usar / Decide which endpoint to use
       const useFormData = !!data.pdfFile;
       
       if (useFormData) {
+        console.log('📦 [API] Usando FormData (com PDF)');
         // Usar novo endpoint com FormData / Use new endpoint with FormData
         const formData = new FormData();
         
@@ -125,18 +134,33 @@ const contractsApi = {
             } else {
               formData.append(key, value);
             }
+            
+            // Log campos de parceiro / Log partner fields
+            if (['client_document', 'client_email', 'client_phone', 'client_address'].includes(key)) {
+              console.log(`  ✅ [API] Adicionado ao FormData: ${key} = ${value}`);
+            }
           }
         });
         
+        console.log('📤 [API] Enviando para /contracts/with-upload');
         const response = await api.post('/contracts/with-upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
+        console.log('✅ [API] Contrato criado com sucesso (com PDF)');
         return response.data;
       } else {
+        console.log('📝 [API] Usando JSON (sem PDF)');
         // Usar endpoint JSON tradicional (sem PDF)
         // Use traditional JSON endpoint (without PDF)
         const { pdfFile, ...contractData } = data;
+        console.log('📤 [API] Enviando para /contracts:', {
+          client_document: contractData.client_document,
+          client_email: contractData.client_email,
+          client_phone: contractData.client_phone,
+          client_address: contractData.client_address
+        });
         const response = await api.post('/contracts', contractData);
+        console.log('✅ [API] Contrato criado com sucesso (sem PDF)');
         return response.data;
       }
     } catch (error) {
@@ -163,10 +187,19 @@ const contractsApi = {
    */
   updateContract: async (id, data) => {
     try {
+      console.log(`🔄 [API] updateContract chamado para ID ${id} com dados:`, {
+        tem_pdf: !!data.pdfFile,
+        client_document: data.client_document,
+        client_email: data.client_email,
+        client_phone: data.client_phone,
+        client_address: data.client_address
+      });
+      
       // Decidir qual endpoint usar / Decide which endpoint to use
       const useFormData = !!data.pdfFile;
       
       if (useFormData) {
+        console.log('📦 [API] Usando FormData (com PDF)');
         // Usar novo endpoint com FormData / Use new endpoint with FormData
         const formData = new FormData();
         
@@ -186,18 +219,33 @@ const contractsApi = {
             } else {
               formData.append(key, value);
             }
+            
+            // Log campos de parceiro / Log partner fields
+            if (['client_document', 'client_email', 'client_phone', 'client_address'].includes(key)) {
+              console.log(`  ✅ [API] Adicionado ao FormData: ${key} = ${value}`);
+            }
           }
         });
         
+        console.log(`📤 [API] Enviando para /contracts/${id}/with-upload`);
         const response = await api.put(`/contracts/${id}/with-upload`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
+        console.log('✅ [API] Contrato atualizado com sucesso (com PDF)');
         return response.data;
       } else {
+        console.log('📝 [API] Usando JSON (sem PDF)');
         // Usar endpoint JSON tradicional (sem PDF)
         // Use traditional JSON endpoint (without PDF)
         const { pdfFile, ...contractData } = data;
+        console.log(`📤 [API] Enviando para /contracts/${id}:`, {
+          client_document: contractData.client_document,
+          client_email: contractData.client_email,
+          client_phone: contractData.client_phone,
+          client_address: contractData.client_address
+        });
         const response = await api.put(`/contracts/${id}`, contractData);
+        console.log('✅ [API] Contrato atualizado com sucesso (sem PDF)');
         return response.data;
       }
     } catch (error) {

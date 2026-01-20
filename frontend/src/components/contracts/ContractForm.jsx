@@ -258,6 +258,8 @@ const ContractForm = ({
   }, []);
 
   const handleFormSubmit = (data) => {
+    console.log('📝 [FORM] Dados recebidos do formulário:', data);
+    
     // Limpa campos vazios opcionais e garante null ao invés de strings vazias
     // Leert optionale leere Felder und garantiert null statt leere Strings
     const cleanedData = {
@@ -286,6 +288,13 @@ const ContractForm = ({
       payment_custom_years: data.payment_custom_years && data.payment_custom_years > 0 ? data.payment_custom_years : null,
       pdfFile: pdfFile
     };
+
+    console.log('🧹 [FORM] Dados limpos (campos de parceiro):', {
+      client_document: cleanedData.client_document,
+      client_email: cleanedData.client_email,
+      client_phone: cleanedData.client_phone,
+      client_address: cleanedData.client_address
+    });
 
     onSubmit(cleanedData);
   };
@@ -989,7 +998,7 @@ const ContractForm = ({
                 type="submit"
                 variant="contained"
                 startIcon={<SaveIcon />}
-                disabled={loading || !isDirty}
+                disabled={loading || (!isDirty && !pdfFile)}
               >
                 {loading ? 'Speichern... / Saving...' : 'Speichern / Save'}
               </Button>

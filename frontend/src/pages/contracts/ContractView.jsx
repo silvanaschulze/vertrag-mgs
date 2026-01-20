@@ -85,6 +85,14 @@ const ContractView = () => {
     const loadContract = async () => {
       try {
         const data = await contractsApi.getContract(id);
+        console.log('📋 Dados do contrato carregados:', {
+          id: data.id,
+          title: data.title,
+          company_name: data.company_name,
+          department: data.department,
+          team: data.team,
+          responsible_user_id: data.responsible_user_id
+        });
         setContract(data);
         setError(null);
       } catch (err) {

@@ -270,6 +270,12 @@ async def create_contract_with_upload(
         
         # 2. Criar objeto ContractCreate para usar validações existentes
         # Create ContractCreate object to use existing validations
+        print(f"🔍 DEBUG - Dados recebidos no endpoint:")
+        print(f"  - department: {department}")
+        print(f"  - team: {team}")
+        print(f"  - responsible_user_id: {responsible_user_id}")
+        print(f"  - company_name: {company_name}")
+        
         contract_data = ContractCreate(
             title=title,
             client_name=client_name,
@@ -295,6 +301,12 @@ async def create_contract_with_upload(
             terms_and_conditions=terms_and_conditions,
             notes=notes
         )
+        
+        print(f"📦 DEBUG - ContractCreate object:")
+        print(f"  - department: {contract_data.department}")
+        print(f"  - team: {contract_data.team}")
+        print(f"  - responsible_user_id: {contract_data.responsible_user_id}")
+        print(f"  - company_name: {contract_data.company_name}")
         
         # 3. Criar contrato (reutilizar lógica existente)
         # Create contract (reuse existing logic)
@@ -909,17 +921,15 @@ async def view_original_pdf(
     safe_filename_ascii = re.sub(r'[^\w\s.-]', '_', filename)  # Fallback ASCII
     safe_filename_utf8 = quote(filename.encode('utf-8'))  # UTF-8 encoding
     
-    # Header für inline Anzeige im Browser / Header para exibição inline no navegador
+    # IMPORTANTE: usar APENAS inline, sem filename, para forçar visualização no navegador
+    # IMPORTANT: use ONLY inline, without filename, to force browser viewing
     headers = {
-        "Content-Disposition": (
-            f'inline; '
-            f'filename="{safe_filename_ascii}"; '
-            f"filename*=UTF-8''{safe_filename_utf8}"
-        ),
+        "Content-Disposition": "inline",
         "Content-Type": "application/pdf",
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Pragma": "no-cache",
-        "Expires": "0"
+        "Expires": "0",
+        "X-Content-Type-Options": "nosniff"
     }
     
     return StreamingResponse(

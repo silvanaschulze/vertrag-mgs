@@ -134,32 +134,64 @@ const ContractDetail = ({ contract }) => {
    * Visualizar PDF inline
    * PDF inline anzeigen
    */
-  const handleViewPdf = () => {
+  const handleViewPdf = async () => {
     if (!contract || !contract.original_pdf_path) {
       enqueueSnackbar('Kein PDF verfügbar / No PDF available', { variant: 'warning' });
       return;
     }
     
-    // Fazer requisição com axios (token já é adicionado pelo interceptor)
-    // Make request with axios (token is already added by interceptor)
-    api.get(`/contracts/${contract.id}/view`, {
-      responseType: 'blob'
-    })
-      .then(response => {
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        const blobUrl = URL.createObjectURL(blob);
-        const newWindow = window.open(blobUrl, '_blank');
-        
-        // Revogar URL após 1 segundo para liberar memória
-        // Revoke URL after 1 second to free memory
-        if (newWindow) {
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-        }
-      })
-      .catch(error => {
-        console.error('Error viewing PDF:', error);
-        enqueueSnackbar('Fehler beim Öffnen der PDF / Error opening PDF', { variant: 'error' });
+    try {
+      // Baixar PDF com autenticação / Download PDF with authentication
+      const response = await api.get(`/contracts/${contract.id}/view`, {
+        responseType: 'blob'
       });
+      
+      // Criar blob URL / Create blob URL
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Abrir em nova janela com object/embed para forçar visualização
+      // Open in new window with object/embed to force viewing
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>${contract.original_pdf_filename || 'PDF'}</title>
+              <meta charset="utf-8">
+              <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                html, body { height: 100%; width: 100%; overflow: hidden; }
+                object, embed { width: 100%; height: 100%; }
+              </style>
+            </head>
+            <body>
+              <object data="${blobUrl}" type="application/pdf" width="100%" height="100%">
+                <embed src="${blobUrl}" type="application/pdf" width="100%" height="100%" />
+                <p>Seu navegador não suporta visualização de PDF. 
+                   <a href="${blobUrl}" download="${contract.original_pdf_filename}">Clique aqui para baixar</a>
+                </p>
+              </object>
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+        enqueueSnackbar('PDF aberto em nova aba / PDF opened in new tab', { variant: 'success' });
+        
+        // Limpar blob após 5 minutos
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 300000);
+      } else {
+        URL.revokeObjectURL(blobUrl);
+        enqueueSnackbar('Pop-up bloqueado. Permita pop-ups / Pop-up blocked. Allow pop-ups', { variant: 'warning' });
+      }
+    } catch (error) {
+      console.error('Error viewing PDF:', error);
+      const errorMsg = error.response?.status === 401 
+        ? 'Sessão expirada. Faça login novamente. / Session expired. Please login again.'
+        : 'Fehler beim Öffnen der PDF / Error opening PDF';
+      enqueueSnackbar(errorMsg, { variant: 'error' });
+    }
   };
 
   /**
