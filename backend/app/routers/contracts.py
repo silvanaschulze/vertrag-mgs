@@ -11,8 +11,13 @@ Funktionen :
 from datetime import date, datetime
 from typing import List, Optional
 from decimal import Decimal
+import re
+import os
+import asyncio
+import hashlib
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Form
 from sqlalchemy.ext.asyncio import AsyncSession  
 
 from app.core.database import get_db
@@ -23,8 +28,7 @@ from app.schemas.contract import (
     ContractListResponse,
     ContractStats,
 )
-import os
-import asyncio
+from app.schemas.approval import ApprovalRequest, RejectionRequest
 from app.services.contract_service import ContractService
 from app.utils.document_generator import render_docx_bytes, _convert_docx_bytes_to_pdf_bytes
 from fastapi.responses import StreamingResponse, Response
@@ -34,7 +38,9 @@ from pathlib import Path
 from fastapi import Depends
 from app.core.security import get_current_active_user
 from app.models.user import User
+from app.models.contract import Contract, ContractStatus
 from app.core.permissions import require_view_original
+from sqlalchemy import select
 
 # Hilfsfunktionen / Funções auxiliares
 
@@ -193,6 +199,153 @@ async def create_contract(
         raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Erstellen des Vertrags")
+
+# POST /contracts/with-upload - Erstellt einen neuen Vertrag mit PDF-Upload
+# POST /contracts/with-upload - Cria novo contrato com upload de PDF
+@router.post("/with-upload", response_model=ContractResponse, status_code=status.HTTP_201_CREATED)
+async def create_contract_with_upload(
+    # Campos obrigatórios / Pflichtfelder
+    title: str = Form(..., min_length=2, max_length=200, description="Vertragstitel / Título"),
+    client_name: str = Form(..., min_length=2, max_length=200, description="Kundenname / Nome do cliente"),
+    start_date: date = Form(..., description="Startdatum / Data início"),
+    
+    # Campos opcionais / Optionale Felder
+    description: Optional[str] = Form(None, max_length=1000),
+    contract_type: Optional[str] = Form(None),
+    status: Optional[str] = Form(None),
+    end_date: Optional[date] = Form(None),
+    renewal_date: Optional[date] = Form(None),
+    value: Optional[Decimal] = Form(None),
+    currency: Optional[str] = Form(None),
+    payment_frequency: Optional[str] = Form(None),
+    payment_custom_years: Optional[int] = Form(None),
+    
+    company_name: Optional[str] = Form(None),
+    legal_form: Optional[str] = Form(None),
+    client_document: Optional[str] = Form(None),
+    client_email: Optional[str] = Form(None),
+    client_phone: Optional[str] = Form(None),
+    client_address: Optional[str] = Form(None),
+    
+    department: Optional[str] = Form(None),
+    team: Optional[str] = Form(None),
+    responsible_user_id: Optional[int] = Form(None),
+    
+    terms_and_conditions: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    
+    # PDF (opcional) / PDF (optional)
+    pdf_file: Optional[UploadFile] = File(None),
+    
+    # Dependencies
+    current_user: User = Depends(get_current_active_user),
+    contract_service: ContractService = Depends(get_contract_service)
+):
+    """
+    Cria contrato com upload de PDF em uma única requisição.
+    Creates contract with PDF upload in a single request.
+    
+    Vantagens / Advantages:
+    - Upload único / Single upload
+    - Validação unificada / Unified validation
+    - Transação atômica / Atomic transaction
+    """
+    try:
+        # 1. Validar PDF se existe / Validate PDF if exists
+        if pdf_file and pdf_file.filename:
+            if not pdf_file.filename.lower().endswith('.pdf'):
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Apenas arquivos PDF são permitidos / Only PDF files allowed"
+                )
+            
+            # Ler conteúdo para validar tamanho / Read content to validate size
+            content = await pdf_file.read()
+            if len(content) > 10 * 1024 * 1024:  # 10MB
+                raise HTTPException(
+                    status_code=413, 
+                    detail="Arquivo muito grande. Máximo 10MB / File too large. Max 10MB"
+                )
+            await pdf_file.seek(0)  # Reset para reler / Reset to re-read
+        
+        # 2. Criar objeto ContractCreate para usar validações existentes
+        # Create ContractCreate object to use existing validations
+        contract_data = ContractCreate(
+            title=title,
+            client_name=client_name,
+            start_date=start_date,
+            description=description,
+            contract_type=contract_type,
+            status=status,
+            end_date=end_date,
+            renewal_date=renewal_date,
+            value=value,
+            currency=currency or "EUR",
+            payment_frequency=payment_frequency,
+            payment_custom_years=payment_custom_years,
+            company_name=company_name,
+            legal_form=legal_form,
+            client_document=client_document,
+            client_email=client_email,
+            client_phone=client_phone,
+            client_address=client_address,
+            department=department,
+            team=team,
+            responsible_user_id=responsible_user_id,
+            terms_and_conditions=terms_and_conditions,
+            notes=notes
+        )
+        
+        # 3. Criar contrato (reutilizar lógica existente)
+        # Create contract (reuse existing logic)
+        created = await contract_service.create_contract(contract_data, current_user.id)
+        
+        # 4. Se tem PDF, salvar e anexar / If has PDF, save and attach
+        if pdf_file and pdf_file.filename:
+            # Criar diretório / Create directory
+            contract_dir = os.path.join(
+                settings.UPLOAD_DIR, 
+                "contracts", 
+                "persisted", 
+                f"contract_{created.id}"
+            )
+            os.makedirs(contract_dir, exist_ok=True)
+            
+            # Salvar PDF / Save PDF
+            file_path = os.path.join(contract_dir, "original.pdf")
+            content = await pdf_file.read()
+            
+            with open(file_path, "wb") as f:
+                f.write(content)
+            
+            # Calcular hash / Calculate hash
+            file_hash = hashlib.sha256(content).hexdigest()
+            
+            # Anexar ao contrato / Attach to contract
+            await contract_service.attach_original_pdf(
+                created.id, 
+                file_path, 
+                pdf_file.filename, 
+                file_hash, 
+                "",  # ocr_text vazio / empty
+                ""   # ocr_sha256 vazio / empty
+            )
+            
+            # Refresh para pegar metadados do PDF / Refresh to get PDF metadata
+            updated = await contract_service.get_contract(created.id)
+            return updated
+        
+        return created
+        
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Fehler beim Erstellen des Vertrags / Erro ao criar contrato: {str(e)}"
+        )
 
 # ============================================================================
 # ENDPOINTS COM CAMINHOS FIXOS (devem vir ANTES de /{contract_id})
@@ -355,6 +508,186 @@ async def update_contract(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Aktualisieren des Vertrags")
 
+# PUT /contracts/{contract_id}/with-upload - Atualiza contrato com PDF
+# PUT /contracts/{contract_id}/with-upload - Aktualisiert Vertrag mit PDF
+@router.put("/{contract_id}/with-upload", response_model=ContractResponse, status_code=status.HTTP_200_OK)
+async def update_contract_with_upload(
+    contract_id: int,
+    
+    # Todos os campos são opcionais / Alle Felder sind optional
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    contract_type: Optional[str] = Form(None),
+    status: Optional[str] = Form(None),
+    
+    value: Optional[Decimal] = Form(None),
+    currency: Optional[str] = Form(None),
+    payment_frequency: Optional[str] = Form(None),
+    payment_custom_years: Optional[int] = Form(None),
+    
+    start_date: Optional[date] = Form(None),
+    end_date: Optional[date] = Form(None),
+    renewal_date: Optional[date] = Form(None),
+    
+    client_name: Optional[str] = Form(None),
+    company_name: Optional[str] = Form(None),
+    legal_form: Optional[str] = Form(None),
+    client_document: Optional[str] = Form(None),
+    client_email: Optional[str] = Form(None),
+    client_phone: Optional[str] = Form(None),
+    client_address: Optional[str] = Form(None),
+    
+    department: Optional[str] = Form(None),
+    team: Optional[str] = Form(None),
+    responsible_user_id: Optional[int] = Form(None),
+    
+    terms_and_conditions: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    
+    # PDF (opcional) / PDF (optional)
+    pdf_file: Optional[UploadFile] = File(None),
+    
+    # Dependencies
+    current_user: User = Depends(get_current_active_user),
+    contract_service: ContractService = Depends(get_contract_service)
+):
+    """
+    Atualiza contrato com possibilidade de substituir PDF.
+    Updates contract with option to replace PDF.
+    
+    Comportamento / Behavior:
+    - Se pdf_file fornecido → substitui PDF antigo / If pdf_file provided → replaces old PDF
+    - Se pdf_file None → mantém PDF existente / If pdf_file None → keeps existing PDF
+    """
+    try:
+        # 1. Validar PDF se existe / Validate PDF if exists
+        if pdf_file and pdf_file.filename:
+            if not pdf_file.filename.lower().endswith('.pdf'):
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Apenas arquivos PDF são permitidos / Only PDF files allowed"
+                )
+            
+            content = await pdf_file.read()
+            if len(content) > 10 * 1024 * 1024:  # 10MB
+                raise HTTPException(
+                    status_code=413, 
+                    detail="Arquivo muito grande. Máximo 10MB / File too large. Max 10MB"
+                )
+            await pdf_file.seek(0)
+        
+        # 2. Criar objeto ContractUpdate com campos fornecidos
+        # Create ContractUpdate object with provided fields
+        update_data = {}
+        if title is not None:
+            update_data['title'] = title
+        if description is not None:
+            update_data['description'] = description
+        if contract_type is not None:
+            update_data['contract_type'] = contract_type
+        if status is not None:
+            update_data['status'] = status
+        if value is not None:
+            update_data['value'] = value
+        if currency is not None:
+            update_data['currency'] = currency
+        if payment_frequency is not None:
+            update_data['payment_frequency'] = payment_frequency
+        if payment_custom_years is not None:
+            update_data['payment_custom_years'] = payment_custom_years
+        if start_date is not None:
+            update_data['start_date'] = start_date
+        if end_date is not None:
+            update_data['end_date'] = end_date
+        if renewal_date is not None:
+            update_data['renewal_date'] = renewal_date
+        if client_name is not None:
+            update_data['client_name'] = client_name
+        if company_name is not None:
+            update_data['company_name'] = company_name
+        if legal_form is not None:
+            update_data['legal_form'] = legal_form
+        if client_document is not None:
+            update_data['client_document'] = client_document
+        if client_email is not None:
+            update_data['client_email'] = client_email
+        if client_phone is not None:
+            update_data['client_phone'] = client_phone
+        if client_address is not None:
+            update_data['client_address'] = client_address
+        if department is not None:
+            update_data['department'] = department
+        if team is not None:
+            update_data['team'] = team
+        if responsible_user_id is not None:
+            update_data['responsible_user_id'] = responsible_user_id
+        if terms_and_conditions is not None:
+            update_data['terms_and_conditions'] = terms_and_conditions
+        if notes is not None:
+            update_data['notes'] = notes
+        
+        contract_update = ContractUpdate(**update_data)
+        
+        # 3. Atualizar contrato / Update contract
+        updated = await contract_service.update_contract(contract_id, contract_update)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Vertrag nicht gefunden / Contrato não encontrado")
+        
+        # 4. Se tem PDF, substituir / If has PDF, replace
+        if pdf_file and pdf_file.filename:
+            # Remover PDF antigo se existe / Remove old PDF if exists
+            old_pdf_path = get_contract_pdf_path(contract_id)
+            if old_pdf_path and os.path.exists(old_pdf_path):
+                try:
+                    os.remove(old_pdf_path)
+                except Exception as e:
+                    # Log mas não falha / Log but don't fail
+                    print(f"Aviso: não foi possível remover PDF antigo: {e}")
+            
+            # Criar diretório / Create directory
+            contract_dir = os.path.join(
+                settings.UPLOAD_DIR, 
+                "contracts", 
+                "persisted", 
+                f"contract_{contract_id}"
+            )
+            os.makedirs(contract_dir, exist_ok=True)
+            
+            # Salvar novo PDF / Save new PDF
+            file_path = os.path.join(contract_dir, "original.pdf")
+            content = await pdf_file.read()
+            
+            with open(file_path, "wb") as f:
+                f.write(content)
+            
+            # Calcular hash / Calculate hash
+            file_hash = hashlib.sha256(content).hexdigest()
+            
+            # Anexar ao contrato / Attach to contract
+            await contract_service.attach_original_pdf(
+                contract_id, 
+                file_path, 
+                pdf_file.filename, 
+                file_hash, 
+                "",  # ocr_text vazio / empty
+                ""   # ocr_sha256 vazio / empty
+            )
+            
+            # Refresh para pegar metadados do PDF / Refresh to get PDF metadata
+            updated = await contract_service.get_contract(contract_id)
+        
+        return updated
+        
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Fehler beim Aktualisieren / Erro ao atualizar: {str(e)}"
+        )
+
 # DELETE /contracts/{contract_id} - Löscht einen Vertrag nach ID
 @router.delete("/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_contract(
@@ -375,6 +708,54 @@ async def delete_contract(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Löschen des Vertrags")
+
+# DELETE /contracts/{contract_id}/original - Remove o PDF original do contrato
+@router.delete("/{contract_id}/original", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_original_pdf(
+    contract_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Remove o PDF original anexado ao contrato.
+    Entfernt die original angehängte PDF vom Vertrag.
+    """
+    import os
+    from sqlalchemy import select, update
+    from app.models.contract import Contract
+    
+    # Buscar contrato
+    result = await db.execute(select(Contract).where(Contract.id == contract_id))
+    contract = result.scalar_one_or_none()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Vertrag nicht gefunden / Contrato não encontrado")
+    
+    if not contract.original_pdf_path:
+        raise HTTPException(status_code=404, detail="Kein PDF vorhanden / Nenhum PDF anexado")
+    
+    # Deletar arquivo físico se existir
+    if os.path.exists(contract.original_pdf_path):
+        try:
+            os.remove(contract.original_pdf_path)
+        except Exception as e:
+            print(f"Error deleting PDF file: {e}")
+    
+    # Atualizar registro no banco
+    await db.execute(
+        update(Contract)
+        .where(Contract.id == contract_id)
+        .values(
+            original_pdf_path=None,
+            original_pdf_filename=None,
+            original_pdf_sha256=None,
+            uploaded_at=None
+        )
+    )
+    await db.commit()
+    
+    return None
+
 
 @router.get("/{contract_id}/document", status_code=status.HTTP_200_OK)
 async def generate_contract_document(
@@ -459,8 +840,25 @@ async def download_original_pdf(
             for chunk in iter(lambda: f.read(8192), b''):
                 yield chunk
 
+    # Filename com suporte a UTF-8 (caracteres alemães: ä, ö, ü, ß)
+    # Filename with UTF-8 support (German characters: ä, ö, ü, ß)
     filename = contract.original_pdf_filename or f"contract_{contract_id}.pdf"
-    return StreamingResponse(iterfile(), media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename={filename}"})
+    
+    # RFC 5987: filename* para suporte UTF-8
+    # Manter filename simples para browsers antigos + filename* para modernos
+    safe_filename_ascii = re.sub(r'[^\w\s.-]', '_', filename)  # Fallback ASCII
+    safe_filename_utf8 = quote(filename.encode('utf-8'))  # UTF-8 encoding
+    
+    headers = {
+        "Content-Disposition": (
+            f'attachment; '
+            f'filename="{safe_filename_ascii}"; '
+            f"filename*=UTF-8''{safe_filename_utf8}"
+        ),
+        "Content-Type": "application/pdf"
+    }
+    
+    return StreamingResponse(iterfile(), media_type="application/pdf", headers=headers)
 
 
 @router.get("/{contract_id}/view")
@@ -503,11 +901,22 @@ async def view_original_pdf(
             for chunk in iter(lambda: f.read(8192), b''):
                 yield chunk
 
+    # Filename com suporte a UTF-8 (caracteres alemães: ä, ö, ü, ß)
+    # Filename with UTF-8 support (German characters: ä, ö, ü, ß)
     filename = getattr(contract, "original_pdf_filename", None) or f"contract_{contract_id}.pdf"
+    
+    # RFC 5987: filename* para suporte UTF-8
+    safe_filename_ascii = re.sub(r'[^\w\s.-]', '_', filename)  # Fallback ASCII
+    safe_filename_utf8 = quote(filename.encode('utf-8'))  # UTF-8 encoding
     
     # Header für inline Anzeige im Browser / Header para exibição inline no navegador
     headers = {
-        "Content-Disposition": f"inline; filename={filename}",
+        "Content-Disposition": (
+            f'inline; '
+            f'filename="{safe_filename_ascii}"; '
+            f"filename*=UTF-8''{safe_filename_utf8}"
+        ),
+        "Content-Type": "application/pdf",
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Pragma": "no-cache",
         "Expires": "0"
@@ -547,6 +956,63 @@ async def upload_contract_template(
         f.write(contents)
 
     return {"message": "Template uploaded / Template hochgeladen", "path": str(target_path)}
+
+
+@router.post("/{contract_id}/upload-pdf", status_code=status.HTTP_200_OK)
+async def upload_original_pdf(
+    contract_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Anexar PDF original a um contrato existente
+    Original-PDF an bestehenden Vertrag anhängen
+    """
+    # Verificar se contrato existe
+    contract_service = ContractService(db)
+    contract = await contract_service.get_contract(contract_id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contrato não encontrado / Vertrag nicht gefunden")
+    
+    # Validar arquivo
+    if not file.filename or not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Apenas arquivos PDF / Nur PDF-Dateien")
+    
+    # Ler conteúdo
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:  # 10MB
+        raise HTTPException(status_code=413, detail="Arquivo muito grande / Datei zu groß (max 10MB)")
+    
+    # Criar diretório para este contrato
+    contract_dir = os.path.join(settings.UPLOAD_DIR, "contracts", "persisted", f"contract_{contract_id}")
+    os.makedirs(contract_dir, exist_ok=True)
+    
+    # Salvar como original.pdf
+    file_path = os.path.join(contract_dir, "original.pdf")
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Calcular hash
+    import hashlib
+    file_hash = hashlib.sha256(content).hexdigest()
+    
+    # Anexar ao contrato
+    relative_path = os.path.join("uploads", "contracts", "persisted", f"contract_{contract_id}", "original.pdf")
+    await contract_service.attach_original_pdf(
+        contract_id, 
+        file_path, 
+        file.filename, 
+        file_hash, 
+        "", # ocr_text vazio
+        ""  # ocr_sha256 vazio
+    )
+    
+    return {
+        "message": "PDF anexado com sucesso / PDF erfolgreich angehängt",
+        "filename": file.filename,
+        "path": relative_path
+    }
 
 
 # ============================================================================

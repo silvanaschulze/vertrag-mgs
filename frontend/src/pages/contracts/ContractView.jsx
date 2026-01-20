@@ -22,12 +22,14 @@ import {
   NavigateNext as NavigateNextIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  ArrowBack as ArrowBackIcon
+  ArrowBack as ArrowBackIcon,
+  Download as DownloadIcon
 } from '@mui/icons-material';
 import ContractDetail from '../../components/contracts/ContractDetail';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import contractsApi from '../../services/contractsApi';
 import { useAuthStore } from '../../store/authStore';
+import api from '../../services/api';
 
 const ContractView = () => {
   const { id } = useParams();
@@ -40,6 +42,7 @@ const ContractView = () => {
   const [error, setError] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   /**
    * Verifica se pode editar contrato
@@ -127,6 +130,49 @@ const ContractView = () => {
 
   const handleBack = () => {
     navigate('/app/contracts');
+  };
+
+  /**
+   * Download PDF do contrato
+   * Vertrag-PDF herunterladen
+   */
+  const handleDownloadPdf = async () => {
+    if (!contract || !contract.original_pdf_path) {
+      enqueueSnackbar('Kein PDF verfügbar / No PDF available', { variant: 'warning' });
+      return;
+    }
+
+    setDownloadingPdf(true);
+    try {
+      const response = await api.get(`/contracts/${id}/original`, {
+        responseType: 'blob', // CRÍTICO: receber como blob
+      });
+
+      // Criar URL do blob e fazer download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Nome do arquivo do header ou padrão
+      const filename = contract.original_pdf_filename || `contract_${id}.pdf`;
+      link.setAttribute('download', filename);
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      enqueueSnackbar('PDF heruntergeladen / PDF downloaded', { variant: 'success' });
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      const errorMessage = err.response?.data?.detail || 'Failed to download PDF';
+      enqueueSnackbar(errorMessage, { variant: 'error' });
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   if (loading) {

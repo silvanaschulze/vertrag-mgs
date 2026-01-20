@@ -228,3 +228,40 @@ export const PAYMENT_FREQUENCY_LABELS_EN = {
   [PAYMENT_FREQUENCY.CUSTOM_YEARS]: 'Every X Years',
   [PAYMENT_FREQUENCY.ONE_TIME]: 'One-Time'
 };
+
+/**
+ * Departments / Bereiche
+ * Departamentos / Setores (baseado em PERFIS_PADRAO do backend)
+ */
+export const DEPARTMENTS = [
+  'Geschäftsführung',
+  'Personal Organization und Finanzen',
+  'Technischer Bereich',
+  'IT und Datenschutz'
+];
+
+/**
+ * Teams por Department / Teams nach Bereich
+ * Times por Departamento (baseado em PERFIS_PADRAO do backend)
+ */
+export const TEAMS_BY_DEPARTMENT = {
+  'Personal Organization und Finanzen': [
+    'Finanzen und Rechnungswesen'
+  ],
+  'IT und Datenschutz': [
+    'Informationstechnologie',
+    'PR'
+  ],
+  'Technischer Bereich': [],
+  'Geschäftsführung': []
+};
+
+/**
+ * Todos os teams disponíveis / Alle verfügbaren Teams
+ * Todos os times disponíveis
+ */
+export const ALL_TEAMS = [
+  'Informationstechnologie',
+  'PR',
+  'Finanzen und Rechnungswesen'
+];

@@ -8,10 +8,11 @@
 import { useMemo } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Chip, IconButton, Tooltip } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Visibility as ViewIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Visibility as ViewIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import api from '../../services/api';
 import { 
   CONTRACT_STATUS_LABELS, 
   CONTRACT_STATUS_LABELS_EN, 
@@ -210,10 +211,43 @@ const ContractTable = ({
     baseColumns.push({
       field: 'actions',
       headerName: 'Aktionen / Actions',
-      width: 140,
+      width: 180,
       sortable: false,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 0.5 }}>
+          {/* PDF Button - shown if contract has original PDF */}
+          {params.row.original_pdf_path && (
+            <Tooltip title="PDF anzeigen / View PDF">
+              <IconButton 
+                size="small" 
+                onClick={() => {
+                  // Abrir PDF em nova aba / Open PDF in new tab
+                  api.get(`/contracts/${params.row.id}/view`, {
+                    responseType: 'blob'
+                  })
+                    .then(response => {
+                      const blob = new Blob([response.data], { type: 'application/pdf' });
+                      const blobUrl = URL.createObjectURL(blob);
+                      const newWindow = window.open(blobUrl, '_blank');
+                      
+                      // Revogar URL após 1 segundo para liberar memória
+                      // Revoke URL after 1 second to free memory
+                      if (newWindow) {
+                        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                      }
+                    })
+                    .catch(error => {
+                      console.error('Error viewing PDF:', error);
+                      alert('Fehler beim Öffnen der PDF / Error opening PDF');
+                    });
+                }}
+                color="error"
+              >
+                <PdfIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          
           <Tooltip title="View Details">
             <IconButton 
               size="small" 

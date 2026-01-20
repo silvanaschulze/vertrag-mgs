@@ -8,7 +8,7 @@ Verschiedene Schemas werden für verschiedene Operationen verwendet (erstellen, 
 from datetime import datetime, date
 from typing import Optional, List
 from decimal import Decimal
-from pydantic import BaseModel, Field, field_validator, ValidationInfo, ConfigDict, field_serializer
+from pydantic import BaseModel, Field, field_validator, model_validator, ValidationInfo, ConfigDict, field_serializer
 from enum import Enum
 import re
 from typing import Optional as _Opt
@@ -102,6 +102,11 @@ class ContractBase(BaseModel):
     client_email: Optional[str] = Field(None, max_length=100, description="Kunden-E-Mail")
     client_phone: Optional[str] = Field(None, max_length=20, description="Kundentelefonnummer")
 
+    #Organização / Organisation
+    department: Optional[str] = Field(None, max_length=100, description="Bereich / Departamento")
+    team: Optional[str] = Field(None, max_length=100, description="Team / Time")
+    responsible_user_id: Optional[int] = Field(None, description="Verantwortlicher Benutzer ID / ID do usuário responsável")
+
     #Zusätzliche Felder
     terms_and_conditions: Optional[str] = Field(None, description="Allgemeine Geschäftsbedingungen")
     notes: Optional[str] = Field(None, max_length=500, description="Zusätzliche Notizen")
@@ -122,6 +127,32 @@ class ContractBase(BaseModel):
             if not re.match(r'^[A-Za-z0-9\s/.-]+$', v):
                 raise ValueError('Kundendokument darf nur Buchstaben, Zahlen, Leerzeichen, /, - und . enthalten.')
         return v
+    
+    @model_validator(mode='after')
+    def validate_payment_frequency_logic(self) -> 'ContractBase':
+        """
+        Validiert die bedingte Logik zwischen payment_frequency und payment_custom_years.
+        Validates conditional logic between payment_frequency and payment_custom_years.
+        
+        Regeln / Rules:
+        - CUSTOM_YEARS → payment_custom_years ist erforderlich (>= 1) / is required (>= 1)
+        - Andere Frequenzen → payment_custom_years wird auf null gesetzt / is set to null
+        """
+        if self.payment_frequency == PaymentFrequency.CUSTOM_YEARS:
+            # CUSTOM_YEARS requires payment_custom_years
+            if not self.payment_custom_years or self.payment_custom_years < 1:
+                raise ValueError(
+                    'payment_custom_years ist erforderlich und muss >= 1 sein, '
+                    'wenn payment_frequency CUSTOM_YEARS ist. / '
+                    'payment_custom_years is required and must be >= 1 when '
+                    'payment_frequency is CUSTOM_YEARS.'
+                )
+        else:
+            # For other frequencies, clear payment_custom_years
+            if self.payment_custom_years is not None:
+                # Auto-clear instead of raising error (more user-friendly)
+                self.payment_custom_years = None
+        return self
     
 # Schema zum Erstellen eines neuen Vertrags
 class ContractCreate(ContractBase):
@@ -144,6 +175,8 @@ class ContractUpdate(BaseModel):
     # Finanzfelder
     value: Optional[Decimal] = Field(None, ge=0, description="Vertragswert")
     currency: Optional[str] = Field(None, max_length=3, description="Währungscode")
+    payment_frequency: Optional[PaymentFrequency] = Field(None, description="Zahlungsfrequenz / Payment frequency")
+    payment_custom_years: Optional[int] = Field(None, ge=1, le=100, description="Anzahl Jahre für 'alle X Jahre' Option")
 
     # Datumsfelder
     start_date: Optional[date] = Field(None, description="Vertragsbeginn")
@@ -152,14 +185,47 @@ class ContractUpdate(BaseModel):
 
     # Beteiligte Parteien
     client_name: Optional[str] = Field(None, min_length=2, max_length=200, description="Kunden-/Auftragnehmername")
+    company_name: Optional[str] = Field(None, min_length=2, max_length=200, description="Firmenname / Nome da empresa")
+    legal_form: Optional[LegalForm] = Field(None, description="Rechtsform / Forma jurídica")
     client_document: Optional[str] = Field(None, max_length=20, description="Kundendokument")
     client_email: Optional[str] = Field(None, max_length=100, description="Kunden-E-Mail")
     client_phone: Optional[str] = Field(None, max_length=20, description="Kundentelefon")
     client_address: Optional[str] = Field(None, max_length=200, description="Kundenadresse")
 
+    #Organização / Organisation
+    department: Optional[str] = Field(None, max_length=100, description="Bereich / Departamento")
+    team: Optional[str] = Field(None, max_length=100, description="Team / Time")
+    responsible_user_id: Optional[int] = Field(None, description="Verantwortlicher Benutzer ID / ID do usuário responsável")
+
     # Zusätzliche Felder
     terms_and_conditions: Optional[str] = Field(None, description="Geschäftsbedingungen")
     notes: Optional[str] = Field(None, max_length=500, description="Zusätzliche Notizen")
+    
+    @model_validator(mode='after')
+    def validate_payment_frequency_logic(self) -> 'ContractUpdate':
+        """
+        Validiert die bedingte Logik zwischen payment_frequency und payment_custom_years.
+        Validates conditional logic between payment_frequency and payment_custom_years.
+        
+        Regeln / Rules:
+        - CUSTOM_YEARS → payment_custom_years ist erforderlich (>= 1) / is required (>= 1)
+        - Andere Frequenzen → payment_custom_years wird auf null gesetzt / is set to null
+        """
+        if self.payment_frequency == PaymentFrequency.CUSTOM_YEARS:
+            # CUSTOM_YEARS requires payment_custom_years
+            if not self.payment_custom_years or self.payment_custom_years < 1:
+                raise ValueError(
+                    'payment_custom_years ist erforderlich und muss >= 1 sein, '
+                    'wenn payment_frequency CUSTOM_YEARS ist. / '
+                    'payment_custom_years is required and must be >= 1 when '
+                    'payment_frequency is CUSTOM_YEARS.'
+                )
+        elif self.payment_frequency is not None:
+            # For other frequencies, clear payment_custom_years
+            if self.payment_custom_years is not None:
+                # Auto-clear instead of raising error (more user-friendly)
+                self.payment_custom_years = None
+        return self
     
     # Schemas für RentStep (Mietstaffelung)
     class RentStepBase(BaseModel):
@@ -239,6 +305,7 @@ class ContractResponse(ContractBase):
     # Mietstaffelungen (zukünftige Anpassungen)
     rent_steps: Optional[List["RentStepResponse"]] = Field(default_factory=list, description="Liste der zukünftigen Mietstaffelungen")
     # Original-PDF Metadaten (optional)
+    original_pdf_path: Optional[str] = Field(None, description="Serverinterner Pfad zur Original-PDF")
     original_pdf_filename: Optional[str] = Field(None, description="Original hochgeladene PDF-Datei")
     original_pdf_sha256: Optional[str] = Field(None, description="SHA256 Hash der Original-PDF")
     uploaded_at: Optional[datetime] = Field(None, description="Zeitpunkt des Uploads der Original-PDF (UTC)")

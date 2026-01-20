@@ -84,6 +84,7 @@ const contractsApi = {
    * @param {string} data.department - Departamento
    * @param {string} data.team - Time
    * @param {number} data.responsible_user_id - ID do responsável
+   * @param {File} data.pdfFile - Arquivo PDF do contrato (opcional)
    * @returns {Promise<Object>} Contrato criado
    * @throws {Error} Se validação falhar (400) ou não autorizado (403)
    * 
@@ -101,8 +102,43 @@ const contractsApi = {
    */
   createContract: async (data) => {
     try {
-      const response = await api.post('/contracts', data);
-      return response.data;
+      // Decidir qual endpoint usar / Decide which endpoint to use
+      const useFormData = !!data.pdfFile;
+      
+      if (useFormData) {
+        // Usar novo endpoint com FormData / Use new endpoint with FormData
+        const formData = new FormData();
+        
+        // Adicionar todos os campos / Add all fields
+        Object.keys(data).forEach(key => {
+          if (key === 'pdfFile') {
+            // Adicionar arquivo / Add file
+            formData.append('pdf_file', data.pdfFile);
+          } else if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
+            // Adicionar campo (converter para string se necessário)
+            // Add field (convert to string if needed)
+            const value = data[key];
+            if (value instanceof Date) {
+              formData.append(key, value.toISOString().split('T')[0]);
+            } else if (typeof value === 'number' || typeof value === 'boolean') {
+              formData.append(key, value.toString());
+            } else {
+              formData.append(key, value);
+            }
+          }
+        });
+        
+        const response = await api.post('/contracts/with-upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+      } else {
+        // Usar endpoint JSON tradicional (sem PDF)
+        // Use traditional JSON endpoint (without PDF)
+        const { pdfFile, ...contractData } = data;
+        const response = await api.post('/contracts', contractData);
+        return response.data;
+      }
     } catch (error) {
       console.error('Error creating contract:', error);
       throw error;
@@ -115,6 +151,7 @@ const contractsApi = {
    * 
    * @param {number} id - ID do contrato
    * @param {Object} data - Dados a atualizar (mesmos campos do create)
+   * @param {File} data.pdfFile - Arquivo PDF do contrato (opcional)
    * @returns {Promise<Object>} Contrato atualizado
    * @throws {Error} Se não encontrado (404), sem permissão (403) ou validação falhar
    * 
@@ -126,10 +163,69 @@ const contractsApi = {
    */
   updateContract: async (id, data) => {
     try {
-      const response = await api.put(`/contracts/${id}`, data);
-      return response.data;
+      // Decidir qual endpoint usar / Decide which endpoint to use
+      const useFormData = !!data.pdfFile;
+      
+      if (useFormData) {
+        // Usar novo endpoint com FormData / Use new endpoint with FormData
+        const formData = new FormData();
+        
+        // Adicionar todos os campos / Add all fields
+        Object.keys(data).forEach(key => {
+          if (key === 'pdfFile') {
+            // Adicionar arquivo / Add file
+            formData.append('pdf_file', data.pdfFile);
+          } else if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
+            // Adicionar campo (converter para string se necessário)
+            // Add field (convert to string if needed)
+            const value = data[key];
+            if (value instanceof Date) {
+              formData.append(key, value.toISOString().split('T')[0]);
+            } else if (typeof value === 'number' || typeof value === 'boolean') {
+              formData.append(key, value.toString());
+            } else {
+              formData.append(key, value);
+            }
+          }
+        });
+        
+        const response = await api.put(`/contracts/${id}/with-upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+      } else {
+        // Usar endpoint JSON tradicional (sem PDF)
+        // Use traditional JSON endpoint (without PDF)
+        const { pdfFile, ...contractData } = data;
+        const response = await api.put(`/contracts/${id}`, contractData);
+        return response.data;
+      }
     } catch (error) {
       console.error(`Error updating contract ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Anexar PDF original a contrato existente
+   * Original-PDF an bestehenden Vertrag anhängen
+   * 
+   * @param {number} id - ID do contrato
+   * @param {File} file - Arquivo PDF
+   * @returns {Promise<Object>} Resposta com mensagem e path
+   * @throws {Error} Se falhar upload
+   */
+  uploadPdf: async (id, file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await api.post(`/contracts/${id}/upload-pdf`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error uploading PDF for contract ${id}:`, error);
       throw error;
     }
   },

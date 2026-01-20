@@ -5,7 +5,7 @@
  * Exibe informações detalhadas de um contrato
  * Zeigt detaillierte Informationen eines Vertrags an
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
   Card,
@@ -19,10 +19,15 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  Button,
+  ButtonGroup
 } from '@mui/material';
+import { Download as DownloadIcon, Visibility as VisibilityIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { format } from 'date-fns';
+import { useSnackbar } from 'notistack';
 import { useAuthStore } from '../../store/authStore';
+import api from '../../services/api';
 import {
   CONTRACT_STATUS_LABELS,
   CONTRACT_STATUS_LABELS_EN,
@@ -73,6 +78,9 @@ const formatDateTime = (dateString) => {
 
 const ContractDetail = ({ contract }) => {
   const user = useAuthStore((state) => state.user);
+  const { enqueueSnackbar } = useSnackbar();
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [deletingPdf, setDeletingPdf] = useState(false);
 
   /**
    * Verifica se usuário pode ver valores financeiros
@@ -82,6 +90,105 @@ const ContractDetail = ({ contract }) => {
     if (!user) return false;
     return user.access_level === 5 || user.access_level === 4;
   }, [user]);
+
+  /**
+   * Download PDF do contrato
+   * Vertrag-PDF herunterladen
+   */
+  const handleDownloadPdf = async () => {
+    if (!contract || !contract.original_pdf_path) {
+      enqueueSnackbar('Kein PDF verfügbar / No PDF available', { variant: 'warning' });
+      return;
+    }
+
+    setDownloadingPdf(true);
+    try {
+      const response = await api.get(`/contracts/${contract.id}/original`, {
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const filename = contract.original_pdf_filename || `contract_${contract.id}.pdf`;
+      link.setAttribute('download', filename);
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      enqueueSnackbar('PDF heruntergeladen / PDF downloaded', { variant: 'success' });
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      enqueueSnackbar('Fehler beim Herunterladen / Download failed', { variant: 'error' });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  /**
+   * Visualizar PDF inline
+   * PDF inline anzeigen
+   */
+  const handleViewPdf = () => {
+    if (!contract || !contract.original_pdf_path) {
+      enqueueSnackbar('Kein PDF verfügbar / No PDF available', { variant: 'warning' });
+      return;
+    }
+    
+    // Fazer requisição com axios (token já é adicionado pelo interceptor)
+    // Make request with axios (token is already added by interceptor)
+    api.get(`/contracts/${contract.id}/view`, {
+      responseType: 'blob'
+    })
+      .then(response => {
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+        const newWindow = window.open(blobUrl, '_blank');
+        
+        // Revogar URL após 1 segundo para liberar memória
+        // Revoke URL after 1 second to free memory
+        if (newWindow) {
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        }
+      })
+      .catch(error => {
+        console.error('Error viewing PDF:', error);
+        enqueueSnackbar('Fehler beim Öffnen der PDF / Error opening PDF', { variant: 'error' });
+      });
+  };
+
+  /**
+   * Deletar PDF do contrato
+   * PDF vom Vertrag löschen
+   */
+  const handleDeletePdf = async () => {
+    if (!contract || !contract.original_pdf_path) {
+      enqueueSnackbar('Kein PDF verfügbar / No PDF available', { variant: 'warning' });
+      return;
+    }
+
+    if (!window.confirm('Möchten Sie die PDF wirklich löschen? / Deseja realmente excluir o PDF?')) {
+      return;
+    }
+
+    setDeletingPdf(true);
+    try {
+      await api.delete(`/contracts/${contract.id}/original`);
+      enqueueSnackbar('PDF gelöscht / PDF excluído', { variant: 'success' });
+      // Recarregar página para atualizar dados
+      window.location.reload();
+    } catch (err) {
+      console.error('Error deleting PDF:', err);
+      enqueueSnackbar('Fehler beim Löschen / Erro ao excluir', { variant: 'error' });
+    } finally {
+      setDeletingPdf(false);
+    }
+  };
 
   if (!contract) {
     return (
@@ -264,6 +371,44 @@ const ContractDetail = ({ contract }) => {
           </Grid>
         </CardContent>
       </Card>
+
+      {/* PDF Original / Original-PDF */}
+      {contract.original_pdf_path && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Original-PDF / Original PDF
+            </Typography>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={6}>
+                <Typography variant="body2" color="text.secondary">
+                  Dateiname / Filename:
+                </Typography>
+                <Typography variant="body1">
+                  {contract.original_pdf_filename || 'contract.pdf'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <ButtonGroup variant="outlined" fullWidth>
+                  <Button 
+                    startIcon={<VisibilityIcon />} 
+                    onClick={handleViewPdf}
+                  >
+                    Ansehen / View
+                  </Button>
+                  <Button 
+                    startIcon={<DownloadIcon />} 
+                    onClick={handleDownloadPdf}
+                    disabled={downloadingPdf}
+                  >
+                    {downloadingPdf ? 'Laden...' : 'Download'}
+                  </Button>
+                </ButtonGroup>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Organização / Organisation */}
       <Card sx={{ mb: 3 }}>

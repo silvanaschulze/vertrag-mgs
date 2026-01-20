@@ -35,13 +35,13 @@ class UserRole(str, enum.Enum):
     """Systemrollen für Benutzer.
     Papéis técnicos do sistema para usuários.
     """
-    SYSTEM_ADMIN = "system_admin"        # TI / Admin técnico
-    DIRECTOR = "director"                # Geschäftsführung / Diretoria
-    DEPARTMENT_USER = "department_user"  # Leiter mit eingeschränkten Funktionen / Gestor com funções restritas
-    DEPARTMENT_ADM = "department_adm"    # Leiter mit Admin-Funktionen / Gestor com funções administrativas
-    TEAM_LEAD = "team_lead"              # Teamleiter / Líder de time
-    STAFF = "staff"                      # Mitarbeiter / Colaborador
-    READ_ONLY = "read_only"              # Nur Lesezugriff / Somente leitura
+    SYSTEM_ADMIN = "SYSTEM_ADMIN"        # TI / Admin técnico
+    DIRECTOR = "DIRECTOR"                # Geschäftsführung / Diretoria
+    DEPARTMENT_USER = "DEPARTMENT_USER"  # Leiter mit eingeschränkten Funktionen / Gestor com funções restritas
+    DEPARTMENT_ADM = "DEPARTMENT_ADM"    # Leiter mit Admin-Funktionen / Gestor com funções administrativas
+    TEAM_LEAD = "TEAM_LEAD"              # Teamleiter / Líder de time
+    STAFF = "STAFF"                      # Mitarbeiter / Colaborador
+    READ_ONLY = "READ_ONLY"              # Nur Lesezugriff / Somente leitura
 
 class User(Base):
     """User model

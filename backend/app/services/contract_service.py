@@ -268,9 +268,13 @@ class ContractService:
                 # Sortierung anwenden / Aplicar ordenação
         sort_column = getattr(Contract, sort_by, Contract.created_at)
         if sort_order.lower() == "asc":
-            query = query.order_by(asc(sort_column))
+            # Ordenação ascendente com ID secundário para consistência
+            # Ascending order with secondary ID for consistency
+            query = query.order_by(asc(sort_column), asc(Contract.id))
         else:
-            query = query.order_by(desc(sort_column))
+            # Ordenação descendente com ID secundário para consistência
+            # Descending order with secondary ID for consistency
+            query = query.order_by(desc(sort_column), asc(Contract.id))
         
         # Paginierung anwenden / Aplicar paginação
         query = query.offset(skip).limit(limit)

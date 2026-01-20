@@ -156,12 +156,12 @@ const Login = () => {
                 sx={{ mt: 3, mb: 2 }}
               >
                 {loading ? (
-                  <>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <CircularProgress size={24} sx={{ mr: 1 }} color="inherit" />
-                    Anmelden... / Logging in...
-                  </>
+                    <span>Anmelden... / Logging in...</span>
+                  </Box>
                 ) : (
-                  'Anmelden / Login'
+                  <span>Anmelden / Login</span>
                 )}
               </Button>
             </form>

@@ -5,7 +5,7 @@
  * Formulário reutilizável para criar e editar contratos
  * Wiederverwendbares Formular zum Erstellen und Bearbeiten von Verträgen
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,9 +28,12 @@ import {
   LEGAL_FORM_LABELS,
   PAYMENT_FREQUENCY,
   PAYMENT_FREQUENCY_LABELS,
-  DEFAULT_CURRENCY
+  DEFAULT_CURRENCY,
+  DEPARTMENTS,
+  ALL_TEAMS
 } from '../../utils/constants';
 import { format, parseISO } from 'date-fns';
+import api from '../../services/api';
 
 /**
  * Schema de validação Zod
@@ -233,6 +236,26 @@ const ContractForm = ({
   const [selectedPaymentFrequency, setSelectedPaymentFrequency] = useState(
     initialData?.payment_frequency || ''
   );
+  
+  // Estado para lista de usuários / State for user list
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  
+  // Carregar usuários / Load users
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const response = await api.get('/users/');
+        setUsers(response.data.users || response.data || []);
+      } catch (error) {
+        console.error('Error loading users:', error);
+        setUsers([]);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+    loadUsers();
+  }, []);
 
   const handleFormSubmit = (data) => {
     // Limpa campos vazios opcionais e garante null ao invés de strings vazias
@@ -370,8 +393,73 @@ const ContractForm = ({
           {/* Upload de PDF / PDF-Upload */}
           <Grid item xs={12}>
             <Typography variant="subtitle1" gutterBottom sx={{ mt: 1 }}>
-              Vertragsdokument / Contract Document *
+              Vertragsdokument / Contract Document {!initialData && '*'}
             </Typography>
+            
+            {/* Mostrar PDF existente se estiver editando */}
+            {/* Show existing PDF if editing */}
+            {initialData && initialData.original_pdf_filename && (
+              <Box sx={{ mb: 2, p: 2, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Aktuelles PDF / Current PDF:
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  📄 {initialData.original_pdf_filename}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      api.get(`/contracts/${initialData.id}/view`, {
+                        responseType: 'blob'
+                      })
+                        .then(response => {
+                          const blob = new Blob([response.data], { type: 'application/pdf' });
+                          const blobUrl = URL.createObjectURL(blob);
+                          const newWindow = window.open(blobUrl, '_blank');
+                          if (newWindow) {
+                            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                          }
+                        })
+                        .catch(error => {
+                          console.error('Error viewing PDF:', error);
+                          alert('Fehler beim Öffnen der PDF / Error opening PDF');
+                        });
+                    }}
+                    disabled={loading}
+                  >
+                    Ansehen / View
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="error"
+                    onClick={async () => {
+                      if (!window.confirm('Möchten Sie die PDF wirklich löschen? / Deseja realmente excluir o PDF?')) {
+                        return;
+                      }
+                      try {
+                        await api.delete(`/contracts/${initialData.id}/original`);
+                        alert('PDF gelöscht / PDF excluído');
+                        window.location.reload();
+                      } catch (error) {
+                        console.error('Error deleting PDF:', error);
+                        alert('Fehler beim Löschen / Erro ao excluir');
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    Löschen / Delete
+                  </Button>
+                </Box>
+                <Typography variant="caption" display="block" sx={{ mt: 1 }} color="text.secondary">
+                  Wählen Sie ein neues PDF aus, um das aktuelle zu ersetzen
+                  Select a new PDF to replace the current one
+                </Typography>
+              </Box>
+            )}
+            
             <input
               accept="application/pdf"
               style={{ display: 'none' }}
@@ -397,7 +485,10 @@ const ContractForm = ({
                 disabled={loading}
                 sx={{ mr: 2 }}
               >
-                PDF auswählen / Select PDF
+                {pdfFile || (initialData && initialData.original_pdf_filename) 
+                  ? 'Neues PDF auswählen / Select New PDF'
+                  : 'PDF auswählen / Select PDF'
+                }
               </Button>
             </label>
             {pdfFile && (
@@ -748,13 +839,23 @@ const ContractForm = ({
               render={({ field }) => (
                 <TextField
                   {...field}
+                  select
                   value={field.value || ''}
                   fullWidth
                   label="Bereich / Department"
                   error={!!errors.department}
                   helperText={errors.department?.message}
                   disabled={loading}
-                />
+                >
+                  <MenuItem value="">
+                    <em>-- Keiner / None --</em>
+                  </MenuItem>
+                  {DEPARTMENTS.map((dept) => (
+                    <MenuItem key={dept} value={dept}>
+                      {dept}
+                    </MenuItem>
+                  ))}
+                </TextField>
               )}
             />
           </Grid>
@@ -766,13 +867,23 @@ const ContractForm = ({
               render={({ field }) => (
                 <TextField
                   {...field}
+                  select
                   value={field.value || ''}
                   fullWidth
                   label="Team / Team"
                   error={!!errors.team}
                   helperText={errors.team?.message}
                   disabled={loading}
-                />
+                >
+                  <MenuItem value="">
+                    <em>-- Keiner / None --</em>
+                  </MenuItem>
+                  {ALL_TEAMS.map((team) => (
+                    <MenuItem key={team} value={team}>
+                      {team}
+                    </MenuItem>
+                  ))}
+                </TextField>
               )}
             />
           </Grid>
@@ -784,18 +895,27 @@ const ContractForm = ({
               render={({ field }) => (
                 <TextField
                   {...field}
+                  select
                   value={field.value || ''}
                   onChange={(e) => {
                     const value = e.target.value === '' ? null : parseInt(e.target.value);
                     field.onChange(value);
                   }}
                   fullWidth
-                  type="number"
-                  label="Verantwortlicher Benutzer ID / Responsible User ID"
+                  label="Verantwortlicher / Responsible User"
                   error={!!errors.responsible_user_id}
                   helperText={errors.responsible_user_id?.message}
-                  disabled={loading}
-                />
+                  disabled={loading || loadingUsers}
+                >
+                  <MenuItem value="">
+                    <em>-- Keiner / None --</em>
+                  </MenuItem>
+                  {users.map((user) => (
+                    <MenuItem key={user.id} value={user.id}>
+                      {user.name} ({user.email})
+                    </MenuItem>
+                  ))}
+                </TextField>
               )}
             />
           </Grid>
