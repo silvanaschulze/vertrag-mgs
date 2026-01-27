@@ -133,7 +133,10 @@ async def list_contracts(
     Rückgabe:
         ContractListResponse: Liste der Verträge mit Paginierungsinformationen
     """
-    return await contract_service.list_contracts(
+    # 🐛 DEBUG: Log dos parâmetros recebidos
+    print(f"📥 [BACKEND] Parâmetros recebidos: page={page}, per_page={per_page}, status={status}, contract_type={contract_type}, search={search}, sort_by={sort_by}, sort_order={sort_order}")
+    
+    result = await contract_service.list_contracts(
         skip=(page - 1) * per_page,
         limit=per_page,
         filters={
@@ -141,9 +144,14 @@ async def list_contracts(
             'contract_type': contract_type
         } if status or contract_type else None,
         search=search,
-    sort_by=sort_by or "created_at",
-    sort_order=sort_order or "desc"
-    )   
+        sort_by=sort_by or "created_at",
+        sort_order=sort_order or "desc"
+    )
+    
+    # 🐛 DEBUG: Log da resposta que será enviada
+    print(f"📤 [BACKEND] Resposta: total={result.total}, contracts={len(result.contracts)}, page={result.page}, per_page={result.per_page}")
+    
+    return result   
 # POST /contracts/ - Erstellt einen neuen Vertrag
 @router.post("/", response_model=ContractResponse, status_code=status.HTTP_201_CREATED)
 async def create_contract(    

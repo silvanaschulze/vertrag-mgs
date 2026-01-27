@@ -333,14 +333,29 @@ const ContractTable = ({
         rowCount={totalRows}
         loading={loading}
         pagination
-        page={page}
-        pageSize={pageSize}
+        paginationModel={{ page: page, pageSize: pageSize }}
         paginationMode="server"
         sortingMode="server"
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
+        onPaginationModelChange={(model) => {
+          console.log('📊 [DataGrid] paginationModel mudou:', model);
+          if (model.page !== page && onPageChange) {
+            console.log('🔄 [DataGrid] Chamando onPageChange:', model.page);
+            onPageChange(model.page);
+          }
+          if (model.pageSize !== pageSize && onPageSizeChange) {
+            console.log('📏 [DataGrid] Chamando onPageSizeChange:', model.pageSize);
+            onPageSizeChange(model.pageSize);
+          }
+        }}
         onSortModelChange={onSortChange}
         pageSizeOptions={[10, 25, 50, 100]}
+        initialState={{
+          pagination: {
+            paginationModel: { page: 0, pageSize: 25 }
+          }
+        }}
+        disableColumnSelector
+        disableDensitySelector
         disableRowSelectionOnClick
         disableColumnMenu
         autoHeight

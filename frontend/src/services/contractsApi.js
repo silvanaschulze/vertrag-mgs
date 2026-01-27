@@ -33,7 +33,22 @@ const contractsApi = {
    */
   getContracts: async (params = {}) => {
     try {
-      const response = await api.get('/contracts/', { params });
+      // 🔧 CRITICAL: Backend usa 'per_page', não 'page_size'
+      // Frontend envia page_size, precisamos mapear para per_page
+      const apiParams = { ...params };
+      if (apiParams.page_size) {
+        apiParams.per_page = apiParams.page_size;
+        delete apiParams.page_size;
+        console.log('🔄 [API] Mapeamento page_size → per_page:', { 
+          original: params.page_size, 
+          mapeado: apiParams.per_page 
+        });
+      }
+      
+      console.log('📤 [API] Parâmetros finais enviados:', apiParams);
+      const response = await api.get('/contracts/', { params: apiParams });
+      console.log('📥 [API] Resposta recebida:', response.data);
+      
       // Backend retorna 'contracts', mapeamos para 'items' para consistência
       return {
         items: response.data.contracts || [],
