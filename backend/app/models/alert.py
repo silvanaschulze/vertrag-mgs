@@ -37,6 +37,7 @@ class AlertStatus(str, enum.Enum):
     PENDING = "pending"
     SENT = "sent"
     FAILED = "failed"
+    REJECTED = "rejected"
 
 
 class Alert(Base):
@@ -132,7 +133,7 @@ class AlertInDB(BaseModel):
     subject: Optional[str] = None
     error: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
 
 class AlertResponse(AlertInDB):

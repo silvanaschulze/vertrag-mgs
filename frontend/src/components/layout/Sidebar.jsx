@@ -16,6 +16,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import AlertBadge from '../alerts/AlertBadge';
 
 const DRAWER_WIDTH = 240;
 
@@ -170,7 +171,12 @@ const Sidebar = () => {
                 }}
               >
                 <ListItemIcon>
-                  <Icon color={isActive ? 'inherit' : 'action'} />
+                  {/* Se for o item de alertas, mostra badge com contador */}
+                  {item.id === 'alerts' ? (
+                    <AlertBadge showIcon={true} />
+                  ) : (
+                    <Icon color={isActive ? 'inherit' : 'action'} />
+                  )}
                 </ListItemIcon>
                 <ListItemText 
                   primary={item.label}

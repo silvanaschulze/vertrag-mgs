@@ -308,7 +308,7 @@ async def create_contract_with_upload(
             responsible_user_id=responsible_user_id,
             terms_and_conditions=terms_and_conditions,
             notes=notes
-        )
+        ) # type: ignore
         
         print(f"📦 DEBUG - ContractCreate object:")
         print(f"  - department: {contract_data.department}")

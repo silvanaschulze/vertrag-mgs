@@ -468,7 +468,9 @@ const ContractDetail = ({ contract }) => {
                 Verantwortlicher Benutzer / Responsible User
               </Typography>
               <Typography variant="body1">
-                {contract.responsible_user_id ? `User ID: ${contract.responsible_user_id}` : '-'}
+                {contract.responsible_user_name
+                  ? contract.responsible_user_name
+                  : (contract.responsible_user_id ? `User ID: ${contract.responsible_user_id}` : '-')}
               </Typography>
             </Grid>
           </Grid>

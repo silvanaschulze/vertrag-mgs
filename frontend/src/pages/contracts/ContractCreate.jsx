@@ -5,7 +5,7 @@
  * Página para criar novo contrato
  * Seite zum Erstellen eines neuen Vertrags
  */
-import { Box, Typography, Breadcrumbs, Link as MuiLink } from '@mui/material';
+import { Box, Typography, Breadcrumbs, Link as MuiLink, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material';
@@ -62,6 +62,16 @@ const ContractCreate = () => {
           New Contract
         </Typography>
       </Box>
+
+      {/* Informação sobre funcionalidades adicionais */}
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          <strong>Hinweis / Nota:</strong> Mietstaffelungen (Rent Steps) und benutzerdefinierte Warnungen können nach dem Speichern des Vertrags hinzugefügt werden.
+        </Typography>
+        <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+          Rent Steps e alertas customizados podem ser adicionados após salvar o contrato.
+        </Typography>
+      </Alert>
 
       {/* Form */}
       <ContractForm

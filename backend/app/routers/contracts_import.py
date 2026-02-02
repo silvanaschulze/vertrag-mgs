@@ -8,6 +8,7 @@ Unterstützt Upload, Extraktion und Validierung von Vertragsdaten.
 Suporta upload, extração e validação de dados de contrato.
 """
 
+import asyncio
 import os
 import time
 import logging
@@ -17,23 +18,15 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Lokale Imports / Imports locais
-from app.core.database import get_db
-from app.core.security import get_current_active_user
-from app.models.user import User
-from app.schemas.extracted_contract import (
-    ExtractedContractDraft, 
-    ExtractionRequest, 
-    ExtractionResponse
-)
-from app.services.pdf_reader import PDFReaderService
-import asyncio
-# Contract Extractor Service wurde in PDFReaderService integriert
-# Serviço de extração de contrato foi integrado no PDFReaderService
 import hashlib
 from datetime import datetime, timezone
 from sqlalchemy import select
 from app.models.contract import Contract
+from app.core.database import get_db
+from app.core.security import get_current_active_user
+from app.models.user import User
+from app.schemas.extracted_contract import ExtractionResponse
+from app.services.pdf_reader import PDFReaderService
 
 # Logging konfigurieren / Configurar logging
 logger = logging.getLogger(__name__)

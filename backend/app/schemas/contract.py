@@ -309,17 +309,19 @@ class ContractResponse(ContractBase):
     original_pdf_filename: Optional[str] = Field(None, description="Original hochgeladene PDF-Datei")
     original_pdf_sha256: Optional[str] = Field(None, description="SHA256 Hash der Original-PDF")
     uploaded_at: Optional[datetime] = Field(None, description="Zeitpunkt des Uploads der Original-PDF (UTC)")
+    # Novo campo: nome do usuário responsável
+    responsible_user_name: Optional[str] = Field(None, description="Name des verantwortlichen Benutzers")
 
     model_config = ConfigDict(from_attributes=True)
-    
+
     @field_serializer('value', when_used='unless-none')
     def serialize_value(self, value: Decimal) -> float:
         return float(value)
-    
+
     @field_serializer('start_date', 'end_date', 'renewal_date', when_used='unless-none')
     def serialize_dates(self, dt: date) -> str:
         return dt.isoformat()
-    
+
     @field_serializer('created_at', 'updated_at', 'uploaded_at', when_used='unless-none')
     def serialize_datetimes(self, dt: datetime) -> str:
         return dt.isoformat()

@@ -49,6 +49,7 @@ export const ROLE_PERMISSIONS = {
       'contracts:import',
       'approvals:approve_all',
       'users:view',
+      'users:manage_all',
       'alerts:view_all',
       'reports:view_all'
     ],

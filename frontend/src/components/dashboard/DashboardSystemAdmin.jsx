@@ -44,8 +44,8 @@ import dashboardApi from '../../services/dashboardApi';
 function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', unit = '' }) {
   return (
     <Card elevation={3}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+      <CardContent sx={{ minWidth: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, minWidth: 0 }}>
           <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
             {title}
           </Typography>
@@ -71,8 +71,8 @@ function MetricCard({ title, value, max, unit, icon: Icon, color = 'primary' }) 
 
   return (
     <Card elevation={2}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+      <CardContent sx={{ minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, minWidth: 0 }}>
           <Icon sx={{ color: `${color}.main`, fontSize: 32, mr: 2 }} />
           <Typography variant="h6" sx={{ fontWeight: 500 }}>
             {title}

@@ -1,3 +1,41 @@
+export const USER_ROLES = {
+  SYSTEM_ADMIN: 'SYSTEM_ADMIN',
+  DIRECTOR: 'DIRECTOR',
+  DEPARTMENT_ADM: 'DEPARTMENT_ADM',
+  DEPARTMENT_USER: 'DEPARTMENT_USER',
+  TEAM_LEAD: 'TEAM_LEAD',
+  STAFF: 'STAFF',
+  READ_ONLY: 'READ_ONLY',
+};
+
+export const USER_ROLE_LABELS = {
+  SYSTEM_ADMIN: 'Systemadministrator / System Admin',
+  DIRECTOR: 'Direktor / Director',
+  DEPARTMENT_ADM: 'Abteilungsleiter / Department Admin',
+  DEPARTMENT_USER: 'Abteilungsbenutzer / Department User',
+  TEAM_LEAD: 'Teamleiter / Team Lead',
+  STAFF: 'Mitarbeiter / Staff',
+  READ_ONLY: 'Nur Lesen / Read Only',
+};
+
+export const ACCESS_LEVELS = {
+  SYSTEM: 6,
+  COMPANY: 5,
+  DEPARTMENT: 4,
+  DEPARTMENT_RESTRICTED: 3,
+  TEAM: 2,
+  OWN: 1,
+};
+
+export const ACCESS_LEVEL_LABELS = {
+  6: 'Level 6',
+  5: 'Level 5',
+  4: 'Level 4',
+  3: 'Level 3',
+  2: 'Level 2',
+  1: 'Level 1',
+  0: 'Level 0',
+};
 /**
  * Constantes da Aplicação
  * Anwendungskonstanten
@@ -265,3 +303,158 @@ export const ALL_TEAMS = [
   'PR',
   'Finanzen und Rechnungswesen'
 ];
+
+/**
+ * ========================================
+ * ALERTAS / WARNUNGEN
+ * ========================================
+ */
+
+/**
+ * Tipos de Alertas (deve corresponder ao backend Alert.alert_type)
+ * Warnungstypen (muss mit Backend Alert.alert_type übereinstimmen)
+ */
+export const ALERT_TYPES = {
+  T_60: 'T-60',      // 60 dias antes do vencimento / 60 Tage vor Ablauf
+  T_30: 'T-30',      // 30 dias antes / 30 Tage vor Ablauf
+  T_10: 'T-10',      // 10 dias antes / 10 Tage vor Ablauf
+  T_1: 'T-1',        // 1 dia antes / 1 Tag vor Ablauf
+  CUSTOM: 'BENUTZERDEFINIERT'   // Alerta manual / Manuelle Warnung
+};
+
+/**
+ * Labels de Tipos de Alertas (bilíngue Alemão/Inglês)
+ * Warnungstyp-Labels (zweisprachig Deutsch/Englisch)
+ */
+export const ALERT_TYPE_LABELS = {
+  'T-60': '60 Tage / 60 Days',
+  'T-30': '30 Tage / 30 Days',
+  'T-10': '10 Tage / 10 Days',
+  'T-1': '1 Tag / 1 Day',
+  'BENUTZERDEFINIERT': 'Benutzerdefiniert / Custom'
+};
+
+/**
+ * Cores para chips de tipos de alertas
+ * Farben für Warnungstyp-Chips
+ */
+export const ALERT_TYPE_COLORS = {
+  'T-60': 'info',      // Azul - ainda distante / Blau - noch weit weg
+  'T-30': 'warning',   // Laranja - atenção / Orange - Achtung
+  'T-10': 'error',     // Vermelho - urgente / Rot - dringend
+  'T-1': 'error',      // Vermelho - muito urgente / Rot - sehr dringend
+  'BENUTZERDEFINIERT': 'default'  // Cinza - personalizado / Grau - benutzerdefiniert
+};
+
+/**
+ * Status de Alertas (backend usa pending/sent/failed)
+ * Warnungsstatus (Backend verwendet pending/sent/failed)
+ */
+export const ALERT_STATUS = {
+  ALL: 'all',           // Todos / Alle
+  PENDING: 'pending',   // Pendente / Ausstehend
+  SENT: 'sent',         // Enviado / Gesendet
+  FAILED: 'failed'      // Falhou / Fehlgeschlagen
+};
+
+/**
+ * Labels de Status de Alertas
+ * Warnungsstatus-Labels
+ */
+export const ALERT_STATUS_LABELS = {
+  [ALERT_STATUS.ALL]: 'Alle / All',
+  [ALERT_STATUS.PENDING]: 'Ausstehend / Pending',
+  [ALERT_STATUS.SENT]: 'Gesendet / Sent',
+  [ALERT_STATUS.FAILED]: 'Fehlgeschlagen / Failed'
+};
+
+/**
+ * Cores para status de alertas
+ * Farben für Warnungsstatus
+ */
+export const ALERT_STATUS_COLORS = {
+  [ALERT_STATUS.PENDING]: 'warning',
+  [ALERT_STATUS.SENT]: 'success',
+  [ALERT_STATUS.FAILED]: 'error'
+};
+
+/**
+ * ========================================
+ * RENT STEPS / MIETSTAFFELUNGEN
+ * ========================================
+ */
+
+/**
+ * Moedas suportadas para Rent Steps
+ * Unterstützte Währungen für Mietstaffelungen
+ */
+export const CURRENCIES = {
+  EUR: 'EUR',
+  USD: 'USD',
+  GBP: 'GBP',
+  CHF: 'CHF',
+  BRL: 'BRL'
+};
+
+/**
+ * Labels de moedas com símbolos
+ * Währungs-Labels mit Symbolen
+ */
+export const CURRENCY_LABELS = {
+  [CURRENCIES.EUR]: 'EUR (€)',
+  [CURRENCIES.USD]: 'USD ($)',
+  [CURRENCIES.GBP]: 'GBP (£)',
+  [CURRENCIES.CHF]: 'CHF (Fr)',
+  [CURRENCIES.BRL]: 'BRL (R$)'
+};
+
+/**
+ * Símbolos de moedas
+ * Währungssymbole
+ */
+export const CURRENCY_SYMBOLS = {
+  [CURRENCIES.EUR]: '€',
+  [CURRENCIES.USD]: '$',
+  [CURRENCIES.GBP]: '£',
+  [CURRENCIES.CHF]: 'Fr',
+  [CURRENCIES.BRL]: 'R$'
+};
+
+/**
+ * ========================================
+ * APPROVALS / GENEHMIGUNGEN
+ * ========================================
+ */
+
+/**
+ * Status de Aprovações (deve corresponder ao backend ApprovalStatus enum)
+ * Genehmigungsstatus (muss mit Backend ApprovalStatus enum übereinstimmen)
+ */
+export const APPROVAL_STATUS = {
+  PENDING: 'pending',       // Aguardando / Ausstehend
+  APPROVED: 'approved',     // Aprovado / Genehmigt
+  REJECTED: 'rejected',     // Rejeitado / Abgelehnt
+  CANCELLED: 'cancelled'    // Cancelado / Abgebrochen
+};
+
+/**
+ * Labels de Status de Aprovações
+ * Genehmigungsstatus-Labels
+ */
+export const APPROVAL_STATUS_LABELS = {
+  [APPROVAL_STATUS.PENDING]: 'Ausstehend / Pendente',
+  [APPROVAL_STATUS.APPROVED]: 'Genehmigt / Aprovado',
+  [APPROVAL_STATUS.REJECTED]: 'Abgelehnt / Rejeitado',
+  [APPROVAL_STATUS.CANCELLED]: 'Abgebrochen / Cancelado'
+};
+
+/**
+ * Cores para status de aprovações
+ * Farben für Genehmigungsstatus
+ */
+export const APPROVAL_STATUS_COLORS = {
+  [APPROVAL_STATUS.PENDING]: 'warning',
+  [APPROVAL_STATUS.APPROVED]: 'success',
+  [APPROVAL_STATUS.REJECTED]: 'error',
+  [APPROVAL_STATUS.CANCELLED]: 'default'
+};

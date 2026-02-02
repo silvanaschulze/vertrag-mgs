@@ -1,31 +1,29 @@
+import UsersPage from './pages/users/UsersPage';
+import UserManage from './pages/users/UserManage';
+// ...existing code...
+import AlertsPage from './pages/alerts/AlertsPage';
+import RequirePermission from './components/auth/RequirePermission';
+import PrivateRoute from './components/auth/PrivateRoute';
+import AppLayout from './components/layout/AppLayout';
+import Dashboard from './pages/Dashboard';
+import ContractsList from './pages/contracts/ContractsList';
+import ContractCreate from './pages/contracts/ContractCreate';
+import ContractView from './pages/contracts/ContractView';
+import ContractEdit from './pages/contracts/ContractEdit';
+import Unauthorized from './pages/Unauthorized';
+import Login from './pages/Login';
 /**
  * App - Configuração de Rotas / Routenkonfiguration
  * 
  * Define todas as rotas da aplicação com proteção
  * Definiert alle Anwendungsrouten mit Schutz
  */
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline } from '@mui/material';
-import { SnackbarProvider } from 'notistack';
-import theme from './theme/theme';
-import PrivateRoute from './components/auth/PrivateRoute';
-import RequirePermission from './components/auth/RequirePermission';
-import AppLayout from './components/layout/AppLayout';
-import Login from './pages/Login';
-import Unauthorized from './pages/Unauthorized';
-import Dashboard from './pages/Dashboard';
-import ContractsList from './pages/contracts/ContractsList';
-import ContractCreate from './pages/contracts/ContractCreate';
-import ContractEdit from './pages/contracts/ContractEdit';
-import ContractView from './pages/contracts/ContractView';
 
-// Páginas temporárias (vamos criar depois)
-// Temporäre Seiten (werden später erstellt)
-const ImportPage = () => <div><h1>Import</h1><p>Em construção / In Arbeit</p></div>;
-const AlertsPage = () => <div><h1>Warnungen / Alerts</h1><p>Em construção / In Arbeit</p></div>;
-const ApprovalsPage = () => <div><h1>Genehmigungen / Approvals</h1><p>Em construção / In Arbeit</p></div>;
-const UsersPage = () => <div><h1>Benutzer / Users</h1><p>Em construção / In Arbeit</p></div>;
+import ContractImport from './pages/contracts/ContractImport';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import { SnackbarProvider } from 'notistack';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import theme from './theme/theme';
 const SystemPage = () => <div><h1>System</h1><p>Em construção / In Arbeit</p></div>;
 
 function App() {
@@ -71,7 +69,7 @@ function App() {
                         path="import"
                         element={
                           <RequirePermission permission="contracts:import">
-                            <ImportPage />
+                            <ContractImport />
                           </RequirePermission>
                         }
                       />
@@ -79,22 +77,29 @@ function App() {
                       {/* Alertas - Todos podem acessar / Warnungen - Alle können zugreifen */}
                       <Route path="alerts" element={<AlertsPage />} />
 
-                      {/* Aprovações - Requer permissão / Genehmigungen - Berechtigung erforderlich */}
-                      <Route
-                        path="approvals"
-                        element={
-                          <RequirePermission permission="approvals:view">
-                            <ApprovalsPage />
-                          </RequirePermission>
-                        }
-                      />
 
-                      {/* Usuários - Requer permissão / Benutzer - Berechtigung erforderlich */}
+                      {/* Usuários - CRUD completo */}
                       <Route
                         path="users"
                         element={
                           <RequirePermission permission="users:view">
                             <UsersPage />
+                          </RequirePermission>
+                        }
+                      />
+                      <Route
+                        path="users/new"
+                        element={
+                          <RequirePermission permission="users:manage_all">
+                            <UserManage />
+                          </RequirePermission>
+                        }
+                      />
+                      <Route
+                        path="users/:id/edit"
+                        element={
+                          <RequirePermission permission="users:manage_all">
+                            <UserManage />
                           </RequirePermission>
                         }
                       />

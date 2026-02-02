@@ -48,8 +48,8 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', isCur
 
   return (
     <Card elevation={3}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+      <CardContent sx={{ minWidth: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, minWidth: 0 }}>
           <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
             {title}
           </Typography>
@@ -231,15 +231,15 @@ export default function DashboardDepartmentAdm() {
       <Grid container spacing={3}>
         {/* Status Chart */}
         <Grid item xs={12} md={12} lg={8}>
-          <Card elevation={3} sx={{ minHeight: 480, width: '100%', maxWidth: '100%' }}>
+          <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
             <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Contracts by Status
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {statusData.length > 0 ? (
-                <Box sx={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
-                  <ResponsiveContainer width="100%" height={380}>
+                <Box sx={{ width: '100%', height: 320, minWidth: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={statusData}
@@ -269,15 +269,15 @@ export default function DashboardDepartmentAdm() {
 
         {/* Types Chart */}
         <Grid item xs={12} md={12} lg={8}>
-          <Card elevation={3} sx={{ minHeight: 480, width: '100%', maxWidth: '100%' }}>
+          <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
             <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Contracts by Type
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {typeData.length > 0 ? (
-                <Box sx={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
-                  <ResponsiveContainer width="100%" height={380}>
+                <Box sx={{ width: '100%', height: 320, minWidth: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={typeData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />

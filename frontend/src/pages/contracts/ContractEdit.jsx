@@ -11,6 +11,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material';
 import ContractForm from '../../components/contracts/ContractForm';
+import RentStepsList from '../../components/rent-steps/RentStepsList';
+import ContractAlerts from '../../components/alerts/ContractAlerts';
 import contractsApi from '../../services/contractsApi';
 
 const ContractEdit = () => {
@@ -123,6 +125,20 @@ const ContractEdit = () => {
         onCancel={handleCancel}
         loading={saving}
       />
+
+      {/* Alertas do Contrato / Vertragswarnungen */}
+      <Box sx={{ mt: 4 }}>
+        <ContractAlerts contractId={contract.id} />
+      </Box>
+
+      {/* Rent Steps - apenas em edição, contrato já existe */}
+      <Box sx={{ mt: 4 }}>
+        <RentStepsList 
+          contractId={contract.id} 
+          currentRentAmount={contract.value}
+          currentCurrency={contract.currency}
+        />
+      </Box>
     </Box>
   );
 };

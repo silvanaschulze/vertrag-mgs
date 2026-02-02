@@ -53,8 +53,8 @@ function StatCard({ title, value, subtitle, icon: Icon, color = 'primary', isCur
 
   return (
     <Card elevation={3} sx={{ height: '100%' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+      <CardContent sx={{ minWidth: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, minWidth: 0 }}>
           <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.95rem' }}>
             {title}
           </Typography>
@@ -243,15 +243,15 @@ export default function DashboardDirector() {
       <Grid container spacing={3}>
         {/* Contracts by Department */}
         <Grid item xs={12} md={8} lg={8}>
-          <Card elevation={3} sx={{ minHeight: 480, width: '100%', maxWidth: '100%' }}>
+          <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
             <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Contracts by Department
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {departmentData.length > 0 ? (
-                <Box sx={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
-                  <ResponsiveContainer width="100%" height={380}>
+                <Box sx={{ width: '100%', height: 320, minWidth: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={departmentData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="departamento" angle={-15} textAnchor="end" height={80} />
@@ -271,7 +271,7 @@ export default function DashboardDirector() {
 
         {/* Contracts by Status */}
         <Grid item xs={12} md={4} lg={4}>
-          <Card elevation={3} sx={{ minHeight: 520, width: '100%', minWidth: 0 }}>
+          <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
             <CardContent sx={{ 
               height: '100%', 
               p: 3, 
@@ -295,10 +295,11 @@ export default function DashboardDirector() {
                     flexGrow: 1,
                     minWidth: 0,
                     width: '100%',
-                    alignSelf: 'stretch'
+                    alignSelf: 'stretch',
+                    height: 320
                   }}
                 >
-                  <ResponsiveContainer width="100%" height={380}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={statusData}
@@ -328,15 +329,15 @@ export default function DashboardDirector() {
 
         {/* Contracts by Type */}
         <Grid item xs={12} md={8} lg={8}>
-          <Card elevation={3} sx={{ minHeight: 480, width: '100%', maxWidth: '100%' }}>
+          <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
             <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Contract Types
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {typeData.length > 0 ? (
-                <Box sx={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
-                  <ResponsiveContainer width="100%" height={380}>
+                <Box sx={{ width: '100%', height: 320, minWidth: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={typeData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" />

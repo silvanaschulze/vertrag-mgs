@@ -155,14 +155,21 @@ class ContractService:
         Returns / Retorna:
             Optional[ContractResponse]: Vertrag oder None / Contrato ou None
         """
+        from sqlalchemy.orm import aliased
+        creator = aliased(User)
+        responsible = aliased(User)
         result = await self.db.execute(
-            select(Contract, User.name).join(User, Contract.created_by == User.id, isouter=True).where(Contract.id == contract_id)
+            select(Contract, creator.name.label("created_by_name"), responsible.name.label("responsible_user_name"))
+            .join(creator, Contract.created_by == creator.id, isouter=True)
+            .join(responsible, Contract.responsible_user_id == responsible.id, isouter=True)
+            .where(Contract.id == contract_id)
         )
         row = result.one_or_none()
         if row:
-            contract, creator_name = row
+            contract, created_by_name, responsible_user_name = row
             contract_dict = ContractResponse.model_validate(contract).model_dump()
-            contract_dict['created_by_name'] = creator_name
+            contract_dict['created_by_name'] = created_by_name
+            contract_dict['responsible_user_name'] = responsible_user_name
             return ContractResponse(**contract_dict)
         return None
 
@@ -234,8 +241,17 @@ class ContractService:
         max_limit = 100
         limit = min(limit, max_limit)
 
-        # Base query com join para pegar o nome do criador / Query base com join para buscar nome do criador
-        query = select(Contract, User.name).join(User, Contract.created_by == User.id, isouter=True)
+        # Base query com join para pegar o nome do criador e do responsável
+        from sqlalchemy.orm import aliased
+        creator = aliased(User)
+        responsible = aliased(User)
+        query = select(
+            Contract,
+            creator.name.label("created_by_name"),
+            responsible.name.label("responsible_user_name")
+        )
+        query = query.join(creator, Contract.created_by == creator.id, isouter=True)
+        query = query.join(responsible, Contract.responsible_user_id == responsible.id, isouter=True)
         
         # Filter anwenden / Aplicar filtros
         if filters:
@@ -289,11 +305,12 @@ class ContractService:
         result = await self.db.execute(query)
         rows = result.all()  # Retorna tuplas (Contract, User.name)
         
-        # Construir lista com nome do criador
+        # Construir lista com nome do criador e do responsável
         contract_list = []
-        for contract, creator_name in rows:
+        for contract, created_by_name, responsible_user_name in rows:
             contract_dict = ContractResponse.model_validate(contract).model_dump()
-            contract_dict['created_by_name'] = creator_name
+            contract_dict['created_by_name'] = created_by_name
+            contract_dict['responsible_user_name'] = responsible_user_name
             contract_list.append(ContractResponse(**contract_dict))
         
         current_page = (skip // limit) + 1 if limit else 1

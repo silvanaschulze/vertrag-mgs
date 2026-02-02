@@ -26,6 +26,9 @@ import {
   Download as DownloadIcon
 } from '@mui/icons-material';
 import ContractDetail from '../../components/contracts/ContractDetail';
+import ContractAlerts from '../../components/alerts/ContractAlerts';
+import RentStepsList from '../../components/rent-steps/RentStepsList';
+import ContractApprovals from '../../components/approvals/ContractApprovals';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import contractsApi from '../../services/contractsApi';
 import { useAuthStore } from '../../store/authStore';
@@ -81,32 +84,32 @@ const ContractView = () => {
    * Carrega contrato
    * Lädt Vertrag
    */
-  useEffect(() => {
-    const loadContract = async () => {
-      try {
-        const data = await contractsApi.getContract(id);
-        console.log('📋 Dados do contrato carregados:', {
-          id: data.id,
-          title: data.title,
-          company_name: data.company_name,
-          department: data.department,
-          team: data.team,
-          responsible_user_id: data.responsible_user_id
-        });
-        setContract(data);
-        setError(null);
-      } catch (err) {
-        console.error('Error loading contract:', err);
-        const errorMessage = err.response?.data?.detail || 'Failed to load contract';
-        setError(errorMessage);
-        enqueueSnackbar(errorMessage, { variant: 'error' });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadContract();
+  const loadContract = useCallback(async () => {
+    try {
+      const data = await contractsApi.getContract(id);
+      console.log('📋 Dados do contrato carregados:', {
+        id: data.id,
+        title: data.title,
+        company_name: data.company_name,
+        department: data.department,
+        team: data.team,
+        responsible_user_id: data.responsible_user_id
+      });
+      setContract(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading contract:', err);
+      const errorMessage = err.response?.data?.detail || 'Failed to load contract';
+      setError(errorMessage);
+      enqueueSnackbar(errorMessage, { variant: 'error' });
+    } finally {
+      setLoading(false);
+    }
   }, [id, enqueueSnackbar]);
+
+  useEffect(() => {
+    loadContract();
+  }, [loadContract]);
 
   const handleEdit = () => {
     navigate(`/app/contracts/${id}/edit`);
@@ -249,6 +252,30 @@ const ContractView = () => {
 
       {/* Detalhes do Contrato / Vertragsdetails */}
       <ContractDetail contract={contract} />
+
+      {/* Alertas do Contrato / Vertragswarnungen */}
+      <Box sx={{ mt: 3 }}>
+        <ContractAlerts contractId={contract.id} contractTitle={contract.title} />
+      </Box>
+
+      {/* Mietstaffelungen / Rent Steps */}
+      <Box sx={{ mt: 3 }}>
+        <RentStepsList 
+          contractId={contract.id} 
+          currentRentAmount={contract.rent_amount}
+          currentCurrency={contract.currency}
+        />
+      </Box>
+
+      {/* Genehmigungen / Approvals */}
+      <Box sx={{ mt: 3 }}>
+        <ContractApprovals
+          contractId={contract.id}
+          contractTitle={contract.title}
+          contractStatus={contract.status}
+          onApprovalChange={loadContract}
+        />
+      </Box>
 
       {/* Dialog de Confirmação de Delete / Löschbestätigungsdialog */}
       <ConfirmDialog

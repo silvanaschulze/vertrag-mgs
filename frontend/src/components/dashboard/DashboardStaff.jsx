@@ -31,8 +31,8 @@ import dashboardApi from '../../services/dashboardApi';
 function StatCard({ title, value, subtitle, icon: Icon, color = 'primary' }) {
   return (
     <Card elevation={3}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+      <CardContent sx={{ minWidth: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, minWidth: 0 }}>
           <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
             {title}
           </Typography>

@@ -41,8 +41,8 @@ const COLORS = ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#6B7280'];
 function StatCard({ title, value, subtitle, icon: Icon, color = 'primary' }) {
   return (
     <Card elevation={3}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+      <CardContent sx={{ minWidth: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, minWidth: 0 }}>
           <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
             {title}
           </Typography>
@@ -196,15 +196,15 @@ export default function DashboardDepartmentUser() {
       {/* Charts */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={12} lg={8}>
-          <Card elevation={3} sx={{ minHeight: 480, width: '100%', maxWidth: '100%' }}>
+          <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
             <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Contract Status
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {statusData.length > 0 ? (
-                <Box sx={{ width: '100%', minWidth: 0, overflow: 'visible' }}>
-                  <ResponsiveContainer width="100%" height={380}>
+                <Box sx={{ width: '100%', height: 320, minWidth: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={statusData}
