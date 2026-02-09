@@ -17,7 +17,7 @@
  * - Aktive Sitzungen
  * - KEINE Verträge, KEINE Berichte, KEINE Finanzwerte
  */
-
+// ...existing code...
 import { useState, useEffect } from 'react';
 import {
   Box,
@@ -139,7 +139,18 @@ export default function DashboardSystemAdmin() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{
+      p: 3,
+      width: '100%',
+      maxWidth: '100%',
+      mx: 'auto',
+      minHeight: '100vh',
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      backgroundColor: 'background.default',
+    }}>
       {/* Technical Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
@@ -164,8 +175,8 @@ export default function DashboardSystemAdmin() {
       </Alert>
 
       {/* User Statistics */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={3} sx={{ mb: 3, minWidth: 0 }}>
+        <Grid item xs={12}>
           <StatCard
             title="Total Users"
             value={stats?.total_users}
@@ -211,8 +222,8 @@ export default function DashboardSystemAdmin() {
       <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
         Storage and Database
       </Typography>
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={6}>
+      <Grid container spacing={3} sx={{ mb: 4, minWidth: 0 }}>
+        <Grid item xs={12}>
           <MetricCard
             title="Disk Usage (Uploads)"
             value={stats?.disk_usage_mb || 0}
@@ -236,7 +247,7 @@ export default function DashboardSystemAdmin() {
       </Grid>
 
       {/* Administrative Functions */}
-      <Grid container spacing={3}>
+      <Grid container spacing={3} sx={{ minWidth: 0 }}>
         <Grid item xs={12} md={6}>
           <Card elevation={3}>
             <CardContent>
@@ -265,7 +276,6 @@ export default function DashboardSystemAdmin() {
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} md={6}>
           <Card elevation={3}>
             <CardContent>
@@ -296,8 +306,6 @@ export default function DashboardSystemAdmin() {
             </CardContent>
           </Card>
         </Grid>
-
-        {/* System Information */}
         <Grid item xs={12}>
           <Card elevation={1}>
             <CardContent>

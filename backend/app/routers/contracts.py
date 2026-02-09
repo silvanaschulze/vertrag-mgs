@@ -712,22 +712,31 @@ async def update_contract_with_upload(
 @router.delete("/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_contract(
     contract_id: int,
-    contract_service: ContractService = Depends(get_contract_service)
+    current_user: User = Depends(get_current_active_user),
+    contract_service: ContractService = Depends(get_contract_service),
+    db: AsyncSession = Depends(get_db)
 ):
     """
-    Löscht einen Vertrag nach seiner ID.
-    Argumente:
-        contract_id (int): ID des Vertrags
-        contract_service (ContractService): Dienst für Vertragsoperationen
-    Rückgabe:
-        None
+    Löscht einen Vertrag nach seiner ID, mit checagem de permissão.
     """
+    from app.core.permissions import can_delete_contract
+    from sqlalchemy.exc import IntegrityError
+    # Buscar contrato
+    result = await db.execute(select(Contract).where(Contract.id == contract_id))
+    contract = result.scalar_one_or_none()
+    if not contract:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden / Contrato não encontrado")
+    # Checar permissão
+    if not can_delete_contract(current_user, contract):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Você não tem permissão para deletar este contrato.")
     try:
         success = await contract_service.delete_contract(contract_id)
         if not success:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden / Contrato não encontrado")
+    except IntegrityError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Não é possível deletar: existem dependências vinculadas (ex: alertas, rent steps, aprovações).")
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Löschen des Vertrags")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Fehler beim Löschen des Vertrags: {str(e)}")
 
 # DELETE /contracts/{contract_id}/original - Remove o PDF original do contrato
 @router.delete("/{contract_id}/original", status_code=status.HTTP_204_NO_CONTENT)

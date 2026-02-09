@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
   Box,
@@ -11,6 +11,10 @@ import {
   MenuItem,
   Typography,
   Alert,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
   Grid,
   Paper,
   Table,
@@ -22,7 +26,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { de } from 'date-fns/locale';
+import de from 'date-fns/locale/de';
 import { format } from 'date-fns';
 import { CURRENCIES, CURRENCY_LABELS } from '../../utils/constants';
 import { createRentStep, updateRentStep } from '../../services/rentStepsApi';
@@ -39,57 +43,88 @@ const RentStepForm = ({
   contractId, 
   rentStep = null,
   currentRentAmount = 0,
+  contractStartDate = null,      // yyyy-MM-dd
+  contractEndDate = null,        // yyyy-MM-dd
+  contractInitialValue = 0,      // valor inicial do contrato
   onSuccess 
 }) => {
+  // DEBUG: Exibir props recebidas
+  // eslint-disable-next-line no-console
+  console.log('DEBUG RentStepForm props:', { contractStartDate, contractEndDate, contractInitialValue, currentRentAmount, rentStep });
   const { showSuccess, showError } = useNotification();
   const isEdit = !!rentStep;
 
   // Estado do formulário
   const [formData, setFormData] = useState({
     effective_date: rentStep?.effective_date ? new Date(rentStep.effective_date) : null,
-    amount: rentStep?.amount || '',
+    end_date: contractEndDate ? new Date(contractEndDate) : null,
+    initial_value: contractInitialValue !== undefined && contractInitialValue !== null ? contractInitialValue : '',
+    amount: rentStep?.amount !== undefined && rentStep?.amount !== null ? rentStep.amount : '',
     currency: rentStep?.currency || 'EUR',
     note: rentStep?.note || '',
-    use_percentage: false,
     increase_percentage: '',
-    periodicity: 'annual', // mensal, trimestral, semestral, anual
-    periods: 1 // número de períodos
+    periodicity: rentStep?.periodicity || 'annual',
+    periods: 1
   });
 
+  const [finalValue, setFinalValue] = useState('');
+  const [retroSim, setRetroSim] = useState(null);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Calcular valor baseado na porcentagem e periodicidade
-  const calculateAmountFromPercentage = (percentage, periodicity, periods) => {
-    if (!currentRentAmount || !percentage || !periods) return '';
-    
-    const rate = parseFloat(percentage) / 100;
-    const numPeriods = parseInt(periods) || 1;
-    
-    // Calcular aumento composto: valor_inicial * (1 + taxa)^períodos
-    const finalAmount = parseFloat(currentRentAmount) * Math.pow(1 + rate, numPeriods);
-    
-    return finalAmount.toFixed(2);
+  useEffect(() => {
+    if (open && !isEdit) {
+      setFormData(prev => ({
+        ...prev,
+        effective_date: contractStartDate ? new Date(contractStartDate) : null,
+        end_date: contractEndDate ? new Date(contractEndDate) : null,
+        initial_value: contractInitialValue || '',
+      }));
+    }
+    if (!open) {
+      setFinalValue('');
+      setRetroSim(null);
+      setErrors({});
+    }
+  }, [open, contractStartDate, contractEndDate, contractInitialValue, isEdit]);
+
+  // Simulação retroativa de aumento
+  const handleRetroSimulate = () => {
+    if (!formData.effective_date || !formData.end_date || !formData.initial_value || !finalValue) return;
+    const start = new Date(formData.effective_date);
+    const end = new Date(formData.end_date);
+    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    const years = months / 12;
+    const vi = parseFloat(formData.initial_value);
+    const vf = parseFloat(finalValue);
+    if (vi <= 0 || vf <= 0 || years <= 0) return;
+    const pctTotal = ((vf / vi - 1) * 100).toFixed(2);
+    const pctAnual = ((Math.pow(vf / vi, 1 / years) - 1) * 100).toFixed(2);
+    const pctMensal = ((Math.pow(vf / vi, 1 / months) - 1) * 100).toFixed(2);
+    setRetroSim({
+      pctTotal,
+      pctAnual,
+      pctMensal,
+      anos: years.toFixed(2),
+      meses: months
+    });
   };
 
-  // Validação
+
+  // Validação simples (agora no escopo do componente)
   const validate = () => {
-    const newErrors = {};
-
-    if (!formData.effective_date) {
-      newErrors.effective_date = 'Datum erforderlich / Data obrigatória';
+    const errs = {};
+    if (!formData.effective_date) errs.effective_date = 'Obrigatório / Erforderlich';
+    // amount NÃO é mais obrigatório se modo retroativo (valor será calculado)
+    // Só exige amount se modo for "manual" ou "porcentagem" e não houver simulação retroativa
+    // Se valor final e inicial e datas estão preenchidos, amount pode ser vazio
+    const retroativoPreenchido = formData.initial_value && finalValue && formData.effective_date && formData.end_date;
+    if (!retroativoPreenchido && (formData.amount === undefined || formData.amount === null || formData.amount === '' || Number(formData.amount) <= 0)) {
+      errs.amount = 'Obrigatório / Erforderlich';
     }
-
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      newErrors.amount = 'Betrag muss größer als 0 sein / Valor deve ser maior que 0';
-    }
-
-    if (!formData.currency) {
-      newErrors.currency = 'Währung erforderlich / Moeda obrigatória';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (!formData.currency) errs.currency = 'Obrigatório / Erforderlich';
+    if (!formData.periodicity || (formData.periodicity !== 'monthly' && formData.periodicity !== 'annual')) errs.periodicity = 'Obrigatório / Erforderlich';
+    return errs;
   };
 
   // Handler de mudanças
@@ -98,6 +133,7 @@ const RentStepForm = ({
       ...prev,
       [field]: value
     }));
+
     // Limpar erro do campo
     if (errors[field]) {
       setErrors(prev => {
@@ -108,34 +144,116 @@ const RentStepForm = ({
     }
   };
 
-  // Submeter formulário
-  const handleSubmit = async () => {
-    if (!validate()) return;
+  // Renderização dos campos extras para retroativa e projeção
+  {/* Valor Inicial do Contrato */}
+  <Grid item xs={12} sm={6}>
+    <TextField
+      fullWidth
+      label="Anfangsbetrag / Valor Inicial"
+      value={contractInitialValue || ''}
+      InputProps={{ readOnly: true }}
+      helperText="Wert zu Vertragsbeginn / Valor no início do contrato"
+    />
+  </Grid>
+  {/* Valor Final para simulação retroativa */}
+  <Grid item xs={12} sm={6}>
+    <TextField
+      fullWidth
+      label="Endbetrag / Valor Final"
+      value={finalValue}
+      onChange={e => setFinalValue(e.target.value)}
+      type="number"
+      inputProps={{ min: 0, step: 0.01 }}
+      helperText="Letzter gezahlter Wert / Último valor pago"
+    />
+  </Grid>
+  {/* Botão para simular aumento retroativo */}
+  <Grid item xs={12}>
+    <Button
+      variant="outlined"
+      onClick={handleRetroSimulate}
+      disabled={!contractStartDate || !contractEndDate || !contractInitialValue || !finalValue}
+      sx={{ mb: 1 }}
+    >
+      Retroaktive Erhöhung simulieren / Simular aumento retroativo
+    </Button>
+    {retroSim && (
+      <Alert severity="info" sx={{ mt: 1 }}>
+        <Typography variant="body2">
+          <strong>Retroaktive Erhöhung / Aumento retroativo:</strong><br />
+          Zeitraum / Período: <b>{retroSim.anos} Jahre / anos</b> ({retroSim.meses} Monate / meses)<br />
+          Gesamterhöhung / Aumento total: <b>{retroSim.pctTotal}%</b><br />
+          Durchschnitt pro Jahr / Média por ano: <b>{retroSim.pctAnual}%</b><br />
+          Durchschnitt pro Monat / Média por mês: <b>{retroSim.pctMensal}%</b>
+        </Typography>
+      </Alert>
+    )}
+  </Grid>
 
+  // Handler de submissão
+  const handleSubmit = async () => {
+    const errs = validate();
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      console.warn('Validação falhou:', errs);
+      return;
+    }
     setSubmitting(true);
     try {
+      // Se amount não foi informado, calcular automaticamente se possível
+      let amount = formData.amount !== undefined && formData.amount !== '' ? parseFloat(formData.amount) : undefined;
+      if ((amount === undefined || isNaN(amount) || amount <= 0) && formData.initial_value && finalValue) {
+        // Cálculo retroativo: usar valor final
+        amount = parseFloat(finalValue);
+      }
+      if (amount === undefined || isNaN(amount) || amount <= 0) {
+        showError('Valor do escalonamento não informado ou inválido. Preencha manualmente ou use a simulação.');
+        setSubmitting(false);
+        return;
+      }
       const payload = {
-        effective_date: format(formData.effective_date, 'yyyy-MM-dd'),
-        amount: parseFloat(formData.amount),
+        effective_date: formData.effective_date ? format(formData.effective_date, 'yyyy-MM-dd') : null,
+        amount: amount,
         currency: formData.currency,
         note: formData.note || null
       };
+      // Log do payload enviado
+      // eslint-disable-next-line no-console
+      console.log('Enviando payload para createRentStep:', payload);
 
+      let response;
       if (isEdit) {
-        await updateRentStep(contractId, rentStep.id, payload);
+        response = await updateRentStep(contractId, rentStep.id, payload);
         showSuccess('Mietstaffelung aktualisiert / Escalonamento atualizado');
       } else {
-        await createRentStep(contractId, payload);
+        response = await createRentStep(contractId, payload);
         showSuccess('Mietstaffelung erstellt / Escalonamento criado');
       }
+      // Log da resposta
+      // eslint-disable-next-line no-console
+      console.log('Resposta da API:', response);
 
       if (onSuccess) onSuccess();
       handleClose();
     } catch (error) {
-      console.error('Error submitting rent step:', error);
+      // eslint-disable-next-line no-console
+      console.error('Erro ao submeter rent step:', error, error?.response);
+      let backendMsg = 'Erro desconhecido';
+      if (error?.response?.data) {
+        if (typeof error.response.data === 'string') {
+          backendMsg = error.response.data;
+        } else if (error.response.data.detail) {
+          backendMsg = error.response.data.detail;
+        } else if (error.response.data.errors) {
+          backendMsg = JSON.stringify(error.response.data.errors);
+        } else {
+          backendMsg = JSON.stringify(error.response.data);
+        }
+      } else if (error?.message) {
+        backendMsg = error.message;
+      }
       showError(
-        error.response?.data?.detail || 
-        'Fehler beim Speichern / Erro ao salvar'
+        backendMsg || 'Fehler beim Speichern / Erro ao salvar'
       );
     } finally {
       setSubmitting(false);
@@ -171,35 +289,38 @@ const RentStepForm = ({
       <DialogContent>
         <Box sx={{ pt: 2 }}>
           <Grid container spacing={2}>
-            {/* Data efetiva */}
-            <Grid item xs={12}>
+            {/* Data efetiva (Startdatum) */}
+            <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
                 <DatePicker
-                  label="Gültig ab / Data de Vigência *"
+                  label="Data Inicial / Startdatum *"
                   value={formData.effective_date}
-                  onChange={(date) => handleChange('effective_date', date)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      error: !!errors.effective_date,
-                      helperText: errors.effective_date
-                    }
-                  }}
+                  onChange={date => handleChange('effective_date', date)}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
                 />
               </LocalizationProvider>
-              <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
-                Ab diesem Datum gilt der neue Mietbetrag / A partir desta data vigora o novo valor
-              </Typography>
+            </Grid>
+            {/* Data Final (end_date) */}
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={de}>
+                <DatePicker
+                  label="Data Final / Enddatum"
+                  value={formData.end_date}
+                  onChange={date => handleChange('end_date', date)}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
+                />
+              </LocalizationProvider>
             </Grid>
 
             {/* Modo de cálculo: Manual ou Porcentagem */}
             {!isEdit && currentRentAmount > 0 && (
               <>
-                <Grid item xs={12}>
-                  <Alert severity="info" sx={{ mb: 1 }}>
-                    <Typography variant="body2">
+                <Grid item xs={12} sm={8}>
+                  <Alert severity="info" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="body2" sx={{ flex: 1 }}>
                       <strong>Aktueller Betrag / Valor Atual:</strong> €{parseFloat(currentRentAmount).toFixed(2)}
                     </Typography>
+                   
                   </Alert>
                 </Grid>
 
@@ -232,209 +353,127 @@ const RentStepForm = ({
                   </Typography>
                 </Grid>
 
-                {/* Campos de Porcentagem - aparecem apenas se use_percentage = true */}
-                {formData.use_percentage && (
-                  <>
-                    <Grid item xs={12} sm={4}>
-                      <TextField
-                        fullWidth
-                        label="Erhöhung / Aumento (%)"
-                        type="number"
-                        value={formData.increase_percentage}
-                        onChange={(e) => {
-                          const percentage = e.target.value;
-                          setFormData(prev => ({
-                            ...prev,
-                            increase_percentage: percentage,
-                            amount: percentage ? calculateAmountFromPercentage(percentage, prev.periodicity, prev.periods) : ''
-                          }));
-                        }}
-                        inputProps={{
-                          min: -100,
-                          max: 1000,
-                          step: 0.1
-                        }}
-                      />
-                    </Grid>
+                {/* CAMPOS RETROATIVOS: manual */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Anfangswert"
+                    value={formData.initial_value}
+                    onChange={e => handleChange('initial_value', e.target.value)}
+                    type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
+                    helperText="Geben Sie den Anfangswert des Vertrags manuell ein"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Endwert"
+                    value={finalValue}
+                    onChange={e => setFinalValue(e.target.value)}
+                    type="number"
+                    inputProps={{ min: 0, step: 0.01 }}
+                    helperText="Zuletzt gezahlter Betrag bzw. aktueller Wert"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleRetroSimulate}
+                    disabled={!formData.effective_date || !formData.end_date || !formData.initial_value || !finalValue}
+                    sx={{ mb: 1 }}
+                  >
+                    Simular Retroativo
+                  </Button>
+                  {retroSim && (
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                      <Typography variant="body2">
+                        <strong>Retroativo:</strong><br />
+                        Periode: <b>{retroSim.anos} Jahre</b> ({retroSim.meses} Monate)<br />
+                        % totaler Erhöhung: <b>{retroSim.pctTotal}%</b><br />
+                        % äquivalente jährlich: <b>{retroSim.pctAnual}%</b><br />
+                        % äquivalente monatlich: <b>{retroSim.pctMensal}%</b>
+                      </Typography>
+                    </Alert>
+                  )}
+                </Grid>
 
-                    <Grid item xs={12} sm={4}>
-                      <TextField
-                        fullWidth
-                        select
-                        label="Periodizität / Periodicidade"
-                        value={formData.periodicity}
-                        onChange={(e) => {
-                          const periodicity = e.target.value;
-                          setFormData(prev => ({
-                            ...prev,
-                            periodicity,
-                            amount: prev.increase_percentage ? calculateAmountFromPercentage(prev.increase_percentage, periodicity, prev.periods) : ''
-                          }));
-                        }}
-                      >
-                        <MenuItem value="monthly">Monatlich / Mensal</MenuItem>
-                        <MenuItem value="quarterly">Vierteljährlich / Trimestral</MenuItem>
-                        <MenuItem value="semiannual">Halbjährlich / Semestral</MenuItem>
-                        <MenuItem value="annual">Jährlich / Anual</MenuItem>
-                      </TextField>
-                    </Grid>
-
-                    <Grid item xs={12} sm={4}>
-                      <TextField
-                        fullWidth
-                        label="Perioden / Períodos"
-                        type="number"
-                        value={formData.periods}
-                        onChange={(e) => {
-                          const periods = e.target.value;
-                          setFormData(prev => ({
-                            ...prev,
-                            periods,
-                            amount: prev.increase_percentage ? calculateAmountFromPercentage(prev.increase_percentage, prev.periodicity, periods) : ''
-                          }));
-                        }}
-                        inputProps={{
-                          min: 1,
-                          max: 120,
-                          step: 1
-                        }}
-                        helperText={
-                          formData.periodicity === 'monthly' ? 'Monate / Meses' :
-                          formData.periodicity === 'quarterly' ? 'Quartale / Trimestres' :
-                          formData.periodicity === 'semiannual' ? 'Halbjahre / Semestres' :
-                          'Jahre / Anos'
-                        }
-                      />
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <Alert severity="success">
-                        <Typography variant="body2">
-                          <strong>Berechnung / Cálculo:</strong> 
-                          {' '}€{parseFloat(currentRentAmount).toFixed(2)} × (1 + {formData.increase_percentage || 0}%)
-                          <sup>{formData.periods || 1}</sup>
-                          {' '}= <strong>€{formData.amount || '0.00'}</strong>
-                        </Typography>
-                        <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
-                          {formData.increase_percentage && formData.periods > 1 ? (
-                            <>
-                              Zusammengesetzter Zinseffekt über {formData.periods}{' '}
-                              {formData.periodicity === 'monthly' ? 'Monate / meses' :
-                               formData.periodicity === 'quarterly' ? 'Quartale / trimestres' :
-                               formData.periodicity === 'semiannual' ? 'Halbjahre / semestres' :
-                               'Jahre / anos'}
-                            </>
-                          ) : (
-                            'Einfache Erhöhung / Aumento simples'
-                          )}
-                        </Typography>
-                      </Alert>
-                    </Grid>
-
-                    {/* Tabela de Projeções */}
-                    {formData.increase_percentage && (
-                      <Grid item xs={12}>
-                        <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'action.hover' }}>
-                          <Typography variant="subtitle2" gutterBottom>
-                            📊 Projeção de Valores / Wertprojektion
-                          </Typography>
-                          <Typography variant="caption" color="textSecondary" gutterBottom display="block">
-                            {formData.periodicity === 'monthly' ? 'Nach Monaten / Por meses' :
-                             formData.periodicity === 'quarterly' ? 'Nach Quartalen / Por trimestres' :
-                             formData.periodicity === 'semiannual' ? 'Nach Halbjahren / Por semestres' :
-                             'Nach Jahren / Por anos'}
-                          </Typography>
-                          <Box sx={{ mt: 1 }}>
-                            <Table size="small">
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell><strong>Periode / Período</strong></TableCell>
-                                  <TableCell align="right"><strong>Betrag / Valor</strong></TableCell>
-                                  <TableCell align="right"><strong>Gesamterhöhung / Aumento Total</strong></TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {[1, 2, 3, 5, 10].map(p => {
-                                  const projectedValue = calculateAmountFromPercentage(formData.increase_percentage, formData.periodicity, p);
-                                  const totalIncrease = ((parseFloat(projectedValue) - parseFloat(currentRentAmount)) / parseFloat(currentRentAmount) * 100).toFixed(2);
-                                  const isSelected = p === parseInt(formData.periods);
-                                  return (
-                                    <TableRow 
-                                      key={p}
-                                      sx={{ 
-                                        backgroundColor: isSelected ? 'primary.light' : 'inherit'
-                                      }}
-                                    >
-                                      <TableCell sx={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
-                                        {p}{' '}
-                                        {formData.periodicity === 'monthly' ? (p === 1 ? 'mês' : 'meses') :
-                                         formData.periodicity === 'quarterly' ? (p === 1 ? 'trimestre' : 'trimestres') :
-                                         formData.periodicity === 'semiannual' ? (p === 1 ? 'semestre' : 'semestres') :
-                                         (p === 1 ? 'ano' : 'anos')}
-                                        {isSelected && ' ⬅️'}
-                                      </TableCell>
-                                      <TableCell align="right" sx={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
-                                        €{projectedValue}
-                                      </TableCell>
-                                      <TableCell 
-                                        align="right" 
-                                        sx={{ 
-                                          color: 'success.dark',
-                                          fontWeight: 'bold'
-                                        }}
-                                      >
-                                        +{totalIncrease}%
-                                      </TableCell>
-                                    </TableRow>
-                                  );
-                                })}
-                              </TableBody>
-                            </Table>
-                          </Box>
-                        </Paper>
-                      </Grid>
-                    )}
-                  </>
-                )}
+                {/* Campos de Porcentagem e Projeção Futura */}
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Erhöhung (%)"
+                    type="number"
+                    value={formData.increase_percentage}
+                    onChange={e => handleChange('increase_percentage', e.target.value)}
+                    inputProps={{ min: -100, max: 1000, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Periodizität"
+                    value={formData.periodicity || 'annual'}
+                    onChange={e => handleChange('periodicity', e.target.value)}
+                  >
+                    <MenuItem value="monthly">Monatlich</MenuItem>
+                    <MenuItem value="annual">Jährlich</MenuItem>
+                  </TextField>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Perioden"
+                    type="number"
+                    value={formData.periods}
+                    onChange={e => handleChange('periods', e.target.value)}
+                    inputProps={{ min: 1, max: 120, step: 1 }}
+                    helperText={formData.periodicity === 'monthly' ? 'Monate' : 'Jahre'}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={() => {
+                      // Zukünftige Simulation
+                      // Apenas atualiza o campo amount
+                      if (formData.increase_percentage && formData.periods) {
+                        const pct = parseFloat(formData.increase_percentage) / 100;
+                        const val = parseFloat(formData.initial_value);
+                        const future = val * Math.pow(1 + pct, formData.periods);
+                        setFormData(prev => ({ ...prev, amount: future.toFixed(2) }));
+                      }
+                    }}
+                    sx={{ mb: 1 }}
+                  >
+                    Simular Futuro
+                  </Button>
+                  {formData.amount && (
+                    <Alert severity="success" sx={{ mt: 1 }}>
+                      <Typography variant="body2">
+                        <strong>Zukünftige Projektion:</strong> Wert nach {formData.periods} {formData.periodicity === 'monthly' ? 'Monaten' : 'Jahren'}: <b>€{formData.amount}</b>
+                      </Typography>
+                    </Alert>
+                  )}
+                </Grid>
+                          {/* Explicação da lógica de cálculo */}
+                          <Grid item xs={12}>
+                            <Alert severity="info">
+                              <Typography variant="body2">
+                                <strong>Wie die Berechnung funktioniert:</strong><br />
+                                <u>Retroaktiv:</u> Geben Sie den Anfangswert, den Endwert und die Zeiträume an. Das System berechnet den gesamten Erhöhungsprozentsatz % , den jährlichen Prozentsatz % und den entsprechenden monatlichen % Prozentsatz.<br />
+                                <u>Zukünftig:</u> Geben Sie den Erhöhungsprozentsatz % , die Periodizität und die Perioden an. Das System projiziert den zukünftigen Wert mit der Formel:<br />
+                                <span style={{ fontFamily: 'monospace' }}>Zukünftiger Wert = Anfangswert × (1 + %/100)<sup>Perioden</sup></span>
+                              </Typography>
+                            </Alert>
+                          </Grid>
               </>
             )}
 
-            {/* Valor */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Betrag / Valor *"
-                type="number"
-                value={formData.amount}
-                onChange={(e) => handleChange('amount', e.target.value)}
-                error={!!errors.amount}
-                helperText={errors.amount || (formData.use_percentage ? 'Automatisch berechnet / Calculado automaticamente' : '')}
-                disabled={formData.use_percentage}
-                inputProps={{
-                  min: 0,
-                  step: 0.01
-                }}
-              />
-            </Grid>
-
-            {/* Moeda */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                select
-                label="Währung / Moeda *"
-                value={formData.currency}
-                onChange={(e) => handleChange('currency', e.target.value)}
-                error={!!errors.currency}
-                helperText={errors.currency}
-              >
-                {Object.entries(CURRENCIES).map(([key, value]) => (
-                  <MenuItem key={value} value={value}>
-                    {CURRENCY_LABELS[value]}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
+            {/* Valor e moeda removidos daqui, pois já exibidos acima ao lado de Aktueller Betrag */}
 
             {/* Observações */}
             <Grid item xs={12}>

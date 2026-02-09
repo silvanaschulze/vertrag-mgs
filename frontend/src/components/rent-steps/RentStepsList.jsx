@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { useAuthStore } from '../../store/authStore';
+import { useNotification } from '../../hooks/useNotification';
 import {
   Box,
   Card,
@@ -39,17 +40,16 @@ import {
   getNextRentStep
 } from '../../services/rentStepsApi';
 import { CURRENCY_SYMBOLS } from '../../utils/constants';
-import { useNotification } from '../../hooks/useNotification';
-import { useAuthStore } from '../../store/authStore';
 import RentStepForm from './RentStepForm';
 import ConfirmDialog from '../ui/ConfirmDialog';
+import PropTypes from 'prop-types';
 
 /**
  * Lista de Rent Steps com CRUD
  * DE: Liste der Mietstaffelungen mit CRUD
  * PT: Lista de escalonamentos de aluguel com CRUD
  */
-const RentStepsList = ({ contractId, currentRentAmount, currentCurrency = 'EUR' }) => {
+const RentStepsList = ({ contractId, currentRentAmount, currentCurrency = 'EUR', contractStartDate, contractEndDate, contractInitialValue }) => {
   const { user } = useAuthStore();
   const { showSuccess, showError } = useNotification();
 
@@ -66,6 +66,8 @@ const RentStepsList = ({ contractId, currentRentAmount, currentCurrency = 'EUR' 
   const canManage = user && user.access_level >= 3;
 
   // Carregar rent steps
+  const isContractDataReady = !!contractStartDate && !!contractInitialValue;
+
   const loadRentSteps = async () => {
     try {
       setLoading(true);
@@ -87,11 +89,18 @@ const RentStepsList = ({ contractId, currentRentAmount, currentCurrency = 'EUR' 
 
   // Abrir formulário para criar
   const handleCreate = () => {
+    // Só permite abrir se dados essenciais estiverem disponíveis
+    if (!contractStartDate || !contractInitialValue) {
+      // eslint-disable-next-line no-alert
+      alert('Die Vertragsdaten wurden noch nicht geladen. Bitte warten Sie einige Sekunden und versuchen Sie es erneut.');
+      return;
+    }
     setEditingStep(null);
     setFormOpen(true);
   };
 
-  // Abrir formulário para editar
+
+  // Handler para editar escalonamento
   const handleEdit = (step) => {
     setEditingStep(step);
     setFormOpen(true);
@@ -332,6 +341,9 @@ const RentStepsList = ({ contractId, currentRentAmount, currentCurrency = 'EUR' 
         contractId={contractId}
         rentStep={editingStep}
         currentRentAmount={currentRentAmount}
+        contractStartDate={contractStartDate}
+        contractEndDate={contractEndDate}
+        contractInitialValue={contractInitialValue}
         onSuccess={handleFormSuccess}
       />
 
@@ -439,7 +451,10 @@ const RentStepsList = ({ contractId, currentRentAmount, currentCurrency = 'EUR' 
 RentStepsList.propTypes = {
   contractId: PropTypes.number.isRequired,
   currentRentAmount: PropTypes.number,
-  currentCurrency: PropTypes.string
+  currentCurrency: PropTypes.string,
+  contractStartDate: PropTypes.string,
+  contractEndDate: PropTypes.string,
+  contractInitialValue: PropTypes.number
 };
 
 export default RentStepsList;

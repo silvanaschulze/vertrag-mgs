@@ -107,9 +107,10 @@ export default function DashboardStaff() {
       </Typography>
 
       {/* Statistics Cards */}
-      <Grid container spacing={3}>
+      <Grid container spacing={10} sx={{ mb: 5, minWidth: 0 }}  >
         {/* Total Contracts */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={12} lg={12} ></Grid>
+        <Grid item xs={12}>
           <StatCard
             title="My Contracts"
             value={stats?.total_contracts}
@@ -120,7 +121,7 @@ export default function DashboardStaff() {
         </Grid>
 
         {/* Expiring Contracts */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={12} lg={12} >
           <StatCard
             title="Expiring in 30 Days"
             value={stats?.expiring_30_days}
@@ -131,7 +132,7 @@ export default function DashboardStaff() {
         </Grid>
 
         {/* Alerts */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={12} lg={12} >
           <StatCard
             title="My Alerts"
             value={stats?.unread_alerts}

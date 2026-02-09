@@ -222,32 +222,53 @@ class PDFReaderService:
         
         Args / Argumentos:
             text (str): Roher Text aus PDF / Texto bruto do PDF
-            
         Returns / Retorna:
             Dict[str, Any]: Extrahierte Vertragsdaten / Dados de contrato extraídos
         """
         try:
             logger.info("Intelligente Datenextraktion gestartet / Extração inteligente de dados iniciada")
-            # Extração básica / Grundlegende Extraktion
+            # Debug: texto normalizado (primeiros 3000 chars)
+            norm_text = text.replace("\u00ad", "").replace("  ", " ").replace("\n\n", "\n").strip()
+            logger.debug(f"[DEBUG] Texto normalizado (primeiros 3000):\n{norm_text[:3000]}")
+
+            # Roteador especializado por tipo de contrato
+            from app.services.pdf_reader_pkg.extractor_router import extract_contract_fields
+            contract_fields = extract_contract_fields(norm_text)
+            logger.info(f"[DEBUG] Tipo de contrato detectado: {contract_fields.get('contract_type')}")
+            for k, v in contract_fields.items():
+                if k != 'contract_type':
+                    snippet = None
+                    if v and isinstance(v, str):
+                        idx = norm_text.find(v)
+                        if idx != -1:
+                            start = max(0, idx-100)
+                            end = min(len(norm_text), idx+len(v)+100)
+                            snippet = norm_text[start:end]
+                    logger.debug(f"[DEBUG] Campo extraído: {k} = {v}\nSnippet: {snippet}")
+
+            # Extração básica complementar (campos não cobertos)
             extracted_data = {
-                'title': self._extract_title(text),
-                'client_name': self._extract_client_name(text),
-                'client_email': self._extract_email(text),
-                'client_phone': self._extract_phone(text),
-                'client_address': self._extract_address(text),
-                'money_values': self._extract_money_values(text),
-                'dates': self._extract_dates(text),
-                'terms_and_conditions': self._extract_terms_and_conditions(text),
-                'description': self._extract_description(text)
+                'title': contract_fields.get('title') or self._extract_title(norm_text),
+                'client_name': contract_fields.get('partner_name') or self._extract_client_name(norm_text),
+                'client_email': self._extract_email(norm_text),
+                'client_phone': self._extract_phone(norm_text),
+                'client_address': contract_fields.get('address') or self._extract_address(norm_text),
+                'money_values': contract_fields.get('value_eur') or self._extract_money_values(norm_text),
+                'dates': self._extract_dates(norm_text),
+                'terms_and_conditions': self._extract_terms_and_conditions(norm_text),
+                'description': self._extract_description(norm_text),
+                'contract_type': contract_fields.get('contract_type'),
+                'start_date': contract_fields.get('start_date'),
+                'end_date': contract_fields.get('end_date'),
+                'payment_frequency': contract_fields.get('payment_frequency'),
             }
-            
+
             # Extração avançada / Erweiterte Extraktion
-            advanced_data = self.extract_advanced_context_data(text)
+            advanced_data = self.extract_advanced_context_data(norm_text)
             extracted_data.update(advanced_data)
 
             logger.info("Intelligente Datenextraktion erfolgreich / Extração inteligente de dados bem-sucedida")
             return extracted_data
-            
         except Exception as e:
             logger.error(f"Fehler bei intelligenter Datenextraktion / Erro na extração inteligente de dados: {str(e)}")
             return {}

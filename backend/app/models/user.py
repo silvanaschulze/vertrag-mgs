@@ -1,6 +1,6 @@
 """User Model - Benutzermodell"""
 
-from __future__ import annotations
+from __future__ import annotations # type: ignore
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
@@ -90,9 +90,8 @@ class User(Base):
     preferences: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON String für Benutzerpräferenzen
 
     #Beziehungen
-    
     contracts: Mapped[list["Contract"]] = relationship("Contract", back_populates="creator") 
-    
+
     """String Darstellung des Benutzers"""
     def __repr__(self):
         # Safety: role may be None or an Enum; handle gracefully to avoid AttributeError during repr
@@ -146,7 +145,25 @@ class User(Base):
         if deleted_by:
             self.deleted_by = deleted_by
 
-    # Hilfsfunktionen für das User-Modell
+# Função utilitária para mapeamento de access_level
+def get_access_level_by_role(role: UserRole) -> int:
+    """Mapeia UserRole para AccessLevel conforme regras do sistema."""
+    if role == UserRole.SYSTEM_ADMIN:
+        return AccessLevel.LEVEL_6
+    elif role == UserRole.DIRECTOR:
+        return AccessLevel.LEVEL_5
+    elif role == UserRole.DEPARTMENT_ADM:
+        return AccessLevel.LEVEL_4
+    elif role == UserRole.DEPARTMENT_USER:
+        return AccessLevel.LEVEL_3
+    elif role == UserRole.TEAM_LEAD:
+        return AccessLevel.LEVEL_2
+    elif role == UserRole.STAFF:
+        return AccessLevel.LEVEL_1
+    elif role == UserRole.READ_ONLY:
+        return AccessLevel.LEVEL_1
+    else:
+        return AccessLevel.LEVEL_1
 
 
 
@@ -161,12 +178,14 @@ def create_user(db, email: str, name: str, password_hash: str, role: UserRole = 
         stacklevel=2,
     )
 
+    access_level = get_access_level_by_role(role)
     new_user = User(
         username=username,
         email=email,
         name=name,
         password_hash=password_hash,
-        role=role
+        role=role,
+        access_level=access_level
     )
     db.add(new_user)
     db.commit()
@@ -197,8 +216,12 @@ def update_user(db, user: User, **kwargs) -> User:
         stacklevel=2,
     )
     for key, value in kwargs.items():
-        if hasattr(user, key):
+        if key == "role":
             setattr(user, key, value)
+            user.access_level = get_access_level_by_role(value)
+        elif key != "access_level":
+            if hasattr(user, key):
+                setattr(user, key, value)
     db.commit()
     db.refresh(user)
     return user

@@ -113,7 +113,11 @@ class Contract(Base):
     creator: Mapped["User"] = relationship("User", back_populates="contracts")
 
     # Beziehung zu Alerts
-    alerts: Mapped[list["Alert"]] = relationship("Alert", back_populates="contract")
+    alerts: Mapped[list["Alert"]] = relationship(
+        "Alert",
+        back_populates="contract",
+        cascade="all, delete-orphan"
+    )
 
     # Mietstaffelungen / Rent steps
     rent_steps: Mapped[list["RentStep"]] = relationship(

@@ -134,9 +134,12 @@ const ContractEdit = () => {
       {/* Rent Steps - apenas em edição, contrato já existe */}
       <Box sx={{ mt: 4 }}>
         <RentStepsList 
-          contractId={contract.id} 
+          contractId={contract.id}
           currentRentAmount={contract.value}
           currentCurrency={contract.currency}
+          contractStartDate={contract.start_date}
+          contractEndDate={contract.end_date}
+          contractInitialValue={contract.value}
         />
       </Box>
     </Box>

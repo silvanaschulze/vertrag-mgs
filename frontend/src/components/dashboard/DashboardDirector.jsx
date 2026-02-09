@@ -134,7 +134,18 @@ export default function DashboardDirector() {
     : [];
 
   return (
-    <Box sx={{ p: 3, width: '100%', mx: 'auto' }}>
+    <Box sx={{
+      p: 3,
+      width: '100%',
+      maxWidth: '100%',
+      mx: 'auto',
+      minHeight: '100vh',
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      backgroundColor: 'background.default',
+    }}>
       {/* Executive Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
@@ -153,8 +164,9 @@ export default function DashboardDirector() {
       </Box>
 
       {/* Main KPIs - Row 1 */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={2} sx={{ mb: 5, minWidth: 0 }}>
+        <Grid item xs={12} md={6} lg={3} ></Grid>
+        <Grid item xs={12}>
           <StatCard
             title="Total Contracts"
             value={stats?.total_contracts}
@@ -197,8 +209,9 @@ export default function DashboardDirector() {
       </Grid>
 
       {/* Secondary KPIs - Row 2 */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={2} sx={{ mb: 5, minWidth: 0 }}>
+        <Grid item xs={12} md={12} lg={12} ></Grid>
+        <Grid item xs={12}>
           <StatCard
             title="Expiring in 30 Days"
             value={stats?.expiring_30_days}
@@ -208,7 +221,7 @@ export default function DashboardDirector() {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} md={12} lg={12} >
           <StatCard
             title="Expiring in 90 Days"
             value={stats?.expiring_90_days}
@@ -218,7 +231,7 @@ export default function DashboardDirector() {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} md={12} lg={12} >
           <StatCard
             title="Pending Alerts"
             value={stats?.unread_alerts}
@@ -228,7 +241,7 @@ export default function DashboardDirector() {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} md={12} lg={12} >
           <StatCard
             title="Approvals"
             value={stats?.pending_approvals}
@@ -240,21 +253,22 @@ export default function DashboardDirector() {
       </Grid>
 
       {/* Executive Charts */}
-      <Grid container spacing={3}>
+      <Grid container spacing={10} sx={{ mb: 12, minWidth: 0 }}>
+        <Grid item xs={12} >  </Grid>
         {/* Contracts by Department */}
-        <Grid item xs={12} md={8} lg={8}>
-          <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
-            <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+        <Grid item xs={12} md={12} lg={12} >
+          <Card elevation={3} sx={{ width: '130%', minWidth: 0 }}>
+            <CardContent>
+              <Typography variant="h5" sx={{ mb: 12, fontWeight: 600 }}>
                 Contracts by Department
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {departmentData.length > 0 ? (
-                <Box sx={{ width: '100%', height: 320, minWidth: 0 }}>
-                  <ResponsiveContainer width="100%" height="100%">
+                <Box sx={{ width: '100%', margin: '0 auto', height: 340, alignSelf: 'center' }}>
+                  <ResponsiveContainer width="100%" height={340}>
                     <BarChart data={departmentData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="departamento" angle={-15} textAnchor="end" height={80} />
+                      <XAxis dataKey="departamento" angle={-45} textAnchor="end" height={150} />
                       <YAxis />
                       <Tooltip />
                       <Legend />
@@ -270,36 +284,25 @@ export default function DashboardDirector() {
         </Grid>
 
         {/* Contracts by Status */}
-        <Grid item xs={12} md={4} lg={4}>
-          <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
-            <CardContent sx={{ 
-              height: '100%', 
-              p: 3, 
-              minWidth: 0, 
-              display: 'flex', 
-              flexDirection: 'column',
-              alignItems: 'stretch'
-            }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+      
+        <Grid item xs={12} md={12} lg={12} >
+          <Card elevation={3} sx={{ width: '130%', minWidth: 0 }}>
+            <CardContent>
+              <Typography variant="h5" sx={{ mb: 12, fontWeight: 600 }}>
                 Distribution by Status
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {statusData.length > 0 ? (
                 <Box 
-                  ref={(el) => {
-                    if (el) {
-                      console.log('Distribution by Status container width:', el.getBoundingClientRect().width);
-                    }
-                  }}
                   sx={{ 
                     flexGrow: 1,
-                    minWidth: 0,
                     width: '100%',
-                    alignSelf: 'stretch',
-                    height: 320
+                    margin: '0 auto',
+                    alignSelf: 'center',
+                    height: 340,
                   }}
                 >
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={340}>
                     <PieChart>
                       <Pie
                         data={statusData}
@@ -316,7 +319,7 @@ export default function DashboardDirector() {
                         ))}
                       </Pie>
                       <Tooltip />
-                      <Legend verticalAlign="bottom" height={36} />
+                      <Legend verticalAlign="bottom" height={46} />
                     </PieChart>
                   </ResponsiveContainer>
                 </Box>
@@ -328,16 +331,16 @@ export default function DashboardDirector() {
         </Grid>
 
         {/* Contracts by Type */}
-        <Grid item xs={12} md={8} lg={8}>
-          <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
-            <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+        <Grid item xs={12} md={12} lg={12} >
+          <Card elevation={3} sx={{ width: '180%', minWidth: 0 }}>
+            <CardContent>
+              <Typography variant="h5" sx={{ mb: 12, fontWeight: 600 }}>
                 Contract Types
               </Typography>
               <Divider sx={{ mb: 2 }} />
               {typeData.length > 0 ? (
-                <Box sx={{ width: '100%', height: 320, minWidth: 0 }}>
-                  <ResponsiveContainer width="100%" height="100%">
+                <Box sx={{ width: '100%', margin: '0 auto', height: 340, alignSelf: 'center' }}>
+                  <ResponsiveContainer width="100%" height={340}>
                     <BarChart data={typeData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" />
@@ -355,7 +358,7 @@ export default function DashboardDirector() {
           </Card>
         </Grid>
 
-        {/* Permissions and Information */}
+        {/* Permissions and Information 
         <Grid item xs={12} md={4} lg={4}>
           <Card elevation={1}>
             <CardContent>
@@ -366,25 +369,25 @@ export default function DashboardDirector() {
               <Grid container spacing={1}>
                 <Grid item xs={12}>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ View all company contracts
+                    ✔️ View all company contracts
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Approve strategic contracts
+                    ✔️ Approve strategic contracts
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Access all reports with financial values
+                    ✔️ Access all reports with financial values
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Manage users and roles in all sectors
+                    ✔️ Manage users and roles in all sectors
                   </Typography>
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    ✅ Define all access levels (1-5)
+                    ✔️ Define all access levels (1-5)
                   </Typography>
                 </Grid>
               </Grid>
             </CardContent>
           </Card>
-        </Grid>
+        </Grid> */}
       </Grid>
     </Box>
   );

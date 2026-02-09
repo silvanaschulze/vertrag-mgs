@@ -111,6 +111,14 @@ const ContractView = () => {
     loadContract();
   }, [loadContract]);
 
+  // DEBUG: Exibir objeto contract no console para inspecionar campos recebidos da API
+  useEffect(() => {
+    if (contract) {
+      // eslint-disable-next-line no-console
+      console.log('DEBUG ContractView contract:', contract);
+    }
+  }, [contract]);
+
   const handleEdit = () => {
     navigate(`/app/contracts/${id}/edit`);
   };
@@ -259,13 +267,18 @@ const ContractView = () => {
       </Box>
 
       {/* Mietstaffelungen / Rent Steps */}
-      <Box sx={{ mt: 3 }}>
-        <RentStepsList 
-          contractId={contract.id} 
-          currentRentAmount={contract.rent_amount}
-          currentCurrency={contract.currency}
-        />
-      </Box>
+      {contract && contract.start_date && contract.value !== null && (
+        <Box sx={{ mt: 3 }}>
+          <RentStepsList 
+            contractId={contract.id} 
+            currentRentAmount={contract.rent_amount}
+            currentCurrency={contract.currency}
+            contractStartDate={contract.start_date}
+            contractEndDate={contract.end_date}
+            contractInitialValue={contract.value}
+          />
+        </Box>
+      )}
 
       {/* Genehmigungen / Approvals */}
       <Box sx={{ mt: 3 }}>

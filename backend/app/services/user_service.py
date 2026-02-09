@@ -45,12 +45,14 @@ class UserService:
         
         # Benutzer erstellen / Criar usuário
         hashed_password = get_password_hash(user_data.password)
+        from app.models.user import get_access_level_by_role
         db_user = User(
             username=user_data.username,
             email=user_data.email,
             name=getattr(user_data, "name", None) or getattr(user_data, "full_name", None),
             password_hash=hashed_password,
             role=user_data.role,
+            access_level=get_access_level_by_role(user_data.role),
             is_active=user_data.is_active,
             is_superuser=user_data.is_superuser
         )

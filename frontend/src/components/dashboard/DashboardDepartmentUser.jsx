@@ -128,8 +128,9 @@ export default function DashboardDepartmentUser() {
       </Box>
 
       {/* Statistics Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={10} sx={{ mb: 5, minWidth: 0 }}>
+        <Grid item xs={12} md={12} lg={12} ></Grid>
+        <Grid item xs={12}>
           <StatCard
             title="Total Contracts"
             value={stats?.total_contracts}
@@ -171,8 +172,9 @@ export default function DashboardDepartmentUser() {
       </Grid>
 
       {/* Row 2 - Alerts and Expiring 90 days */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={10} sx={{ mb: 5, minWidth: 0 }}>
+        <Grid item xs={12} md={12} lg={12} ></Grid>
+        <Grid item xs={12}>
           <StatCard
             title="Unread Alerts"
             value={stats?.unread_alerts}
@@ -182,7 +184,7 @@ export default function DashboardDepartmentUser() {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} md={12} lg={12} >
           <StatCard
             title="Expiring in 90 Days"
             value={stats?.expiring_90_days}

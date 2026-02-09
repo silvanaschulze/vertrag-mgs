@@ -21,13 +21,19 @@ export const getUser = async (id) => {
   return data;
 };
 
+
+// Remove access_level do payload antes de enviar
 export const createUser = async (user) => {
-  const { data } = await api.post(API_URL, user);
+  const { access_level, ...userData } = user;
+  const { data } = await api.post(API_URL, userData);
   return data;
 };
 
+
+// Remove access_level do payload antes de enviar
 export const updateUser = async (id, user) => {
-  const { data } = await api.put(`${API_URL}${id}/`, user);
+  const { access_level, ...userData } = user;
+  const { data } = await api.put(`${API_URL}${id}/`, userData);
   return data;
 };
 

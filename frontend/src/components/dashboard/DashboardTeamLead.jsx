@@ -120,8 +120,9 @@ export default function DashboardTeamLead() {
       </Typography>
 
       {/* Statistics Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={10} sx={{ mb: 5, minWidth: 0 }}>
+168	        <Grid item xs={12} md={12} lg={12} ></Grid>
+169	        <Grid item xs={12}>
           <StatCard
             title="Team Contracts"
             value={stats?.total_contracts}
@@ -164,63 +165,67 @@ export default function DashboardTeamLead() {
 
       {/* Team Contract Status Chart */}
       {statusData.length > 0 && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={12} lg={8}>
-            <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
-              <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  Team Contract Status
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Box sx={{ width: '100%', height: 320, minWidth: 0 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={statusData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {statusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend verticalAlign="bottom" height={36} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Box>
-              </CardContent>
-            </Card>
+        <>
+          <Grid container spacing={10} sx={{ mb: 5, minWidth: 0 }}>
+            <Grid item xs={12} md={12} lg={12} ></Grid>
+            <Grid item xs={12}>
+              <Card elevation={3} sx={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
+                <CardContent sx={{ height: '100%', p: 3, minWidth: 0 }}>
+                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                    Team Contract Status
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  <Box sx={{ width: '100%', height: 320, minWidth: 0 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={statusData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {statusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend verticalAlign="bottom" height={36} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Card elevation={1}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  Your Permissions
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  ✅ View team contracts
-                </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  ✅ Create and edit team contracts
-                </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  ❌ Approve contracts (request from department manager)
-                </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  ❌ Access reports (request from department manager)
-                </Typography>
-              </CardContent>
-            </Card>
+          <Grid container spacing={3} sx={{ minWidth: 0 }}>
+            <Grid item xs={12} md={6}>
+              <Card elevation={1}>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                    Your Permissions
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    ✅ View team contracts
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    ✅ Create and edit team contracts
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    ❌ Approve contracts (request from department manager)
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    ❌ Access reports (request from department manager)
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
-        </Grid>
+        </>
       )}
     </Box>
   );

@@ -152,7 +152,7 @@ const ContractAlerts = ({ contractId, contractTitle }) => {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Typ / Tipo</TableCell>
+                <TableCell>Verantwortlicher</TableCell>
                 <TableCell>Datum / Data</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Erstellt / Criado</TableCell>
@@ -165,13 +165,11 @@ const ContractAlerts = ({ contractId, contractTitle }) => {
             <TableBody>
               {alerts.map((alert) => (
                 <TableRow key={alert.id}>
-                  {/* Tipo / Typ */}
+                  {/* Verantwortlicher (usuário responsável) */}
                   <TableCell>
-                    <Chip
-                      label={ALERT_TYPE_LABELS[alert.alert_type] || alert.alert_type}
-                      color={ALERT_TYPE_COLORS[alert.alert_type] || 'default'}
-                      size="small"
-                    />
+                    <Typography variant="body2">
+                      {alert.responsible_user_name || alert.responsible_user || '-'}
+                    </Typography>
                   </TableCell>
 
                   {/* Data Agendada / Geplantes Datum */}

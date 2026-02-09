@@ -481,7 +481,7 @@ const handleEditConfirm = async () => {
         onPageChange={(e, newPage) => onPageChange(newPage)}
         rowsPerPage={pageSize}
         onRowsPerPageChange={(e) => onPageSizeChange(parseInt(e.target.value, 10))}
-        rowsPerPageOptions={[10, 25, 50, 100]}
+        rowsPerPageOptions={[10, 25]}
         labelRowsPerPage="Zeilen pro Seite / Linhas por página:"
         labelDisplayedRows={({ from, to, count }) =>
           `${from}-${to} von / de ${count !== -1 ? count : `mehr als / mais de ${to}`}`
