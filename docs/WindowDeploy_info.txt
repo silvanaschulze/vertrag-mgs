@@ -1,0 +1,39 @@
+Os 3 arquivos formam o kit completo de deploy para Windows Server:
+
+1. 📘 README-DOCKER-WINDOWS.md
+Guia de instalação passo a passo (tipo manual de instruções)
+
+Como instalar Docker Engine gratuito no Windows Server
+Como fazer deploy do Vertrag-MGS usando Docker
+Comandos PowerShell para tudo: instalação, configuração, manutenção
+Troubleshooting (resolver problemas)
+Equivalente ao README-PRODUCTION.md, mas para Windows ao invés de Linux
+Quando usar: Quando for instalar o sistema no servidor Windows da escola pela primeira vez.
+
+2. 💾 backup-windows.ps1
+Script automático de backup (em PowerShell)
+
+Faz backup de tudo: banco de dados, uploads, configurações, logs
+Compacta tudo em um arquivo .zip
+Remove backups antigos (>30 dias)
+Verifica integridade do backup
+Quando usar:
+
+Agendado para rodar automaticamente todos os dias às 2h da manhã
+Ou manualmente quando quiser: .\backup-windows.ps1
+3. ♻️ restore-windows.ps1
+Script de restauração (em PowerShell)
+
+Restaura o sistema a partir de um backup
+Mostra lista de backups disponíveis para escolher
+Cria um "safety backup" antes de restaurar (segurança extra)
+Para containers, restaura arquivos, reinicia tudo
+Quando usar:
+
+Se algo der errado (banco corrompido, arquivos deletados acidentalmente)
+Para voltar a um estado anterior: .\restore-windows.ps1
+🔄 Fluxo completo:
+Instalação inicial → Seguir README-DOCKER-WINDOWS.md
+Backup diário automático → backup-windows.ps1 (agendado)
+Se precisar restaurar → restore-windows.ps1
+Equivalem aos arquivos bash que você já tem (backup-system.sh, restore-system.sh), mas adaptados para PowerShell e Windows Server. 🪟

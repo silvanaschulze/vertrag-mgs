@@ -51,15 +51,9 @@ Thumbs.db
 /__pycache__/
 /node_modules/
 
-# Requisitos locais
-projeto_info.txt
 
-# Scripts de teste locais
-backend/test_complete.py
-backend/test_local.py
 
-# Documentação local
-docs/
+
 
 # Python e VS Code
 .vscode/
