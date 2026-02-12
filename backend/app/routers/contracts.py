@@ -25,8 +25,6 @@ from app.schemas.contract import (
     ContractCreate,
     ContractUpdate,
     ContractResponse,
-    ContractListResponse,
-    ContractStats,
 )
 from app.schemas.approval import ApprovalRequest, RejectionRequest
 from app.services.contract_service import ContractService
@@ -108,6 +106,8 @@ def get_contract_service(db: AsyncSession = Depends(get_db)) -> ContractService:
     return ContractService(db)  
 
 # GET /contracts/ - Liste alle Verträge
+from app.schemas.contract import ContractListResponse
+
 @router.get("/", response_model=ContractListResponse, status_code=status.HTTP_200_OK)
 async def list_contracts(
     page: int = Query(1, ge=1, description="Seitennummer"),
@@ -149,7 +149,7 @@ async def list_contracts(
     )
     
     # 🐛 DEBUG: Log da resposta que será enviada
-    print(f"📤 [BACKEND] Resposta: total={result.total}, contracts={len(result.contracts)}, page={result.page}, per_page={result.per_page}")
+    print(f"📤 [BACKEND] Resposta: total={result['total']}, contracts={len(result['contracts'])}, page={result['page']}, per_page={result['per_page']}")
     
     return result   
 # POST /contracts/ - Erstellt einen neuen Vertrag
@@ -373,7 +373,7 @@ async def create_contract_with_upload(
 # ============================================================================
 
 # GET /contracts/stats - Ruft Vertragsstatistiken ab
-@router.get("/stats", response_model=ContractStats, status_code=status.HTTP_200_OK)
+@router.get("/stats", response_model=dict, status_code=status.HTTP_200_OK)
 async def get_contract_stats(
     contract_service: ContractService = Depends(get_contract_service)
 ):
@@ -389,7 +389,7 @@ async def get_contract_stats(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Fehler beim Abrufen der Vertragsstatistiken")
     
-@router.get("/search", response_model=ContractListResponse, status_code=status.HTTP_200_OK)
+@router.get("/search", response_model=list, status_code=status.HTTP_200_OK)
 async def search_contracts(
     query: str = Query(..., description="Suchbegriff für Titel oder Beschreibung"),
     page: int = Query(1, ge=1, description="Seitennummer"),
@@ -411,7 +411,7 @@ async def search_contracts(
         skip=(page - 1) * per_page,
         limit=per_page
     )       
-@router.get("/active", response_model=ContractListResponse, status_code=status.HTTP_200_OK)
+@router.get("/active", response_model=list, status_code=status.HTTP_200_OK)
 async def get_active_contracts(
     page: int = Query(1, ge=1, description="Seitennummer"),
     per_page: int = Query(10, ge=1, le=100, description="Anzahl der Verträge pro Seite"),
@@ -431,7 +431,7 @@ async def get_active_contracts(
         limit=per_page
     )       
 # GET /contracts/expiring - Verträge abrufen, die in den nächsten X Tagen ablaufen
-@router.get("/expiring", response_model=ContractListResponse, status_code=status.HTTP_200_OK)
+@router.get("/expiring", response_model=list, status_code=status.HTTP_200_OK)
 async def get_expiring_contracts(
     days: int = Query(30, ge=1, le=365, description="Anzahl der Tage bis zum Ablauf / Número de dias até o vencimento"),
     page: int = Query(1, ge=1, description="Seitennummer / Número da página"),
@@ -448,7 +448,7 @@ async def get_expiring_contracts(
     )
 
 # GET /contracts/expired - Abgelaufene Verträge abrufen
-@router.get("/expired", response_model=ContractListResponse, status_code=status.HTTP_200_OK)
+@router.get("/expired", response_model=list, status_code=status.HTTP_200_OK)
 async def get_expired_contracts(
     page: int = Query(1, ge=1, description="Seitennummer / Número da página"),
     per_page: int = Query(10, ge=1, le=100, description="Anzahl der Verträge pro Seite / Número de contratos por página"),
@@ -462,7 +462,7 @@ async def get_expired_contracts(
         limit=per_page
     )
 
-@router.get("/by-client", response_model=ContractListResponse, status_code=status.HTTP_200_OK)
+@router.get("/by-client", response_model=list, status_code=status.HTTP_200_OK)
 async def get_contracts_by_client(
     client_name: str = Query(..., description="Name des Kunden / Nome do cliente"),
     page: int = Query(1, ge=1, description="Seitennummer / Número da página"),

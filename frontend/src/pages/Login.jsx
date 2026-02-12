@@ -58,6 +58,13 @@ const Login = () => {
       setLoading(true);
       setError('');
 
+      // Proteção extra: nunca disparar GET
+      if (!data.email || !data.password) {
+        setError('Credenciais obrigatórias.');
+        setLoading(false);
+        return;
+      }
+
       // Chama API de login / Login-API aufrufen
       const response = await loginApi(data.email, data.password);
 
@@ -68,7 +75,6 @@ const Login = () => {
       navigate('/app/dashboard');
     } catch (err) {
       console.error('Login error:', err);
-      
       // Mensagem de erro / Fehlermeldung
       if (err.response?.status === 401) {
         setError('Ungültige Anmeldedaten / Invalid credentials');

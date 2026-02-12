@@ -62,6 +62,11 @@ class PaymentFrequency(str, enum.Enum):
     CUSTOM_YEARS = "alle_x_jahre"    # Alle X Jahre / A cada X anos
     ONE_TIME = "einmalig"            # Einmalig / Pagamento único
 
+class OperationType(str, enum.Enum):
+    """Art der Operation / Tipo da Operação"""
+    INCOME = "INCOME"      # Eingabewert / Entrada
+    EXPENSE = "EXPENSE"    # Ausgabewert / Saída
+
 class Contract(Base):
     """Vertragsmodell für die Datenbank"""
     __tablename__ = "contracts"  
@@ -74,6 +79,10 @@ class Contract(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     contract_type: Mapped[ContractType] = mapped_column(Enum(ContractType), default=ContractType.OTHER, nullable=False)
     status: Mapped[ContractStatus] = mapped_column(Enum(ContractStatus), default=ContractStatus.DRAFT, nullable=False)
+
+
+    # Art der Operation / Tipo da Operação
+    operation_type: Mapped[OperationType] = mapped_column(Enum(OperationType), default=OperationType.INCOME, nullable=False, index=True, comment="Eingabewert/Ausgabewert | Entrada/Saída")
 
     #Finanzfelder
     value: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)  #Maximalwert 9999999999.99

@@ -230,13 +230,31 @@ class DashboardService:
         )
         expiring_90_days = exp90_result.scalar() or 0
         
-        # Valor mensal total
+
+        # Valor mensal total (todos)
         value_result = await self.db.execute(
             select(func.sum(Contract.value)).where(
                 Contract.status == ContractStatus.ACTIVE
             )
         )
         monthly_value = float(value_result.scalar() or 0.0)
+
+        # Entradas (INCOME) e Saídas (EXPENSE)
+        income_result = await self.db.execute(
+            select(func.sum(Contract.value)).where(
+                Contract.status == ContractStatus.ACTIVE,
+                Contract.operation_type == "INCOME"
+            )
+        )
+        monthly_income = float(income_result.scalar() or 0.0)
+
+        expense_result = await self.db.execute(
+            select(func.sum(Contract.value)).where(
+                Contract.status == ContractStatus.ACTIVE,
+                Contract.operation_type == "EXPENSE"
+            )
+        )
+        monthly_expense = float(expense_result.scalar() or 0.0)
         
         # Alertas
         alerts_result = await self.db.execute(
@@ -288,6 +306,8 @@ class DashboardService:
             expiring_30_days=expiring_30_days,
             expiring_90_days=expiring_90_days,
             monthly_value=monthly_value,
+            monthly_income=monthly_income,
+            monthly_expense=monthly_expense,
             total_alerts=total_alerts,
             unread_alerts=unread_alerts,
             pending_approvals=pending_approvals,

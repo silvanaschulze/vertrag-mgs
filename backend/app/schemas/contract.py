@@ -1,3 +1,8 @@
+# ...existing code...
+
+# ...existing code...
+# (Removido temporariamente ContractListResponse para definir depois)
+# ...existing code...
 """
 Vertragsschemas für das Vertragsverwaltungssystem
 
@@ -73,9 +78,15 @@ class PaymentFrequency(str, Enum):
     CUSTOM_YEARS = "alle_x_jahre"
     ONE_TIME = "einmalig"
 
+class OperationType(str, Enum):
+    """Art der Operation / Tipo da Operação"""
+    INCOME = "INCOME"      # Eingabewert / Entrada
+    EXPENSE = "EXPENSE"    # Ausgabewert / Saída
+
 #basisschema mit gemeinsamen feldern
 class ContractBase(BaseModel):
     """basisschema mit gemeinsamen vertragsfeldern"""
+    operation_type: OperationType = Field(OperationType.INCOME, description="Art der Operation: INCOME=Eingabewert, EXPENSE=Ausgabewert / Tipo da operação: INCOME=Entrada, EXPENSE=Saída")
     title: str = Field(..., min_length=2, max_length=200, description="Vertrags titel")
     description: Optional[str] = Field(None, max_length=1000, description="Vertragsbeschreibung")
     contract_type: ContractType = Field(default=ContractType.OTHER, description="Vertragstyp")
@@ -165,25 +176,24 @@ class ContractCreate(ContractBase):
     extraction_metadata: Optional[ExtractionMetadata] = Field(None, description="Metadaten der extrahierten/uploaded PDF, optional")
 
 # Schema zum Aktualisieren von Vertragsdaten
+
+# Schema zum Aktualisieren von Vertragsdaten
+from typing import Self
+
 class ContractUpdate(BaseModel):
     """Schema zum Aktualisieren von Vertragsdaten"""
+    operation_type: Optional[OperationType] = Field(None, description="Art der Operation: INCOME=Eingabewert, EXPENSE=Ausgabewert / Tipo da operação: INCOME=Entrada, EXPENSE=Saída")
     title: Optional[str] = Field(None, min_length=3, max_length=200, description="Vertragstitel")
     description: Optional[str] = Field(None, max_length=1000, description="Vertragsbeschreibung")
     contract_type: Optional[ContractType] = Field(None, description="Vertragstyp")
     status: Optional[ContractStatus] = Field(None, description="Vertragsstatus")
-
-    # Finanzfelder
     value: Optional[Decimal] = Field(None, ge=0, description="Vertragswert")
     currency: Optional[str] = Field(None, max_length=3, description="Währungscode")
     payment_frequency: Optional[PaymentFrequency] = Field(None, description="Zahlungsfrequenz / Payment frequency")
     payment_custom_years: Optional[int] = Field(None, ge=1, le=100, description="Anzahl Jahre für 'alle X Jahre' Option")
-
-    # Datumsfelder
     start_date: Optional[date] = Field(None, description="Vertragsbeginn")
     end_date: Optional[date] = Field(None, description="Vertragsende")
     renewal_date: Optional[date] = Field(None, description="Vertragsverlängerungsdatum")
-
-    # Beteiligte Parteien
     client_name: Optional[str] = Field(None, min_length=2, max_length=200, description="Kunden-/Auftragnehmername")
     company_name: Optional[str] = Field(None, min_length=2, max_length=200, description="Firmenname / Nome da empresa")
     legal_form: Optional[LegalForm] = Field(None, description="Rechtsform / Forma jurídica")
@@ -191,75 +201,32 @@ class ContractUpdate(BaseModel):
     client_email: Optional[str] = Field(None, max_length=100, description="Kunden-E-Mail")
     client_phone: Optional[str] = Field(None, max_length=20, description="Kundentelefon")
     client_address: Optional[str] = Field(None, max_length=200, description="Kundenadresse")
-
-    #Organização / Organisation
     department: Optional[str] = Field(None, max_length=100, description="Bereich / Departamento")
     team: Optional[str] = Field(None, max_length=100, description="Team / Time")
     responsible_user_id: Optional[int] = Field(None, description="Verantwortlicher Benutzer ID / ID do usuário responsável")
-
-    # Zusätzliche Felder
     terms_and_conditions: Optional[str] = Field(None, description="Geschäftsbedingungen")
     notes: Optional[str] = Field(None, max_length=500, description="Zusätzliche Notizen")
-    
+
     @model_validator(mode='after')
-    def validate_payment_frequency_logic(self) -> 'ContractUpdate':
-        """
-        Validiert die bedingte Logik zwischen payment_frequency und payment_custom_years.
-        Validates conditional logic between payment_frequency and payment_custom_years.
-        
-        Regeln / Rules:
-        - CUSTOM_YEARS → payment_custom_years ist erforderlich (>= 1) / is required (>= 1)
-        - Andere Frequenzen → payment_custom_years wird auf null gesetzt / is set to null
-        """
-        if self.payment_frequency == PaymentFrequency.CUSTOM_YEARS:
-            # CUSTOM_YEARS requires payment_custom_years
-            if not self.payment_custom_years or self.payment_custom_years < 1:
+    @classmethod
+    def validate_payment_frequency_logic(cls, values):
+        payment_frequency = values.get('payment_frequency')
+        payment_custom_years = values.get('payment_custom_years')
+        if payment_frequency == PaymentFrequency.CUSTOM_YEARS:
+            if not payment_custom_years or payment_custom_years < 1:
                 raise ValueError(
                     'payment_custom_years ist erforderlich und muss >= 1 sein, '
                     'wenn payment_frequency CUSTOM_YEARS ist. / '
                     'payment_custom_years is required and must be >= 1 when '
                     'payment_frequency is CUSTOM_YEARS.'
                 )
-        elif self.payment_frequency is not None:
-            # For other frequencies, clear payment_custom_years
-            if self.payment_custom_years is not None:
-                # Auto-clear instead of raising error (more user-friendly)
-                self.payment_custom_years = None
-        return self
+        elif payment_frequency is not None:
+            if payment_custom_years is not None:
+                values['payment_custom_years'] = None
+        return values
     
-    # Schemas für RentStep (Mietstaffelung)
-    class RentStepBase(BaseModel):
-        """Basisschema für eine Mietstaffelung (zukünftige Mietanpassung)."""
-        effective_date: date = Field(..., description="Datum, an dem der Betrag wirksam wird")
-        amount: Decimal = Field(..., ge=0, description="Betrag in Vertragswährung")
-        currency: Optional[str] = Field(None, min_length=3, max_length=3, description="ISO 4217 Währungscode (optional)")
-        note: Optional[str] = Field(None, max_length=300, description="Optionaler Hinweis")
 
-    class RentStepCreate(RentStepBase):
-        """Schema zum Erstellen einer RentStep"""
-        pass
-
-    class RentStepUpdate(BaseModel):
-        effective_date: Optional[date] = Field(None, description="Neues Wirksamkeitsdatum")
-        amount: Optional[Decimal] = Field(None, ge=0, description="Neuer Betrag")
-        currency: Optional[str] = Field(None, min_length=3, max_length=3, description="ISO 4217 Währungscode (optional)")
-        note: Optional[str] = Field(None, max_length=300, description="Optionaler Hinweis")
-
-    class RentStepResponse(RentStepBase):
-        model_config = ConfigDict(from_attributes=True)
-        
-        id: int = Field(..., description="Eindeutige ID der RentStep")
-        contract_id: int = Field(..., description="ID des zugehörigen Vertrags")
-        
-        @field_serializer('amount')
-        def serialize_amount(self, amount: Decimal) -> float:
-            return float(amount)
-        
-        @field_serializer('effective_date')
-        def serialize_date(self, dt: date) -> str:
-            return dt.isoformat()
-
-# Schema für API-Antworten (enthält Benutzerinformationen)
+# Schemas für RentStep (Mietstaffelung)
 class RentStepBase(BaseModel):
     """Basisschema für eine Mietstaffelung (zukünftige Mietanpassung)."""
     effective_date: date = Field(..., description="Datum, an dem der Betrag wirksam wird")
@@ -267,11 +234,9 @@ class RentStepBase(BaseModel):
     currency: Optional[str] = Field(None, min_length=3, max_length=3, description="ISO 4217 Währungscode (optional)")
     note: Optional[str] = Field(None, max_length=300, description="Optionaler Hinweis")
 
-
 class RentStepCreate(RentStepBase):
     """Schema zum Erstellen einer RentStep"""
     pass
-
 
 class RentStepUpdate(BaseModel):
     effective_date: Optional[date] = Field(None, description="Neues Wirksamkeitsdatum")
@@ -279,17 +244,15 @@ class RentStepUpdate(BaseModel):
     currency: Optional[str] = Field(None, min_length=3, max_length=3, description="ISO 4217 Währungscode (optional)")
     note: Optional[str] = Field(None, max_length=300, description="Optionaler Hinweis")
 
-
 class RentStepResponse(RentStepBase):
     model_config = ConfigDict(from_attributes=True)
-    
     id: int = Field(..., description="Eindeutige ID der RentStep")
     contract_id: int = Field(..., description="ID des zugehörigen Vertrags")
-    
+
     @field_serializer('amount')
     def serialize_amount(self, amount: Decimal) -> float:
         return float(amount) if amount else 0.0
-    
+
     @field_serializer('effective_date')
     def serialize_date(self, dt: date) -> str:
         return dt.isoformat()
@@ -326,6 +289,14 @@ class ContractResponse(ContractBase):
     def serialize_datetimes(self, dt: datetime) -> str:
         return dt.isoformat()
 
+
+# Schema para resposta de listagem de contratos
+class ContractListResponse(BaseModel):
+    total: int
+    contracts: List['ContractResponse']
+    page: int
+    per_page: int
+
 # Schema für Vertragsdaten in der Datenbank
 class ContractInDB(ContractBase):
     """Schema für Vertragsdaten wie in der Datenbank gespeichert"""
@@ -334,48 +305,31 @@ class ContractInDB(ContractBase):
     created_at: datetime = Field(..., description="Vertragserstellungszeitstempel")
     updated_at: Optional[datetime] = Field(None, description="Zeitstempel der letzten Aktualisierung")
     rent_steps: Optional[List["RentStepResponse"]] = Field(default_factory=list, description="Liste der zukünftigen Mietstaffelungen")
-    # Original-PDF Metadaten
-    original_pdf_path: Optional[str] = Field(None, description="Serverinterner Pfad zur Original-PDF (internal)")
-    original_pdf_filename: Optional[str] = Field(None, description="Original hochgeladene PDF-Datei")
-    original_pdf_sha256: Optional[str] = Field(None, description="SHA256 Hash der Original-PDF")
-    ocr_text_sha256: Optional[str] = Field(None, description="SHA256 des OCR-Texts")
-    uploaded_at: Optional[datetime] = Field(None, description="Zeitpunkt des Uploads der Original-PDF")
-    
-    model_config = ConfigDict(from_attributes=True)
-    
-    @field_serializer('value', when_used='unless-none')
-    def serialize_value(self, value: Decimal) -> float:
-        return float(value)
-    
-    @field_serializer('start_date', 'end_date', 'renewal_date', when_used='unless-none')
-    def serialize_dates(self, dt: date) -> str:
-        return dt.isoformat()
-    
-    @field_serializer('created_at', 'updated_at', 'uploaded_at', when_used='unless-none')
-    def serialize_datetimes(self, dt: datetime) -> str:
-        return dt.isoformat()
 
-# Schema für Vertragslisten-Antworten
-class ContractListResponse(BaseModel):
-    """Schema für Vertragslisten in API-Antworten"""
-    contracts: List[ContractResponse] = Field(..., description="Liste der Verträge")
-    total: int = Field(..., description="Gesamtanzahl der Verträge")
-    page: int = Field(..., description="Aktuelle Seitennummer")
-    per_page: int = Field(..., description="Anzahl der Verträge pro Seite")
-    
-    model_config = ConfigDict(from_attributes=True)
-# Schema für Vertragsstatistiken
-class ContractStats(BaseModel):
-    """Schema für Vertragsstatistiken"""
-    total_contracts: int = Field(..., description="Gesamtanzahl der Verträge")
-    active_contracts: int = Field(..., description="Anzahl der aktiven Verträge")
-    expired_contracts: int = Field(..., description="Anzahl der abgelaufenen Verträge")
-    draft_contracts: int = Field(..., description="Anzahl der Entwurfsverträge")
-    total_value: Decimal = Field(..., description="Gesamtwert aller Verträge")
-    currency: str = Field(..., description="Für den Gesamtwert verwendete Währung")
-    
-    model_config = ConfigDict(from_attributes=True)
-    
-    @field_serializer('total_value')
-    def serialize_total_value(self, value: Decimal) -> float:
-        return float(value)
+    # Schema zum Aktualisieren von Vertragsdaten
+    class ContractUpdate(BaseModel):
+        """Schema zum Aktualisieren von Vertragsdaten"""
+        title: Optional[str] = Field(None, min_length=3, max_length=200, description="Vertragstitel")
+        description: Optional[str] = Field(None, max_length=1000, description="Vertragsbeschreibung")
+        contract_type: Optional[ContractType] = Field(None, description="Vertragstyp")
+        status: Optional[ContractStatus] = Field(None, description="Vertragsstatus")
+        value: Optional[Decimal] = Field(None, ge=0, description="Vertragswert")
+        currency: Optional[str] = Field(None, max_length=3, description="Währungscode")
+        payment_frequency: Optional[PaymentFrequency] = Field(None, description="Zahlungsfrequenz / Payment frequency")
+        payment_custom_years: Optional[int] = Field(None, ge=1, le=100, description="Anzahl Jahre für 'alle X Jahre' Option")
+        start_date: Optional[date] = Field(None, description="Vertragsbeginn")
+        end_date: Optional[date] = Field(None, description="Vertragsende")
+        renewal_date: Optional[date] = Field(None, description="Vertragsverlängerungsdatum")
+        client_name: Optional[str] = Field(None, min_length=2, max_length=200, description="Kunden-/Auftragnehmername")
+        company_name: Optional[str] = Field(None, min_length=2, max_length=200, description="Firmenname / Nome da empresa")
+        legal_form: Optional[LegalForm] = Field(None, description="Rechtsform / Forma jurídica")
+        client_document: Optional[str] = Field(None, max_length=20, description="Kundendokument")
+        client_email: Optional[str] = Field(None, max_length=100, description="Kunden-E-Mail")
+        client_phone: Optional[str] = Field(None, max_length=20, description="Kundentelefon")
+        client_address: Optional[str] = Field(None, max_length=200, description="Kundenadresse")
+        department: Optional[str] = Field(None, max_length=100, description="Bereich / Departamento")
+        team: Optional[str] = Field(None, max_length=100, description="Team / Time")
+        responsible_user_id: Optional[int] = Field(None, description="Verantwortlicher Benutzer ID / ID do usuário responsável")
+        terms_and_conditions: Optional[str] = Field(None, description="Geschäftsbedingungen")
+        notes: Optional[str] = Field(None, max_length=500, description="Zusätzliche Notizen")
+        operation_type: Optional[OperationType] = Field(None, description="Art der Operation: INCOME=Eingabewert, EXPENSE=Ausgabewert / Tipo da operação: INCOME=Entrada, EXPENSE=Saída")

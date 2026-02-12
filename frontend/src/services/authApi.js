@@ -17,13 +17,18 @@ export const login = async (email, password) => {
   const formData = new URLSearchParams();
   formData.append('username', email);  // OAuth2 chama de 'username'
   formData.append('password', password);
-  
+
+  // Garantir que não há GET automático
+  if (!email || !password) {
+    throw new Error('Credenciais não fornecidas');
+  }
+
   const response = await api.post('/auth/login', formData, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     }
   });
-  
+
   return response.data;
 };
 
